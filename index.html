@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agenda Personal — Alejandro</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="app-header">
+    <div class="header-brand">
+      <button id="btn-home" class="btn-back hidden" title="Volver al inicio">← Inicio</button>
+      <h1>Agenda Personal</h1>
+    </div>
+    <div class="header-date" id="current-date"></div>
+  </header>
+
+  <main class="container">
+    <!-- PANTALLA DE INGRESO: 3 GRANDES BOTONES -->
+    <section id="view-home" class="view">
+      <h2 class="section-subtitle">Seleccioná una sección para empezar</h2>
+      <div class="home-grid">
+        <button id="btn-open-tasks" class="big-card card-primary">
+          <div class="card-icon">📋</div>
+          <div class="card-title">1. Lista de Tareas</div>
+          <div class="card-desc">Tareas del día a día con orden de prioridad</div>
+          <div class="card-badge" id="home-tasks-counter">0 pendientes</div>
+        </button>
+
+        <button id="btn-open-mod2" class="big-card card-secondary">
+          <div class="card-icon">📌</div>
+          <div class="card-title">2. Próximo Módulo</div>
+          <div class="card-desc">Disponible para el segundo punto que definamos</div>
+          <div class="card-badge badge-muted">En espera</div>
+        </button>
+
+        <button id="btn-open-mod3" class="big-card card-tertiary">
+          <div class="card-icon">🗂️</div>
+          <div class="card-title">3. Próximo Módulo</div>
+          <div class="card-desc">Disponible para el tercer punto que definamos</div>
+          <div class="card-badge badge-muted">En espera</div>
+        </button>
+      </div>
+    </section>
+
+    <!-- MÓDULO 1: LISTA DE TAREAS DEL DÍA A DÍA -->
+    <section id="view-tasks" class="view hidden">
+      <div class="tasks-top-bar">
+        <div>
+          <h2>Lista de Tareas del Día a Día</h2>
+          <p class="subtitle-text">Marcá si la realizaste o eliminala de la lista</p>
+        </div>
+        <button id="btn-new-task" class="btn-add-plus" title="Agregar nueva tarea">
+          <span class="plus-symbol">+</span> Nueva tarea
+        </button>
+      </div>
+
+      <!-- FORMULARIO DESPLEGABLE CON EL BOTÓN + -->
+      <div id="form-new-task-box" class="task-form-box hidden">
+        <h3>Cargar nueva tarea</h3>
+        <div class="form-row">
+          <div class="form-group flex-grow">
+            <label for="input-task-text">¿Qué debés hacer?</label>
+            <input type="text" id="input-task-text" placeholder="Ej: Llamar al contador, revisar pedidos..." autocomplete="off">
+          </div>
+          <div class="form-group">
+            <label>Orden de prioridad</label>
+            <div class="priority-selector" id="priority-selector">
+              <button type="button" class="prio-option prio-verde active" data-priority="simple">
+                <span class="dot dot-verde"></span> Simple
+              </button>
+              <button type="button" class="prio-option prio-amarillo" data-priority="intermedio">
+                <span class="dot dot-amarillo"></span> Intermedio
+              </button>
+              <button type="button" class="prio-option prio-rojo" data-priority="urgente">
+                <span class="dot dot-rojo"></span> Urgente
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button type="button" id="btn-cancel-task" class="btn-secondary">Cancelar</button>
+          <button type="button" id="btn-save-task" class="btn-primary">Guardar tarea (Enter)</button>
+        </div>
+      </div>
+
+      <!-- FILTROS RÁPIDOS -->
+      <div class="tasks-filters">
+        <button class="filter-chip active" data-filter="todas">Todas</button>
+        <button class="filter-chip" data-filter="pendientes">Pendientes</button>
+        <button class="filter-chip" data-filter="realizadas">Realizadas</button>
+      </div>
+
+      <!-- LISTA DE TAREAS -->
+      <div id="tasks-list" class="tasks-list"></div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
