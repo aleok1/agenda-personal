@@ -3,6 +3,9 @@ const STORAGE_KEY_TASKS = 'alejandro_agenda_tareas_v1';
 const STORAGE_KEY_REMINDERS = 'alejandro_agenda_recordatorios_v1';
 const STORAGE_KEY_DELETED = 'alejandro_agenda_borrados_v1';
 
+// 1 hora en milisegundos (60 minutos) para que las tareas realizadas desaparezcan solas
+const UNA_HORA_MS = 60 * 60 * 1000;
+
 // IDs de ejemplo que venían de muestra para ignorarlos al sincronizar datos reales
 const IDS_EJEMPLO = new Set(['t-1', 't-2', 't-3', 'r-1']);
 
@@ -142,9 +145,49 @@ function guardarEnLocal() {
   actualizarContadoresYAlertas();
 }
 
+// ================================================================
+// LIMPIEZA AUTOMÁTICA: BORRAR TAREAS REALIZADAS HACE MÁS DE 1 HORA
+// ================================================================
+function limpiarTareasVencidas() {
+  const ahora = Date.now();
+  let huboCambios = false;
+
+  tareas = tareas.filter(t => {
+    if (t.realizada) {
+      // Si estaba realizada de antes y no tenía hora anotada, le empezamos a contar desde ahora
+      if (!t.completedAt) {
+        t.completedAt = t.updatedAt || ahora;
+        huboCambios = true;
+      }
+      if (ahora - t.completedAt >= UNA_HORA_MS) {
+        borrados.push(t.id);
+        huboCambios = true;
+        return false; // Ya pasó 1 hora: desaparece de la lista
+      }
+    }
+    return true;
+  });
+
+  if (huboCambios) {
+    guardarEnLocal();
+    renderizarTareas();
+  }
+  return huboCambios;
+}
+
+function textoTiempoRestante(completedAt) {
+  if (!completedAt) return '';
+  const restanteMs = UNA_HORA_MS - (Date.now() - completedAt);
+  if (restanteMs <= 0) return 'Se oculta ahora';
+  const min = Math.ceil(restanteMs / 60000);
+  return `Desaparece en ${min} min`;
+}
+
 // ====================================================
 // SINCRONIZACIÓN EN LA NUBE (CELULAR <-> COMPUTADORA)
 // ====================================================
+const API_SYNC_URL = 'https://agenda-personal-aleok.vercel.app/api/sync';
+
 function combinarListas(listaNube, listaLocal, setBorrados) {
   const mapa = new Map();
   (listaNube || []).forEach(item => {
@@ -157,7 +200,6 @@ function combinarListas(listaNube, listaLocal, setBorrados) {
       if (!mapa.has(item.id)) {
         mapa.set(item.id, item);
       } else {
-        // Si existe en ambos, usar el que tenga actualización más reciente
         const existente = mapa.get(item.id);
         if ((item.updatedAt || 0) > (existente.updatedAt || 0)) {
           mapa.set(item.id, item);
@@ -167,8 +209,6 @@ function combinarListas(listaNube, listaLocal, setBorrados) {
   });
   return Array.from(mapa.values());
 }
-
-const API_SYNC_URL = 'https://agenda-personal-aleok.vercel.app/api/sync';
 
 async function sincronizarDesdeNube() {
   if (sincronizando) return;
@@ -187,19 +227,20 @@ async function sincronizarDesdeNube() {
     const tareasCombinadas = combinarListas(cloud.tareas || [], tareas, setBorrados);
     const recCombinados = combinarListas(cloud.recordatorios || [], recordatorios, setBorrados);
 
-    // Verificar si este dispositivo tenía cosas nuevas que no estaban en la nube
     const habiaLocalesNuevos =
       tareasCombinadas.length !== (cloud.tareas || []).filter(x => !IDS_EJEMPLO.has(x.id) && !setBorrados.has(x.id)).length ||
       recCombinados.length !== (cloud.recordatorios || []).filter(x => !IDS_EJEMPLO.has(x.id) && !setBorrados.has(x.id)).length;
 
     tareas = tareasCombinadas;
     recordatorios = recCombinados;
+
+    const seLimpiaronVencidas = limpiarTareasVencidas();
     guardarEnLocal();
     renderizarTareas();
     renderizarCalendario();
     renderizarRecordatoriosDelDia();
 
-    if (habiaLocalesNuevos) {
+    if (habiaLocalesNuevos || seLimpiaronVencidas) {
       await guardarEnNube();
     } else {
       actualizarEstadoSync('☁️ Sincronizado', 'verde');
@@ -276,6 +317,7 @@ function irATareas() {
   viewAgenda.classList.add('hidden');
   viewTasks.classList.remove('hidden');
   btnHome.classList.remove('hidden');
+  limpiarTareasVencidas();
   renderizarTareas();
 }
 
@@ -340,6 +382,7 @@ function crearNuevaTarea() {
     texto: texto,
     prioridad: prioridadSeleccionada,
     realizada: false,
+    completedAt: null,
     updatedAt: Date.now()
   });
 
@@ -390,12 +433,19 @@ function renderizarTareas() {
     const fila = document.createElement('div');
     fila.className = `task-item prio-${tarea.prioridad} ${tarea.realizada ? 'realizada' : ''}`;
 
+    const infoAutoBorrado = tarea.realizada && tarea.completedAt
+      ? `<span style="font-size:0.78rem;color:#94a3b8;margin-left:6px;">(${textoTiempoRestante(tarea.completedAt)})</span>`
+      : '';
+
     fila.innerHTML = `
       <div class="task-info">
         <span class="priority-pill pill-${tarea.prioridad}">
           ${ETIQUETA_PRIORIDAD[tarea.prioridad]}
         </span>
-        <span class="task-text">${escaparHTML(tarea.texto)}</span>
+        <div>
+          <span class="task-text">${escaparHTML(tarea.texto)}</span>
+          ${infoAutoBorrado}
+        </div>
       </div>
       <div class="task-actions">
         <button class="btn-done ${tarea.realizada ? 'is-done' : ''}" data-action="toggle">
@@ -409,6 +459,7 @@ function renderizarTareas() {
 
     fila.querySelector('[data-action="toggle"]').addEventListener('click', () => {
       tarea.realizada = !tarea.realizada;
+      tarea.completedAt = tarea.realizada ? Date.now() : null;
       tarea.updatedAt = Date.now();
       renderizarTareas();
       guardarEnNube();
@@ -609,14 +660,22 @@ function escaparHTML(str) {
   return div.innerHTML;
 }
 
-// Inicializar app y sincronizar con la nube
+// Inicializar app, limpiar tareas realizadas hace más de 1 hora y sincronizar
 mostrarFechaHoy();
+limpiarTareasVencidas();
 actualizarContadoresYAlertas();
 renderizarTareas();
 renderizarCalendario();
 renderizarRecordatoriosDelDia();
 sincronizarDesdeNube();
 
-// Volver a sincronizar cuando el usuario vuelve a la ventana o cada 12 segundos
+// Revisar cada 30 segundos si alguna tarea realizada ya cumplió 1 hora y sincronizar con la nube
 window.addEventListener('focus', sincronizarDesdeNube);
+setInterval(() => {
+  if (limpiarTareasVencidas()) {
+    guardarEnNube();
+  } else {
+    renderizarTareas();
+  }
+}, 30000);
 setInterval(sincronizarDesdeNube, 12000);
