@@ -16,6 +16,21 @@
   </header>
 
   <main class="container">
+    <!-- AVISO AUTOMÁTICO DE ACTIVIDADES DE HOY (al abrir la app) -->
+    <div id="today-alert-banner" class="today-alert hidden">
+      <div class="today-alert-header">
+        <div class="today-alert-title">
+          <span class="bell-icon">🔔</span>
+          <strong id="today-alert-heading">Tenés actividades programadas para hoy en tu Agenda Mensual</strong>
+        </div>
+        <div class="today-alert-actions">
+          <button id="btn-alert-go-agenda" class="btn-alert-link">Abrir Agenda de Hoy →</button>
+          <button id="btn-alert-close" class="btn-alert-dismiss" title="Ocultar aviso">✕</button>
+        </div>
+      </div>
+      <ul id="today-alert-list" class="today-alert-list"></ul>
+    </div>
+
     <!-- PANTALLA DE INGRESO: 3 GRANDES BOTONES -->
     <section id="view-home" class="view">
       <h2 class="section-subtitle">Seleccioná una sección para empezar</h2>
@@ -23,15 +38,15 @@
         <button id="btn-open-tasks" class="big-card card-primary">
           <div class="card-icon">📋</div>
           <div class="card-title">1. Lista de Tareas</div>
-          <div class="card-desc">Tareas del día a día con orden de prioridad</div>
+          <div class="card-desc">Tareas del día a día con orden de prioridad (verde, amarillo y rojo)</div>
           <div class="card-badge" id="home-tasks-counter">0 pendientes</div>
         </button>
 
-        <button id="btn-open-mod2" class="big-card card-secondary">
-          <div class="card-icon">📌</div>
-          <div class="card-title">2. Próximo Módulo</div>
-          <div class="card-desc">Disponible para el segundo punto que definamos</div>
-          <div class="card-badge badge-muted">En espera</div>
+        <button id="btn-open-agenda" class="big-card card-agenda">
+          <div class="card-icon">📅</div>
+          <div class="card-title">2. Agenda Mensual</div>
+          <div class="card-desc">Calendario por días para guardar recordatorios y actividades con aviso diario</div>
+          <div class="card-badge badge-agenda" id="home-agenda-counter">0 para hoy</div>
         </button>
 
         <button id="btn-open-mod3" class="big-card card-tertiary">
@@ -93,6 +108,73 @@
 
       <!-- LISTA DE TAREAS -->
       <div id="tasks-list" class="tasks-list"></div>
+    </section>
+
+    <!-- MÓDULO 2: AGENDA MENSUAL -->
+    <section id="view-agenda" class="view hidden">
+      <div class="tasks-top-bar">
+        <div>
+          <h2>Agenda Mensual</h2>
+          <p class="subtitle-text">Tocá cualquier día del mes para ver o guardar recordatorios</p>
+        </div>
+        <button id="btn-jump-today" class="btn-secondary">Ir a Hoy</button>
+      </div>
+
+      <div class="agenda-layout">
+        <!-- COLUMNA IZQUIERDA: CALENDARIO DEL MES -->
+        <div class="calendar-card">
+          <div class="calendar-header">
+            <button id="btn-prev-month" class="btn-month-nav" title="Mes anterior">◀</button>
+            <h3 id="calendar-month-title" class="calendar-month-title">Octubre 2026</h3>
+            <button id="btn-next-month" class="btn-month-nav" title="Mes siguiente">▶</button>
+          </div>
+
+          <div class="calendar-weekdays">
+            <div>Lun</div>
+            <div>Mar</div>
+            <div>Mié</div>
+            <div>Jue</div>
+            <div>Vie</div>
+            <div>Sáb</div>
+            <div>Dom</div>
+          </div>
+
+          <div id="calendar-grid" class="calendar-grid"></div>
+        </div>
+
+        <!-- COLUMNA DERECHA: RECORDATORIOS DEL DÍA SELECCIONADO -->
+        <div class="day-panel-card">
+          <div class="day-panel-header">
+            <div>
+              <span class="day-selected-tag" id="selected-day-badge">Día seleccionado</span>
+              <h3 id="selected-day-title" class="selected-day-title">Hoy</h3>
+            </div>
+            <button id="btn-new-reminder" class="btn-add-plus btn-add-small">
+              <span class="plus-symbol">+</span> Nuevo recordatorio
+            </button>
+          </div>
+
+          <!-- FORMULARIO PARA GUARDAR RECORDATORIO EN EL DÍA -->
+          <div id="form-reminder-box" class="reminder-form-box">
+            <div class="reminder-inputs-row">
+              <div class="form-group time-group">
+                <label for="input-reminder-time">Hora (opcional)</label>
+                <input type="time" id="input-reminder-time">
+              </div>
+              <div class="form-group flex-grow">
+                <label for="input-reminder-text">Recordatorio o actividad</label>
+                <input type="text" id="input-reminder-text" placeholder="Escribí el recordatorio y apretá Enter..." autocomplete="off">
+              </div>
+            </div>
+            <div class="form-actions">
+              <button type="button" id="btn-save-reminder" class="btn-primary">Guardar en este día (Enter)</button>
+            </div>
+          </div>
+
+          <!-- LISTA DE RECORDATORIOS DE ESE DÍA -->
+          <div id="day-reminders-list" class="tasks-list"></div>
+        </div>
+      </div>
     </section>
   </main>
 
