@@ -168,11 +168,13 @@ function combinarListas(listaNube, listaLocal, setBorrados) {
   return Array.from(mapa.values());
 }
 
+const API_SYNC_URL = 'https://agenda-personal-aleok.vercel.app/api/sync';
+
 async function sincronizarDesdeNube() {
   if (sincronizando) return;
   sincronizando = true;
   try {
-    const res = await fetch('/api/sync?t=' + Date.now(), { cache: 'no-store' });
+    const res = await fetch(API_SYNC_URL + '?t=' + Date.now(), { cache: 'no-store' });
     if (!res.ok) {
       actualizarEstadoSync('☁️ Modo local', 'amarillo');
       sincronizando = false;
@@ -213,7 +215,7 @@ async function guardarEnNube() {
   guardarEnLocal();
   actualizarEstadoSync('☁️ Guardando...', 'amarillo');
   try {
-    const res = await fetch('/api/sync', {
+    const res = await fetch(API_SYNC_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
