@@ -1,6 +1,10 @@
-// Claves de almacenamiento local
+// Claves de almacenamiento local y sincronización en la nube
 const STORAGE_KEY_TASKS = 'alejandro_agenda_tareas_v1';
 const STORAGE_KEY_REMINDERS = 'alejandro_agenda_recordatorios_v1';
+const STORAGE_KEY_DELETED = 'alejandro_agenda_borrados_v1';
+
+// IDs de ejemplo que venían de muestra para ignorarlos al sincronizar datos reales
+const IDS_EJEMPLO = new Set(['t-1', 't-2', 't-3', 'r-1']);
 
 const PESO_PRIORIDAD = { urgente: 1, intermedio: 2, simple: 3 };
 const ETIQUETA_PRIORIDAD = { urgente: 'Urgente', intermedio: 'Intermedio', simple: 'Simple' };
@@ -9,7 +13,6 @@ const NOMBRES_MESES = [
   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
 ];
 
-// Fecha de hoy en formato YYYY-MM-DD local
 function obtenerFechaISO(dateObj) {
   const y = dateObj.getFullYear();
   const m = String(dateObj.getMonth() + 1).padStart(2, '0');
@@ -20,16 +23,17 @@ function obtenerFechaISO(dateObj) {
 const hoyDate = new Date();
 const HOY_ISO = obtenerFechaISO(hoyDate);
 
-let tareas = cargarTareas();
-let recordatorios = cargarRecordatorios();
+let borrados = cargarBorrados();
+let tareas = cargarTareasLocal();
+let recordatorios = cargarRecordatoriosLocal();
 
 let prioridadSeleccionada = 'simple';
 let filtroActual = 'todas';
 
-// Estado del calendario mensual
 let mesActualVista = hoyDate.getMonth();
 let anioActualVista = hoyDate.getFullYear();
 let fechaSeleccionadaISO = HOY_ISO;
+let sincronizando = false;
 
 // Elementos del DOM
 const viewHome = document.getElementById('view-home');
@@ -42,6 +46,7 @@ const btnOpenMod3 = document.getElementById('btn-open-mod3');
 const homeTasksCounter = document.getElementById('home-tasks-counter');
 const homeAgendaCounter = document.getElementById('home-agenda-counter');
 const currentDateEl = document.getElementById('current-date');
+const syncStatusEl = document.getElementById('sync-status');
 
 // Aviso de actividades de hoy
 const todayAlertBanner = document.getElementById('today-alert-banner');
@@ -74,14 +79,26 @@ const inputReminderText = document.getElementById('input-reminder-text');
 const btnSaveReminder = document.getElementById('btn-save-reminder');
 const dayRemindersList = document.getElementById('day-reminders-list');
 
-// Mostrar fecha de hoy en el encabezado
+function actualizarEstadoSync(texto, color) {
+  if (!syncStatusEl) return;
+  syncStatusEl.textContent = texto;
+  if (color === 'amarillo') {
+    syncStatusEl.style.background = 'rgba(234, 179, 8, 0.15)';
+    syncStatusEl.style.color = '#facc15';
+    syncStatusEl.style.borderColor = 'rgba(234, 179, 8, 0.4)';
+  } else {
+    syncStatusEl.style.background = 'rgba(34, 197, 94, 0.15)';
+    syncStatusEl.style.color = '#4ade80';
+    syncStatusEl.style.borderColor = 'rgba(34, 197, 94, 0.4)';
+  }
+}
+
 function mostrarFechaHoy() {
   const opciones = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
   const texto = hoyDate.toLocaleDateString('es-AR', opciones);
   currentDateEl.textContent = texto.charAt(0).toUpperCase() + texto.slice(1);
 }
 
-// Formatear una fecha YYYY-MM-DD a texto legible en español
 function formatearFechaLegible(isoStr) {
   const [y, m, d] = isoStr.split('-').map(Number);
   const fecha = new Date(y, m - 1, d);
@@ -90,39 +107,127 @@ function formatearFechaLegible(isoStr) {
   return isoStr === HOY_ISO ? `Hoy — ${capitalizado}` : capitalizado;
 }
 
-// Cargar y guardar Tareas del día a día
-function cargarTareas() {
+function cargarBorrados() {
+  const g = localStorage.getItem(STORAGE_KEY_DELETED);
+  if (g) {
+    try { return JSON.parse(g); } catch (e) { return []; }
+  }
+  return [];
+}
+
+function cargarTareasLocal() {
   const guardado = localStorage.getItem(STORAGE_KEY_TASKS);
   if (guardado) {
-    try { return JSON.parse(guardado); } catch (e) { return []; }
+    try {
+      return JSON.parse(guardado).filter(x => !IDS_EJEMPLO.has(x.id));
+    } catch (e) { return []; }
   }
-  return [
-    { id: 't-1', texto: 'Revisar cierres del día', prioridad: 'urgente', realizada: false },
-    { id: 't-2', texto: 'Confirmar turnos de la semana', prioridad: 'intermedio', realizada: false },
-    { id: 't-3', texto: 'Ordenar papeles del escritorio', prioridad: 'simple', realizada: false }
-  ];
+  return [];
 }
 
-function guardarTareas() {
-  localStorage.setItem(STORAGE_KEY_TASKS, JSON.stringify(tareas));
-  actualizarContadoresYAlertas();
-}
-
-// Cargar y guardar Recordatorios de la Agenda Mensual
-function cargarRecordatorios() {
+function cargarRecordatoriosLocal() {
   const guardado = localStorage.getItem(STORAGE_KEY_REMINDERS);
   if (guardado) {
-    try { return JSON.parse(guardado); } catch (e) { return []; }
+    try {
+      return JSON.parse(guardado).filter(x => !IDS_EJEMPLO.has(x.id));
+    } catch (e) { return []; }
   }
-  // Ejemplo inicial programado para HOY para que se vea cómo avisa al abrir la app
-  return [
-    { id: 'r-1', fecha: HOY_ISO, hora: '10:30', texto: 'Reunión / control de pendientes del mes', realizada: false }
-  ];
+  return [];
 }
 
-function guardarRecordatorios() {
+function guardarEnLocal() {
+  localStorage.setItem(STORAGE_KEY_TASKS, JSON.stringify(tareas));
   localStorage.setItem(STORAGE_KEY_REMINDERS, JSON.stringify(recordatorios));
+  localStorage.setItem(STORAGE_KEY_DELETED, JSON.stringify(borrados));
   actualizarContadoresYAlertas();
+}
+
+// ====================================================
+// SINCRONIZACIÓN EN LA NUBE (CELULAR <-> COMPUTADORA)
+// ====================================================
+function combinarListas(listaNube, listaLocal, setBorrados) {
+  const mapa = new Map();
+  (listaNube || []).forEach(item => {
+    if (!IDS_EJEMPLO.has(item.id) && !setBorrados.has(item.id)) {
+      mapa.set(item.id, item);
+    }
+  });
+  (listaLocal || []).forEach(item => {
+    if (!IDS_EJEMPLO.has(item.id) && !setBorrados.has(item.id)) {
+      if (!mapa.has(item.id)) {
+        mapa.set(item.id, item);
+      } else {
+        // Si existe en ambos, usar el que tenga actualización más reciente
+        const existente = mapa.get(item.id);
+        if ((item.updatedAt || 0) > (existente.updatedAt || 0)) {
+          mapa.set(item.id, item);
+        }
+      }
+    }
+  });
+  return Array.from(mapa.values());
+}
+
+async function sincronizarDesdeNube() {
+  if (sincronizando) return;
+  sincronizando = true;
+  try {
+    const res = await fetch('/api/sync?t=' + Date.now(), { cache: 'no-store' });
+    if (!res.ok) {
+      actualizarEstadoSync('☁️ Modo local', 'amarillo');
+      sincronizando = false;
+      return;
+    }
+    const cloud = await res.json();
+    const setBorrados = new Set([...(cloud.borrados || []), ...borrados]);
+    borrados = Array.from(setBorrados);
+
+    const tareasCombinadas = combinarListas(cloud.tareas || [], tareas, setBorrados);
+    const recCombinados = combinarListas(cloud.recordatorios || [], recordatorios, setBorrados);
+
+    // Verificar si este dispositivo tenía cosas nuevas que no estaban en la nube
+    const habiaLocalesNuevos =
+      tareasCombinadas.length !== (cloud.tareas || []).filter(x => !IDS_EJEMPLO.has(x.id) && !setBorrados.has(x.id)).length ||
+      recCombinados.length !== (cloud.recordatorios || []).filter(x => !IDS_EJEMPLO.has(x.id) && !setBorrados.has(x.id)).length;
+
+    tareas = tareasCombinadas;
+    recordatorios = recCombinados;
+    guardarEnLocal();
+    renderizarTareas();
+    renderizarCalendario();
+    renderizarRecordatoriosDelDia();
+
+    if (habiaLocalesNuevos) {
+      await guardarEnNube();
+    } else {
+      actualizarEstadoSync('☁️ Sincronizado', 'verde');
+    }
+  } catch (e) {
+    actualizarEstadoSync('☁️ Guardado en dispositivo', 'amarillo');
+  } finally {
+    sincronizando = false;
+  }
+}
+
+async function guardarEnNube() {
+  guardarEnLocal();
+  actualizarEstadoSync('☁️ Guardando...', 'amarillo');
+  try {
+    const res = await fetch('/api/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        tareas: tareas,
+        recordatorios: recordatorios,
+        borrados: borrados
+      })
+    });
+    if (res.ok) {
+      actualizarEstadoSync('☁️ Sincronizado', 'verde');
+    }
+  } catch (e) {
+    actualizarEstadoSync('☁️ Pendiente de señal', 'amarillo');
+  }
 }
 
 // Actualizar contadores de los botones y el Aviso Automático de Hoy
@@ -137,7 +242,6 @@ function actualizarContadoresYAlertas() {
   const cantHoy = recordatoriosDeHoyPendientes.length;
   homeAgendaCounter.textContent = cantHoy === 1 ? '1 actividad para hoy' : `${cantHoy} actividades para hoy`;
 
-  // Mostrar aviso superior si hay actividades programadas para hoy en la Agenda Mensual
   if (cantHoy > 0) {
     todayAlertBanner.classList.remove('hidden');
     todayAlertHeading.textContent = cantHoy === 1
@@ -191,14 +295,8 @@ function irAAgenda(fechaISO) {
 btnHome.addEventListener('click', irAInicio);
 btnOpenTasks.addEventListener('click', irATareas);
 btnOpenAgenda.addEventListener('click', () => irAAgenda());
-
-btnAlertGoAgenda.addEventListener('click', () => {
-  irAAgenda(HOY_ISO);
-});
-
-btnAlertClose.addEventListener('click', () => {
-  todayAlertBanner.classList.add('hidden');
-});
+btnAlertGoAgenda.addEventListener('click', () => irAAgenda(HOY_ISO));
+btnAlertClose.addEventListener('click', () => todayAlertBanner.classList.add('hidden'));
 
 btnOpenMod3.addEventListener('click', () => {
   alert('Este es el Botón 3. Cuando me digas qué función querés acá, lo armamos.');
@@ -236,16 +334,17 @@ function crearNuevaTarea() {
   }
 
   tareas.push({
-    id: 'tarea-' + Date.now(),
+    id: 'tarea-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
     texto: texto,
     prioridad: prioridadSeleccionada,
-    realizada: false
+    realizada: false,
+    updatedAt: Date.now()
   });
 
-  guardarTareas();
   renderizarTareas();
   inputTaskText.value = '';
   formNewTaskBox.classList.add('hidden');
+  guardarEnNube();
 }
 
 btnSaveTask.addEventListener('click', crearNuevaTarea);
@@ -308,13 +407,15 @@ function renderizarTareas() {
 
     fila.querySelector('[data-action="toggle"]').addEventListener('click', () => {
       tarea.realizada = !tarea.realizada;
-      guardarTareas();
+      tarea.updatedAt = Date.now();
       renderizarTareas();
+      guardarEnNube();
     });
     fila.querySelector('[data-action="delete"]').addEventListener('click', () => {
+      borrados.push(tarea.id);
       tareas = tareas.filter(x => x.id !== tarea.id);
-      guardarTareas();
       renderizarTareas();
+      guardarEnNube();
     });
 
     tasksList.appendChild(fila);
@@ -354,7 +455,6 @@ btnNewReminder.addEventListener('click', () => {
   inputReminderText.focus();
 });
 
-// Regla de Alejandro: Enter pasa al siguiente campo o guarda
 inputReminderTime.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') {
     e.preventDefault();
@@ -379,19 +479,20 @@ function guardarNuevoRecordatorio() {
   }
 
   recordatorios.push({
-    id: 'rec-' + Date.now(),
+    id: 'rec-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
     fecha: fechaSeleccionadaISO,
     hora: inputReminderTime.value || '',
     texto: texto,
-    realizada: false
+    realizada: false,
+    updatedAt: Date.now()
   });
 
   inputReminderText.value = '';
   inputReminderTime.value = '';
-  guardarRecordatorios();
   renderizarCalendario();
   renderizarRecordatoriosDelDia();
   inputReminderText.focus();
+  guardarEnNube();
 }
 
 function renderizarCalendario() {
@@ -399,7 +500,6 @@ function renderizarCalendario() {
   calendarGrid.innerHTML = '';
 
   const primerDiaSemana = new Date(anioActualVista, mesActualVista, 1).getDay();
-  // Ajustar para que la semana empiece en Lunes (0 = Lunes ... 6 = Domingo)
   const offsetLunes = (primerDiaSemana + 6) % 7;
   const totalDiasMes = new Date(anioActualVista, mesActualVista + 1, 0).getDate();
 
@@ -483,16 +583,18 @@ function renderizarRecordatoriosDelDia() {
 
     fila.querySelector('[data-action="toggle"]').addEventListener('click', () => {
       rec.realizada = !rec.realizada;
-      guardarRecordatorios();
+      rec.updatedAt = Date.now();
       renderizarCalendario();
       renderizarRecordatoriosDelDia();
+      guardarEnNube();
     });
 
     fila.querySelector('[data-action="delete"]').addEventListener('click', () => {
+      borrados.push(rec.id);
       recordatorios = recordatorios.filter(x => x.id !== rec.id);
-      guardarRecordatorios();
       renderizarCalendario();
       renderizarRecordatoriosDelDia();
+      guardarEnNube();
     });
 
     dayRemindersList.appendChild(fila);
@@ -505,9 +607,14 @@ function escaparHTML(str) {
   return div.innerHTML;
 }
 
-// Inicializar app
+// Inicializar app y sincronizar con la nube
 mostrarFechaHoy();
 actualizarContadoresYAlertas();
 renderizarTareas();
 renderizarCalendario();
 renderizarRecordatoriosDelDia();
+sincronizarDesdeNube();
+
+// Volver a sincronizar cuando el usuario vuelve a la ventana o cada 12 segundos
+window.addEventListener('focus', sincronizarDesdeNube);
+setInterval(sincronizarDesdeNube, 12000);
