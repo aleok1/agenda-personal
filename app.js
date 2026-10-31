@@ -1,3 +1,15 @@
+// Global error handler para visibilidad inmediata en pantalla si algo falla
+window.onerror = function(msg, url, lineNo, colNo, error) {
+  console.error('ERROR GLOBAL:', msg, lineNo, error);
+  const syncEl = document.getElementById('sync-status');
+  if (syncEl) {
+    syncEl.textContent = '⚠️ Error L' + lineNo;
+    syncEl.title = String(msg || '');
+    syncEl.style.background = 'rgba(239, 68, 68, 0.2)';
+    syncEl.style.color = '#f87171';
+  }
+};
+
 // Configuración de tiempos: 1 hora para sesión sin contraseña y 1 hora para auto-borrar tareas realizadas
 const UNA_HORA_MS = 60 * 60 * 1000;
 const STORAGE_SESSIONS_KEY = 'agenda_familiar_sesiones_v1';
@@ -27,10 +39,23 @@ function obtenerFechaISO(dateObj) {
 const hoyDate = new Date();
 const HOY_ISO = obtenerFechaISO(hoyDate);
 
-// Estado global de usuarios y sesión activa
+// Estado global de usuarios y sesión activa con respaldo inmediato
 let listaUsuariosPublica = [
-  { id: 'alejandro', nombre: 'Alejandro', esAdmin: true, tienePassword: false }
+  { id: 'alejandro', nombre: 'Alejandro', esAdmin: true, tienePassword: true },
+  { id: 'nico-7999', nombre: 'Nico', esAdmin: false, tienePassword: true },
+  { id: 'romi-7301', nombre: 'ROMI', esAdmin: false, tienePassword: true }
 ];
+
+try {
+  const guardados = localStorage.getItem('agenda_usuarios_cache');
+  if (guardados) {
+    const arr = JSON.parse(guardados);
+    if (Array.isArray(arr) && arr.length > 0) {
+      listaUsuariosPublica = arr;
+    }
+  }
+} catch (e) {}
+
 let usuarioActivo = null; // { id, nombre, esAdmin, password }
 let usuarioSeleccionadoParaLogin = null;
 
@@ -328,20 +353,36 @@ window.addEventListener('click', () => {
 // PANTALLA 0: SELECCIÓN DE USUARIO, LOGIN Y CREACIÓN DE NUEVOS USUARIOS
 // =========================================================================
 async function cargarListaDeUsuarios() {
+  // 1. Renderizado INMEDIATO: pinta la grilla al instante con la lista local para evitar demoras
+  renderizarGrillaUsuarios();
   actualizarEstadoSync('☁️ Conectando...', 'amarillo');
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 6000);
+
   try {
-    const res = await fetch(API_SYNC_URL + '?accion=lista_usuarios&t=' + Date.now(), { cache: 'no-store' });
+    const res = await fetch(API_SYNC_URL + '?accion=lista_usuarios&t=' + Date.now(), {
+      cache: 'no-store',
+      signal: controller.signal
+    });
+    clearTimeout(timer);
     if (res.ok) {
       const data = await res.json();
       if (Array.isArray(data.usuarios) && data.usuarios.length > 0) {
         listaUsuariosPublica = data.usuarios;
+        try {
+          localStorage.setItem('agenda_usuarios_cache', JSON.stringify(data.usuarios));
+        } catch (e) {}
+        renderizarGrillaUsuarios();
       }
       actualizarEstadoSync('☁️ En línea', 'verde');
+    } else {
+      actualizarEstadoSync('☁️ Sin conexión', 'amarillo');
     }
   } catch (e) {
+    clearTimeout(timer);
     actualizarEstadoSync('☁️ Sin conexión', 'amarillo');
   }
-  renderizarGrillaUsuarios();
 }
 
 const AVATARES_USUARIOS = ['👤', '🦁', '🐯', '🦊', '🐻', '🐼', '🐨', '🐶', '🐱', '🦄', '🦖', '🦅', '🦋', '🌟', '🔥', '⚡', '🍀', '🌸', '⚽', '🎮', '🎸', '🚀', '💎', '🕶️'];
