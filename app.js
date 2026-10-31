@@ -1271,9 +1271,9 @@ function volverAPantallaUsuarios() {
   if (btnToggleBiometrics) btnToggleBiometrics.classList.add('hidden');
   if (bannerEnrollBiometrics) bannerEnrollBiometrics.classList.add('hidden');
   if (biometricsModalBox) biometricsModalBox.classList.add('hidden');
-  btnAskOtherUser.classList.add('hidden');
-  btnAdminUsers.classList.add('hidden');
-  btnShareLink.classList.add('hidden');
+  if (btnAskOtherUser) btnAskOtherUser.classList.add('hidden');
+  if (btnAdminUsers) btnAdminUsers.classList.add('hidden');
+  if (btnShareLink) btnShareLink.classList.add('hidden');
 
   viewUsers.classList.remove('hidden');
   cargarListaDeUsuarios();
@@ -1385,18 +1385,25 @@ async function enviarTareaAOtroUsuario() {
 // =========================================================================
 // PANEL EXCLUSIVO DE ALEJANDRO: ELIMINAR USUARIOS
 // =========================================================================
-btnAdminUsers.addEventListener('click', () => {
-  askUserTaskBox.classList.add('hidden');
-  shareModalBox.classList.add('hidden');
-  adminUsersBox.classList.toggle('hidden');
-  if (!adminUsersBox.classList.contains('hidden')) {
-    renderizarListaAdminUsuarios();
-  }
-});
+if (btnAdminUsers) {
+  btnAdminUsers.addEventListener('click', () => {
+    if (askUserTaskBox) askUserTaskBox.classList.add('hidden');
+    if (shareModalBox) shareModalBox.classList.add('hidden');
+    if (adminUsersBox) {
+      adminUsersBox.classList.toggle('hidden');
+      if (!adminUsersBox.classList.contains('hidden')) {
+        renderizarListaAdminUsuarios();
+      }
+    }
+  });
+}
 
-btnCloseAdminUsers.addEventListener('click', () => adminUsersBox.classList.add('hidden'));
+if (btnCloseAdminUsers && adminUsersBox) {
+  btnCloseAdminUsers.addEventListener('click', () => adminUsersBox.classList.add('hidden'));
+}
 
 function renderizarListaAdminUsuarios() {
+  if (!adminUsersList) return;
   adminUsersList.innerHTML = '';
   const otrosUsuarios = listaUsuariosPublica.filter(u => !u.esAdmin && u.id !== 'alejandro');
 
