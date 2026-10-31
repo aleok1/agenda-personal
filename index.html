@@ -22,20 +22,8 @@
       <span id="sync-status" class="sync-badge">☁️ Conectando...</span>
     </div>
     <div class="header-right-group">
-      <button type="button" id="btn-toggle-biometrics" class="btn-share btn-bio-header hidden" title="Configurar ingreso con huella digital">
-        👆 Huella
-      </button>
-      <button type="button" id="btn-enable-notifications" class="btn-share hidden" title="Activar notificaciones en el celular">
-        🔔 Activar notificaciones
-      </button>
       <button id="btn-ask-other-user" class="btn-ask-task hidden" title="Dejarle una tarea a otro usuario de la app">
         📨 Pedir tarea a otro usuario
-      </button>
-      <button id="btn-admin-users" class="btn-admin-panel hidden" title="Eliminar usuarios (Solo Administrador)">
-        🛡️ Eliminar usuarios
-      </button>
-      <button id="btn-share-link" class="btn-share hidden" title="Compartir link externo">
-        🔗 Compartir
       </button>
       <div class="header-date" id="current-date"></div>
     </div>
@@ -298,10 +286,10 @@
         </button>
 
         <button id="btn-open-extras" class="big-card card-extras">
-          <div class="card-icon">✨</div>
-          <div class="card-title">4. Extras</div>
-          <div class="card-desc">1. Supermercado, 2. Gemini IA, 3. Heladera (Recetas) y 4. Entrenamiento (Rutinas IA)</div>
-          <div class="card-badge badge-extras" id="home-extras-counter">Súper + Gemini + Heladera + Gym</div>
+          <div class="card-icon">🧰</div>
+          <div class="card-title">4. Extras y Ajustes</div>
+          <div class="card-desc">Supermercado, Gemini IA, Heladera, Entrenamiento y Configuración</div>
+          <div class="card-badge badge-extras" id="home-extras-counter">5 opciones disponibles</div>
         </button>
       </div>
     </section>
@@ -527,26 +515,80 @@
       <div id="wallet-movements-list" class="tasks-list"></div>
     </section>
 
-    <!-- MÓDULO 4: EXTRAS (MENÚ INTERNO CON 1. LISTA DE SUPERMERCADO Y 2. GEMINI IA) -->
+    <!-- MÓDULO 4: EXTRAS Y HERRAMIENTAS -->
     <section id="view-extras" class="view hidden">
-      <!-- SELECTOR DE HERRAMIENTA DENTRO DE EXTRAS -->
-      <div class="extras-tabs-bar">
-        <button type="button" id="tab-extra-super" class="extra-tab-btn active">
-          🛒 1. Supermercado
+      <!-- 1. PANTALLA PRINCIPAL DE EXTRAS: MENÚ CON BOTONES DE TODAS LAS OPCIONES -->
+      <div id="extras-menu-section">
+        <div class="tasks-top-bar">
+          <div>
+            <h2>🧰 Extras y Herramientas</h2>
+            <p class="subtitle-text">Elegí la herramienta que querés abrir:</p>
+          </div>
+        </div>
+        <div class="home-grid">
+          <button type="button" id="card-extra-super" class="big-card card-primary">
+            <div class="card-icon">🛒</div>
+            <div class="card-title">1. Supermercado</div>
+            <div class="card-desc">Lista colaborativa compartida con quienes vivís. Los comestibles pasan a tu Heladera al comprar.</div>
+            <div class="card-badge" id="extra-super-counter">Abrir lista</div>
+          </button>
+
+          <button type="button" id="card-extra-gemini" class="big-card card-assistant">
+            <div class="card-icon">✨</div>
+            <div class="card-title">2. Gemini IA</div>
+            <div class="card-desc">Asistente de inteligencia artificial para preguntas de cualquier tema, redacción, ideas y recetas.</div>
+            <div class="card-badge badge-agenda">Consultar IA</div>
+          </button>
+
+          <button type="button" id="card-extra-fridge" class="big-card card-agenda">
+            <div class="card-icon">🧊</div>
+            <div class="card-title">3. Heladera</div>
+            <div class="card-desc">Cargá qué tenés disponible y generá recetas paso a paso con lo que hay en casa.</div>
+            <div class="card-badge" id="extra-fridge-counter">Ver ingredientes</div>
+          </button>
+
+          <button type="button" id="card-extra-workout" class="big-card card-primary" style="background: linear-gradient(135deg, rgba(6, 78, 59, 0.9), rgba(15, 23, 42, 0.9)); border-color: #34d399;">
+            <div class="card-icon">💪</div>
+            <div class="card-title">4. Entrenamiento</div>
+            <div class="card-desc">Rutinas de gimnasio y multigym divididas en 2 grupos musculares por día con paso a paso.</div>
+            <div class="card-badge" style="border-color: #34d399; color: #a7f3d0;">Ver rutina</div>
+          </button>
+
+          <button type="button" id="card-extra-settings" class="big-card" style="background: linear-gradient(135deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.9)); border: 1.5px solid #64748b;">
+            <div class="card-icon">⚙️</div>
+            <div class="card-title">5. Configuración</div>
+            <div class="card-desc">Tiempo de bloqueo de sesión, huella digital, notificaciones, compartir y administración.</div>
+            <div class="card-badge" style="border-color: #94a3b8; color: #cbd5e1;">Ajustes</div>
+          </button>
+        </div>
+      </div>
+
+      <!-- BARRA DE NAVEGACIÓN CUANDO SE ESTÁ ADENTRO DE UNA HERRAMIENTA -->
+      <div id="extras-subview-nav" class="extras-subview-nav hidden">
+        <button type="button" id="btn-back-to-extras-menu" class="btn-back" style="width: fit-content; margin-bottom: 6px;">
+          ← Volver al menú Extras
         </button>
-        <button type="button" id="tab-extra-gemini" class="extra-tab-btn">
-          ✨ 2. Gemini IA
-        </button>
-        <button type="button" id="tab-extra-fridge" class="extra-tab-btn">
-          🧊 3. Heladera
-        </button>
-        <button type="button" id="tab-extra-workout" class="extra-tab-btn">
-          💪 4. Entrenamiento
-        </button>
+        <div class="extras-tabs-bar">
+          <button type="button" id="tab-extra-super" class="extra-tab-btn">
+            🛒 1. Supermercado
+          </button>
+          <button type="button" id="tab-extra-gemini" class="extra-tab-btn">
+            ✨ 2. Gemini IA
+          </button>
+          <button type="button" id="tab-extra-fridge" class="extra-tab-btn">
+            🧊 3. Heladera
+          </button>
+          <button type="button" id="tab-extra-workout" class="extra-tab-btn">
+            💪 4. Entrenamiento
+          </button>
+          <button type="button" id="tab-extra-settings" class="extra-tab-btn">
+            ⚙️ 5. Configuración
+          </button>
+        </div>
       </div>
 
       <!-- SUB-SECCIÓN 1: LISTA DE SUPERMERCADO -->
-      <div id="subview-super">
+      <div id="subview-super" class="hidden">
         <div class="tasks-top-bar">
           <div>
             <h2>1. Lista de Supermercado</h2>
@@ -730,6 +772,98 @@
             <button type="button" id="btn-another-workout" class="btn-secondary">🔄 Cambiar variante de ejercicios</button>
           </div>
           <div id="workout-routine-content" class="workout-days-container"></div>
+        </div>
+      </div>
+
+      <!-- SUB-SECCIÓN 5: CONFIGURACIÓN -->
+      <div id="subview-settings" class="hidden">
+        <div class="tasks-top-bar">
+          <div>
+            <h2>⚙️ Configuración y Seguridad</h2>
+            <p class="subtitle-text">Personalizá tu tiempo de bloqueo, huella digital, notificaciones y opciones de tu cuenta</p>
+          </div>
+        </div>
+
+        <div class="settings-container">
+          <!-- 1. TIEMPO DE BLOQUEO POR INACTIVIDAD -->
+          <div class="settings-card">
+            <div class="settings-card-header">
+              <span class="settings-icon">⏱️</span>
+              <div>
+                <h3>Tiempo de bloqueo por inactividad</h3>
+                <p class="subtitle-text">Elegí cada cuánto tiempo debe cerrarse tu sesión automáticamente si no usás la app:</p>
+              </div>
+            </div>
+            <div class="settings-options-row" id="timeout-selector-group">
+              <button type="button" class="btn-setting-pill" data-minutes="1">1 min</button>
+              <button type="button" class="btn-setting-pill" data-minutes="15">15 min</button>
+              <button type="button" class="btn-setting-pill" data-minutes="60">60 min (1 hora)</button>
+              <button type="button" class="btn-setting-pill" data-minutes="240">4 horas</button>
+            </div>
+            <div id="timeout-saved-msg" class="share-copied-msg hidden" style="margin-top: 10px;">✓ Tiempo de bloqueo actualizado</div>
+          </div>
+
+          <!-- 2. HUELLA DIGITAL / BIOMETRÍA -->
+          <div class="settings-card">
+            <div class="settings-card-header">
+              <span class="settings-icon">👆</span>
+              <div>
+                <h3>Desbloqueo con Huella Digital</h3>
+                <p class="subtitle-text">Desbloqueá tu propio usuario en 1 segundo con tu huella sin ingresar contraseña cada vez:</p>
+              </div>
+            </div>
+            <div id="settings-bio-status" class="settings-status-box" style="margin-bottom: 12px;"></div>
+            <div id="settings-bio-actions"></div>
+          </div>
+
+          <!-- 3. NOTIFICACIONES DEL CELULAR -->
+          <div class="settings-card">
+            <div class="settings-card-header">
+              <span class="settings-icon">🔔</span>
+              <div>
+                <h3>Notificaciones en el Celular</h3>
+                <p class="subtitle-text">Avisos de tareas pedidas por otros, respuestas y recordatorios de la agenda:</p>
+              </div>
+            </div>
+            <div id="settings-push-status" class="settings-status-box" style="margin-bottom: 12px;"></div>
+            <div id="settings-push-actions" style="display: flex; gap: 10px; flex-wrap: wrap;">
+              <button type="button" id="btn-settings-enable-push" class="btn-primary" style="background: #059669; font-weight:700;">
+                🔔 Activar notificaciones
+              </button>
+              <button type="button" id="btn-settings-test-push" class="btn-secondary">
+                🧪 Probar notificación
+              </button>
+            </div>
+          </div>
+
+          <!-- 4. COMPARTIR LINK EXTERNO -->
+          <div class="settings-card">
+            <div class="settings-card-header">
+              <span class="settings-icon">🔗</span>
+              <div>
+                <h3>Compartir link para pedirte tareas</h3>
+                <p class="subtitle-text">Cualquier persona que entre a este link podrá enviarte una tarea poniendo su nombre, sin ver tu agenda:</p>
+              </div>
+            </div>
+            <div class="share-url-row" style="margin-top: 12px;">
+              <input type="text" id="input-settings-share-url" readonly>
+              <button type="button" id="btn-settings-copy-share" class="btn-primary">Copiar link</button>
+              <button type="button" id="btn-settings-whatsapp-share" class="btn-whatsapp">Enviar por WhatsApp</button>
+            </div>
+            <div id="settings-share-copied" class="share-copied-msg hidden" style="margin-top: 10px;">✓ ¡Link copiado al portapapeles!</div>
+          </div>
+
+          <!-- 5. ADMINISTRACIÓN DE USUARIOS (SOLO ALEJANDRO / ADMINISTRADOR) -->
+          <div class="settings-card admin-box" id="settings-admin-card" style="display: none;">
+            <div class="settings-card-header">
+              <span class="settings-icon">🛡️</span>
+              <div>
+                <h3 style="color: #f87171;">Administración de Usuarios (Exclusivo Alejandro)</h3>
+                <p class="subtitle-text">Como administrador podés eliminar usuarios de la aplicación (por privacidad no se muestra su contenido interno):</p>
+              </div>
+            </div>
+            <div id="settings-admin-users-list" class="tasks-list" style="margin-top: 14px;"></div>
+          </div>
         </div>
       </div>
     </section>
