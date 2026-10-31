@@ -423,6 +423,9 @@ function renderizarGrillaUsuarios() {
   });
 }
 
+// Renderizado inmediato al evaluar el script
+try { renderizarGrillaUsuarios(); } catch (e) {}
+
 async function seleccionarUsuarioParaEntrar(u) {
   createUserBox.classList.add('hidden');
   loginErrorMsg.classList.add('hidden');
