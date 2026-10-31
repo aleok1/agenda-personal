@@ -284,12 +284,26 @@ function registrarActividadSesion() {
   localStorage.setItem(STORAGE_SESSIONS_KEY, JSON.stringify(sesiones));
 }
 
+function obtenerTiempoBloqueoUsuario(usuarioId) {
+  let min = 60;
+  try {
+    const guardado = localStorage.getItem('agenda_bloqueo_' + usuarioId);
+    if (guardado) {
+      min = Number(guardado) || 60;
+    } else if (usuarioActivo && usuarioActivo.id === usuarioId && usuarioActivo.tiempoBloqueoMin) {
+      min = Number(usuarioActivo.tiempoBloqueoMin) || 60;
+    }
+  } catch (e) {}
+  return min * 60 * 1000;
+}
+
 function obtenerPasswordSesionVigente(usuarioId) {
   const sesiones = leerSesionesGuardadas();
   const info = sesiones[usuarioId];
   if (!info || !info.password || !info.ultimaActividad) return null;
-  // Si pasó más de 1 hora sin usarse, caduca y vuelve a pedir contraseña
-  if (Date.now() - info.ultimaActividad >= UNA_HORA_MS) {
+  const timeoutMs = obtenerTiempoBloqueoUsuario(usuarioId);
+  // Si pasó el tiempo configurado por el usuario sin usarse, caduca y vuelve a pedir contraseña
+  if (Date.now() - info.ultimaActividad >= timeoutMs) {
     delete sesiones[usuarioId];
     localStorage.setItem(STORAGE_SESSIONS_KEY, JSON.stringify(sesiones));
     return null;
@@ -476,8 +490,12 @@ async function intentarIngresoConPassword(u, pass, eraAutomatico) {
       nombre: u.nombre,
       esAdmin: Boolean(u.esAdmin),
       avatar: u.esAdmin ? '👑' : (data.usuario?.avatar || u.avatar || '👤'),
-      password: pass
+      password: pass,
+      tiempoBloqueoMin: data.tiempoBloqueoMin || Number(localStorage.getItem('agenda_bloqueo_' + u.id)) || 60
     };
+    if (data.tiempoBloqueoMin) {
+      localStorage.setItem('agenda_bloqueo_' + u.id, data.tiempoBloqueoMin);
+    }
     if (Array.isArray(data.usuarios)) {
       listaUsuariosPublica = data.usuarios;
     }
@@ -1198,17 +1216,16 @@ function entrarAMenuDeUsuarioActivo() {
   activeUserBadge.textContent = `${iconoUsuario} ${usuarioActivo.nombre}`;
   activeUserBadge.classList.remove('hidden');
   btnAskOtherUser.classList.remove('hidden');
-  btnShareLink.classList.remove('hidden');
-  actualizarBotonPermisoNotificaciones();
-  actualizarEstadoBotonHuella();
+  if (btnShareLink) btnShareLink.classList.add('hidden');
+  if (btnAdminUsers) btnAdminUsers.classList.add('hidden');
+  if (btnEnableNotifications) btnEnableNotifications.classList.add('hidden');
+  if (btnToggleBiometrics) btnToggleBiometrics.classList.add('hidden');
   sincronizarSuscripcionWebPush();
 
-  // Solo Alejandro (esAdmin) tiene la corona 👑 y ve Eliminar usuarios; el resto puede elegir su propio avatar
+  // Avatar selector: solo el admin Alejandro tiene la corona exclusiva 👑 fija
   if (usuarioActivo.esAdmin) {
-    btnAdminUsers.classList.remove('hidden');
     if (btnChangeAvatar) btnChangeAvatar.classList.add('hidden');
   } else {
-    btnAdminUsers.classList.add('hidden');
     if (btnChangeAvatar) btnChangeAvatar.classList.remove('hidden');
   }
 
@@ -1663,6 +1680,7 @@ async function guardarEnNube(avisoParaAutor) {
       supermercado: supermercado,
       heladera: heladera,
       entrenamiento: entrenamiento,
+      tiempoBloqueoMin: usuarioActivo.tiempoBloqueoMin || 60,
       borrados: borrados
     };
     if (avisoParaAutor) {
@@ -1712,8 +1730,7 @@ function actualizarContadoresYAlertas() {
   }
 
   if (homeExtrasCounter) {
-    const cantSuper = supermercado.length;
-    homeExtrasCounter.textContent = cantSuper === 1 ? '1 producto en lista' : `${cantSuper} productos en lista`;
+    homeExtrasCounter.textContent = '5 herramientas y ajustes';
   }
 
   if (cantHoy > 0) {
@@ -1836,9 +1853,9 @@ function irAExtras() {
   if (viewAssistant) viewAssistant.classList.add('hidden');
   viewExtras.classList.remove('hidden');
   btnHome.classList.remove('hidden');
-  renderizarSupermercado();
-  const inp = document.getElementById('input-super-item');
-  if (inp) inp.focus();
+
+  // Solo mostrar el menú de opciones (sin abrir Supermercado ni ninguna otra herramienta automáticamente)
+  mostrarMenuExtras();
 }
 
 // Manejar el botón físico/gesto "Atrás" del celular para que navegue adentro de la app sin salirse
@@ -1863,7 +1880,14 @@ window.addEventListener('popstate', () => {
       return;
     }
 
-    // 2. Si está adentro de alguno de los 5 módulos, volver al menú de 5 botones del usuario
+    // 2. Si está adentro de una herramienta de Extras, volver al menú de opciones de Extras
+    if (viewExtras && !viewExtras.classList.contains('hidden') && extrasSubviewNav && !extrasSubviewNav.classList.contains('hidden')) {
+      mostrarMenuExtras();
+      history.pushState({ vista: 'extras' }, '');
+      return;
+    }
+
+    // 3. Si está adentro de alguno de los módulos, volver al menú de inicio del usuario
     const enSubModulo =
       !viewTasks.classList.contains('hidden') ||
       !viewAgenda.classList.contains('hidden') ||
@@ -2463,50 +2487,309 @@ function renderizarBilletera() {
 }
 
 // ==========================================
-// EXTRAS -> PESTAÑAS (1. SUPERMERCADO, 2. GEMINI IA, 3. HELADERA, 4. ENTRENAMIENTO)
+// EXTRAS Y HERRAMIENTAS (1. SUPERMERCADO, 2. GEMINI IA, 3. HELADERA, 4. ENTRENAMIENTO, 5. CONFIGURACIÓN)
 // ==========================================
+const extrasMenuSection = document.getElementById('extras-menu-section');
+const extrasSubviewNav = document.getElementById('extras-subview-nav');
+const btnBackToExtrasMenu = document.getElementById('btn-back-to-extras-menu');
+
+const cardExtraSuper = document.getElementById('card-extra-super');
+const cardExtraGemini = document.getElementById('card-extra-gemini');
+const cardExtraFridge = document.getElementById('card-extra-fridge');
+const cardExtraWorkout = document.getElementById('card-extra-workout');
+const cardExtraSettings = document.getElementById('card-extra-settings');
+
 const tabExtraSuper = document.getElementById('tab-extra-super');
 const tabExtraGemini = document.getElementById('tab-extra-gemini');
 const tabExtraFridge = document.getElementById('tab-extra-fridge');
 const tabExtraWorkout = document.getElementById('tab-extra-workout');
+const tabExtraSettings = document.getElementById('tab-extra-settings');
+
 const subviewSuper = document.getElementById('subview-super');
 const subviewGemini = document.getElementById('subview-gemini');
 const subviewFridge = document.getElementById('subview-fridge');
 const subviewWorkout = document.getElementById('subview-workout');
+const subviewSettings = document.getElementById('subview-settings');
 
-const chatMessagesEl = document.getElementById('chat-messages');
-const inputChatMsg = document.getElementById('input-chat-msg');
-const btnSendChat = document.getElementById('btn-send-chat');
-const btnClearChat = document.getElementById('btn-clear-chat');
-let historialChatGemini = [];
+function mostrarMenuExtras() {
+  if (extrasMenuSection) extrasMenuSection.classList.remove('hidden');
+  if (extrasSubviewNav) extrasSubviewNav.classList.add('hidden');
+  if (subviewSuper) subviewSuper.classList.add('hidden');
+  if (subviewGemini) subviewGemini.classList.add('hidden');
+  if (subviewFridge) subviewFridge.classList.add('hidden');
+  if (subviewWorkout) subviewWorkout.classList.add('hidden');
+  if (subviewSettings) subviewSettings.classList.add('hidden');
 
-function activarTabExtras(cual) {
-  if (!tabExtraSuper || !tabExtraGemini) return;
-  tabExtraSuper.classList.toggle('active', cual === 'super');
-  tabExtraGemini.classList.toggle('active', cual === 'gemini');
-  if (tabExtraFridge) tabExtraFridge.classList.toggle('active', cual === 'fridge');
-  if (tabExtraWorkout) tabExtraWorkout.classList.toggle('active', cual === 'workout');
-
-  subviewSuper.classList.toggle('hidden', cual !== 'super');
-  subviewGemini.classList.toggle('hidden', cual !== 'gemini');
-  if (subviewFridge) subviewFridge.classList.toggle('hidden', cual !== 'fridge');
-  if (subviewWorkout) subviewWorkout.classList.toggle('hidden', cual !== 'workout');
-
-  if (cual === 'gemini' && inputChatMsg) inputChatMsg.focus();
-  if (cual === 'fridge') {
-    renderizarHeladera();
-    const fInput = document.getElementById('input-fridge-name');
-    if (fInput) fInput.focus();
+  const extraSuperCounter = document.getElementById('extra-super-counter');
+  if (extraSuperCounter) {
+    const cantSuper = Array.isArray(supermercado) ? supermercado.length : 0;
+    extraSuperCounter.textContent = cantSuper === 1 ? '1 producto en lista' : `${cantSuper} productos en lista`;
   }
-  if (cual === 'workout') {
-    renderizarEntrenamiento();
+  const extraFridgeCounter = document.getElementById('extra-fridge-counter');
+  if (extraFridgeCounter) {
+    const cantF = Array.isArray(heladera) ? heladera.length : 0;
+    extraFridgeCounter.textContent = cantF === 1 ? '1 ingrediente' : `${cantF} ingredientes`;
   }
 }
 
-if (tabExtraSuper) tabExtraSuper.addEventListener('click', () => activarTabExtras('super'));
-if (tabExtraGemini) tabExtraGemini.addEventListener('click', () => activarTabExtras('gemini'));
-if (tabExtraFridge) tabExtraFridge.addEventListener('click', () => activarTabExtras('fridge'));
-if (tabExtraWorkout) tabExtraWorkout.addEventListener('click', () => activarTabExtras('workout'));
+function abrirHerramientaExtras(cual) {
+  if (extrasMenuSection) extrasMenuSection.classList.add('hidden');
+  if (extrasSubviewNav) extrasSubviewNav.classList.remove('hidden');
+
+  if (tabExtraSuper) tabExtraSuper.classList.toggle('active', cual === 'super');
+  if (tabExtraGemini) tabExtraGemini.classList.toggle('active', cual === 'gemini');
+  if (tabExtraFridge) tabExtraFridge.classList.toggle('active', cual === 'fridge');
+  if (tabExtraWorkout) tabExtraWorkout.classList.toggle('active', cual === 'workout');
+  if (tabExtraSettings) tabExtraSettings.classList.toggle('active', cual === 'settings');
+
+  if (subviewSuper) subviewSuper.classList.toggle('hidden', cual !== 'super');
+  if (subviewGemini) subviewGemini.classList.toggle('hidden', cual !== 'gemini');
+  if (subviewFridge) subviewFridge.classList.toggle('hidden', cual !== 'fridge');
+  if (subviewWorkout) subviewWorkout.classList.toggle('hidden', cual !== 'workout');
+  if (subviewSettings) subviewSettings.classList.toggle('hidden', cual !== 'settings');
+
+  if (cual === 'super') {
+    renderizarSupermercado();
+    const inp = document.getElementById('input-super-item');
+    if (inp) inp.focus();
+  } else if (cual === 'gemini') {
+    if (inputChatMsg) inputChatMsg.focus();
+  } else if (cual === 'fridge') {
+    renderizarHeladera();
+    const fInput = document.getElementById('input-fridge-name');
+    if (fInput) fInput.focus();
+  } else if (cual === 'workout') {
+    renderizarEntrenamiento();
+  } else if (cual === 'settings') {
+    renderizarConfiguracion();
+  }
+}
+
+if (cardExtraSuper) cardExtraSuper.addEventListener('click', () => abrirHerramientaExtras('super'));
+if (cardExtraGemini) cardExtraGemini.addEventListener('click', () => abrirHerramientaExtras('gemini'));
+if (cardExtraFridge) cardExtraFridge.addEventListener('click', () => abrirHerramientaExtras('fridge'));
+if (cardExtraWorkout) cardExtraWorkout.addEventListener('click', () => abrirHerramientaExtras('workout'));
+if (cardExtraSettings) cardExtraSettings.addEventListener('click', () => abrirHerramientaExtras('settings'));
+
+if (btnBackToExtrasMenu) btnBackToExtrasMenu.addEventListener('click', mostrarMenuExtras);
+
+if (tabExtraSuper) tabExtraSuper.addEventListener('click', () => abrirHerramientaExtras('super'));
+if (tabExtraGemini) tabExtraGemini.addEventListener('click', () => abrirHerramientaExtras('gemini'));
+if (tabExtraFridge) tabExtraFridge.addEventListener('click', () => abrirHerramientaExtras('fridge'));
+if (tabExtraWorkout) tabExtraWorkout.addEventListener('click', () => abrirHerramientaExtras('workout'));
+if (tabExtraSettings) tabExtraSettings.addEventListener('click', () => abrirHerramientaExtras('settings'));
+
+async function renderizarConfiguracion() {
+  if (!usuarioActivo) return;
+
+  // 1. TIEMPO DE BLOQUEO POR INACTIVIDAD (1 min, 15 min, 60 min, 4 horas)
+  const minActual = Number(usuarioActivo.tiempoBloqueoMin) || Number(localStorage.getItem('agenda_bloqueo_' + usuarioActivo.id)) || 60;
+  const timeoutSelectorGroup = document.getElementById('timeout-selector-group');
+  if (timeoutSelectorGroup) {
+    const pills = timeoutSelectorGroup.querySelectorAll('.btn-setting-pill');
+    pills.forEach(pill => {
+      const min = Number(pill.getAttribute('data-minutes'));
+      pill.classList.toggle('active', min === minActual);
+      pill.onclick = async () => {
+        usuarioActivo.tiempoBloqueoMin = min;
+        localStorage.setItem('agenda_bloqueo_' + usuarioActivo.id, min);
+        pills.forEach(p => p.classList.toggle('active', Number(p.getAttribute('data-minutes')) === min));
+        const savedMsg = document.getElementById('timeout-saved-msg');
+        if (savedMsg) {
+          const texto = min === 240 ? '4 horas' : (min + ' minutos');
+          savedMsg.textContent = `✓ Sesión configurada para cerrarse tras ${texto} de inactividad`;
+          savedMsg.classList.remove('hidden');
+          setTimeout(() => savedMsg.classList.add('hidden'), 3000);
+        }
+        registrarActividadSesion();
+        await guardarEnNube();
+      };
+    });
+  }
+
+  // 2. HUELLA DIGITAL / BIOMETRÍA
+  const settingsBioStatus = document.getElementById('settings-bio-status');
+  const settingsBioActions = document.getElementById('settings-bio-actions');
+  if (settingsBioStatus && settingsBioActions) {
+    const soportaBio = await esBiometriaSoportada();
+    if (!soportaBio) {
+      settingsBioStatus.innerHTML = '⚠️ Este celular o navegador no soporta autenticación biométrica WebAuthn.';
+      settingsBioActions.innerHTML = '';
+    } else {
+      const tieneHuella = tieneHuellaGuardada(usuarioActivo.id);
+      if (tieneHuella) {
+        settingsBioStatus.innerHTML = `✅ La huella digital está <strong>activada</strong> para <strong>${escaparHTML(usuarioActivo.nombre)}</strong> en este celular.<br><span style="color:#a7f3d0; font-size:0.85rem;">Al tocar tu tarjeta de usuario al inicio podrás escanear tu dedo y entrar sin contraseña.</span>`;
+        settingsBioActions.innerHTML = `
+          <button type="button" id="btn-settings-deactivate-bio" class="btn-secondary" style="border-color:#ef4444; color:#fca5a5; font-weight:600;">
+            ❌ Desactivar huella en este celular
+          </button>
+        `;
+        const btnDeact = document.getElementById('btn-settings-deactivate-bio');
+        if (btnDeact) {
+          btnDeact.onclick = () => {
+            if (confirm(`¿Querés desactivar el ingreso con huella para ${usuarioActivo.nombre} en este celular?`)) {
+              desvincularHuella(usuarioActivo.id);
+              renderizarConfiguracion();
+            }
+          };
+        }
+      } else {
+        settingsBioStatus.innerHTML = `La huella digital <strong>no está activada</strong> para <strong>${escaparHTML(usuarioActivo.nombre)}</strong> en este celular. Podés activarla para desbloquear tu agenda con tu dedo en 1 segundo.`;
+        settingsBioActions.innerHTML = `
+          <button type="button" id="btn-settings-activate-bio" class="btn-primary" style="background:#059669; font-weight:700;">
+            👆 Activar mi huella en este celular
+          </button>
+        `;
+        const btnAct = document.getElementById('btn-settings-activate-bio');
+        if (btnAct) {
+          btnAct.onclick = async () => {
+            const ok = await activarHuellaParaUsuario(usuarioActivo, usuarioActivo.password);
+            if (ok) renderizarConfiguracion();
+          };
+        }
+      }
+    }
+  }
+
+  // 3. NOTIFICACIONES DEL CELULAR
+  const settingsPushStatus = document.getElementById('settings-push-status');
+  const btnSettingsEnablePush = document.getElementById('btn-settings-enable-push');
+  const btnSettingsTestPush = document.getElementById('btn-settings-test-push');
+  if (settingsPushStatus) {
+    if (!('Notification' in window)) {
+      settingsPushStatus.innerHTML = '⚠️ Este navegador no soporta notificaciones locales o push.';
+      if (btnSettingsEnablePush) btnSettingsEnablePush.style.display = 'none';
+      if (btnSettingsTestPush) btnSettingsTestPush.style.display = 'none';
+    } else if (Notification.permission === 'granted') {
+      settingsPushStatus.innerHTML = '✅ Las notificaciones están <strong>activadas y funcionando</strong> en este celular.<br><span style="color:#a7f3d0; font-size:0.85rem;">Recibirás avisos de tareas pedidas por otros usuarios, tareas realizadas y actividades programadas.</span>';
+      if (btnSettingsEnablePush) btnSettingsEnablePush.style.display = 'none';
+      if (btnSettingsTestPush) btnSettingsTestPush.style.display = 'inline-block';
+    } else if (Notification.permission === 'denied') {
+      settingsPushStatus.innerHTML = '⚠️ Las notificaciones están <strong>bloqueadas</strong> por el navegador.<br><span style="color:#cbd5e1; font-size:0.85rem;">Para permitirlas, tocá el icono del candado en la barra superior de tu navegador y habilitá el permiso de Notificaciones.</span>';
+      if (btnSettingsEnablePush) btnSettingsEnablePush.style.display = 'none';
+      if (btnSettingsTestPush) btnSettingsTestPush.style.display = 'none';
+    } else {
+      settingsPushStatus.innerHTML = 'Las notificaciones no están habilitadas aún. Activalas para recibir avisos de tareas y actividades en tu celular.';
+      if (btnSettingsEnablePush) btnSettingsEnablePush.style.display = 'inline-block';
+      if (btnSettingsTestPush) btnSettingsTestPush.style.display = 'none';
+    }
+  }
+
+  if (btnSettingsEnablePush) {
+    btnSettingsEnablePush.onclick = async () => {
+      await solicitarPermisoNotificaciones(true);
+      renderizarConfiguracion();
+    };
+  }
+
+  if (btnSettingsTestPush) {
+    btnSettingsTestPush.onclick = async () => {
+      await enviarNotificacionCelular('🔔 Notificación de prueba', '¡Las notificaciones de tu Agenda Familiar están activadas y funcionan genial!', 'test-' + Date.now());
+    };
+  }
+
+  // 4. COMPARTIR LINK EXTERNO
+  const inputSettingsShareUrl = document.getElementById('input-settings-share-url');
+  const btnSettingsCopyShare = document.getElementById('btn-settings-copy-share');
+  const btnSettingsWhatsappShare = document.getElementById('btn-settings-whatsapp-share');
+  const settingsShareCopied = document.getElementById('settings-share-copied');
+  const urlCompartir = obtenerUrlCompartirActual();
+  if (inputSettingsShareUrl) inputSettingsShareUrl.value = urlCompartir;
+
+  if (btnSettingsCopyShare) {
+    btnSettingsCopyShare.onclick = () => {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(urlCompartir).then(() => {
+          if (settingsShareCopied) {
+            settingsShareCopied.classList.remove('hidden');
+            setTimeout(() => settingsShareCopied.classList.add('hidden'), 2500);
+          }
+        }).catch(() => {
+          if (inputSettingsShareUrl) {
+            inputSettingsShareUrl.select();
+            document.execCommand('copy');
+          }
+        });
+      } else if (inputSettingsShareUrl) {
+        inputSettingsShareUrl.select();
+        document.execCommand('copy');
+        if (settingsShareCopied) {
+          settingsShareCopied.classList.remove('hidden');
+          setTimeout(() => settingsShareCopied.classList.add('hidden'), 2500);
+        }
+      }
+    };
+  }
+
+  if (btnSettingsWhatsappShare) {
+    btnSettingsWhatsappShare.onclick = () => {
+      const msg = `¡Hola! Podés dejarme tareas pendientes en mi agenda entrando a este link:\n${urlCompartir}`;
+      window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank');
+    };
+  }
+
+  // 5. ADMINISTRACIÓN DE USUARIOS (SOLO ADMINISTRADOR / ALEJANDRO)
+  const settingsAdminCard = document.getElementById('settings-admin-card');
+  const settingsAdminUsersList = document.getElementById('settings-admin-users-list');
+  if (settingsAdminCard && settingsAdminUsersList) {
+    if (usuarioActivo.esAdmin) {
+      settingsAdminCard.style.display = 'block';
+      renderizarListaAdminEnSettings(settingsAdminUsersList);
+    } else {
+      settingsAdminCard.style.display = 'none';
+    }
+  }
+}
+
+function renderizarListaAdminEnSettings(cont) {
+  if (!cont) return;
+  cont.innerHTML = '';
+  const otros = listaUsuariosPublica.filter(u => !u.esAdmin);
+  if (otros.length === 0) {
+    cont.innerHTML = '<div style="padding: 10px; color: var(--text-muted);">No hay otros usuarios creados para eliminar.</div>';
+    return;
+  }
+  otros.forEach(u => {
+    const fila = document.createElement('div');
+    fila.className = 'task-item';
+    fila.innerHTML = `
+      <div class="task-info">
+        <span class="priority-pill pill-hora">${u.avatar || '👤'} Usuario</span>
+        <span class="task-text">${escaparHTML(u.nombre)}</span>
+      </div>
+      <div class="task-actions">
+        <button type="button" class="btn-delete" data-del-user="${u.id}">🗑️ Eliminar usuario</button>
+      </div>
+    `;
+    const btnDel = fila.querySelector('button');
+    btnDel.onclick = async () => {
+      if (!confirm(`¿Estás SEGURO de eliminar definitivamente al usuario "${u.nombre}" y todos sus datos? Esta acción no se puede deshacer.`)) return;
+      try {
+        const res = await fetch(API_SYNC_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            accion: 'eliminar_usuario',
+            usuarioId: 'alejandro',
+            password: usuarioActivo.password,
+            eliminarUsuarioId: u.id
+          })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          listaUsuariosPublica = data.usuarios || listaUsuariosPublica.filter(x => x.id !== u.id);
+          renderizarListaAdminEnSettings(cont);
+          renderizarGrillaUsuarios();
+        } else {
+          alert(data.error || 'No se pudo eliminar el usuario');
+        }
+      } catch (e) {
+        alert('Error de conexión al eliminar usuario.');
+      }
+    };
+    cont.appendChild(fila);
+  });
+}
 
 function agregarBurbujaChat(texto, tipo) {
   if (!chatMessagesEl) return;
