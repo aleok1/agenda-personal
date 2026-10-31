@@ -8,7 +8,7 @@
   <link rel="icon" type="image/svg+xml" href="logo.svg">
   <link rel="apple-touch-icon" href="logo.svg">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="styles.css?v=20261031_05">
+  <link rel="stylesheet" href="styles.css?v=20261031_06">
 </head>
 <body>
   <header class="app-header">
@@ -99,7 +99,26 @@
       </div>
 
       <!-- GRILLA DE BOTONES DE USUARIOS (ALEJANDRO + OTROS USUARIOS) -->
-      <div id="users-grid" class="home-grid"></div>
+      <div id="users-grid" class="home-grid">
+        <button type="button" class="big-card card-primary" data-default-user="alejandro">
+          <div class="card-icon">👑</div>
+          <div class="card-title">Alejandro</div>
+          <div class="card-desc">Administrador de la aplicación</div>
+          <div class="card-badge">Ingresar</div>
+        </button>
+        <button type="button" class="big-card card-agenda" data-default-user="nico-7999">
+          <div class="card-icon">👤</div>
+          <div class="card-title">Nico</div>
+          <div class="card-desc">Agenda personal privada</div>
+          <div class="card-badge badge-agenda">Ingresar</div>
+        </button>
+        <button type="button" class="big-card card-agenda" data-default-user="romi-7301">
+          <div class="card-icon">👤</div>
+          <div class="card-title">ROMI</div>
+          <div class="card-desc">Agenda personal privada</div>
+          <div class="card-badge badge-agenda">Ingresar</div>
+        </button>
+      </div>
     </section>
 
     <!-- ========================================================== -->
@@ -914,6 +933,6 @@
     </section>
   </main>
 
-  <script src="app.js?v=20261031_05"></script>
+  <script src="app.js?v=20261031_06"></script>
 </body>
 </html>
