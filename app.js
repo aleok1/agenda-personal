@@ -2839,6 +2839,15 @@ function renderizarListaAdminEnSettings(cont) {
   });
 }
 
+// ==========================================
+// MÓDULO: ASISTENTE GEMINI (DENTRO DE EXTRAS)
+// ==========================================
+const chatMessagesEl = document.getElementById('chat-messages');
+const btnClearChat = document.getElementById('btn-clear-chat');
+const inputChatMsg = document.getElementById('input-chat-msg');
+const btnSendChat = document.getElementById('btn-send-chat');
+let historialChatGemini = [];
+
 function agregarBurbujaChat(texto, tipo) {
   if (!chatMessagesEl) return;
   const div = document.createElement('div');
