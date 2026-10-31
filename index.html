@@ -2,22 +2,240 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Agenda Personal — Alejandro</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#059669">
+  <title>Agenda Familiar</title>
+  <link rel="icon" type="image/svg+xml" href="logo.svg">
+  <link rel="apple-touch-icon" href="logo.svg">
+  <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <header class="app-header">
     <div class="header-brand">
-      <button id="btn-home" class="btn-back hidden" title="Volver al inicio">← Inicio</button>
-      <h1>Agenda Personal</h1>
+      <button id="btn-switch-user" class="btn-back hidden" title="Volver a la selección de usuarios">👥 Usuarios</button>
+      <button id="btn-home" class="btn-back hidden" title="Volver al menú de mi agenda">← Mi Menú</button>
+      <img src="logo.svg" alt="Logo Agenda Familiar" class="app-logo">
+      <h1 id="app-main-title">Agenda Familiar</h1>
+      <span id="active-user-badge" class="user-pill hidden"></span>
+      <button type="button" id="btn-change-avatar" class="btn-change-avatar hidden" title="Elegir o cambiar mi avatar">🎨 Avatar</button>
       <span id="sync-status" class="sync-badge">☁️ Conectando...</span>
     </div>
-    <div class="header-date" id="current-date"></div>
+    <div class="header-right-group">
+      <button type="button" id="btn-toggle-biometrics" class="btn-share btn-bio-header hidden" title="Configurar ingreso con huella digital">
+        👆 Huella
+      </button>
+      <button type="button" id="btn-enable-notifications" class="btn-share hidden" title="Activar notificaciones en el celular">
+        🔔 Activar notificaciones
+      </button>
+      <button id="btn-ask-other-user" class="btn-ask-task hidden" title="Dejarle una tarea a otro usuario de la app">
+        📨 Pedir tarea a otro usuario
+      </button>
+      <button id="btn-admin-users" class="btn-admin-panel hidden" title="Eliminar usuarios (Solo Administrador)">
+        🛡️ Eliminar usuarios
+      </button>
+      <button id="btn-share-link" class="btn-share hidden" title="Compartir link externo">
+        🔗 Compartir
+      </button>
+      <div class="header-date" id="current-date"></div>
+    </div>
   </header>
 
   <main class="container">
-    <!-- AVISO AUTOMÁTICO DE ACTIVIDADES DE HOY (al abrir la app) -->
+    <!-- ========================================================== -->
+    <!-- PANTALLA 0: SELECCIÓN DE USUARIO FAMILIAR Y CONTRASEÑA     -->
+    <!-- ========================================================== -->
+    <section id="view-users" class="view">
+      <div class="tasks-top-bar">
+        <div>
+          <h2>¿Quién va a usar la Agenda?</h2>
+          <p class="subtitle-text">Cada usuario tiene su propia agenda privada con contraseña</p>
+        </div>
+        <button id="btn-new-user-toggle" class="btn-add-plus">
+          <span class="plus-symbol">+</span> Nuevo usuario
+        </button>
+      </div>
+
+      <!-- CUADRO PARA INGRESAR O CREAR CONTRASEÑA AL TOCAR UN USUARIO -->
+      <div id="login-password-box" class="task-form-box hidden" style="max-width: 520px; margin: 0 auto 24px auto;">
+        <h3 id="login-box-title">Ingresar a la agenda</h3>
+        <p id="login-box-subtitle" class="subtitle-text" style="margin-bottom: 14px;"></p>
+        
+        <!-- BOTÓN DE DESBLOQUEO CON HUELLA DIGITAL -->
+        <div id="box-fingerprint-login" class="fingerprint-login-box hidden">
+          <button type="button" id="btn-login-fingerprint" class="btn-fingerprint-large">
+            <span class="fingerprint-pulse-icon">👆</span>
+            <span class="fingerprint-text">
+              <strong id="btn-login-fingerprint-title">Desbloquear con mi huella digital</strong>
+              <small>Tocá acá para escanear tu huella</small>
+            </span>
+          </button>
+          <div class="fingerprint-divider"><span>o ingresá tu contraseña</span></div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 14px;">
+          <label for="input-login-password" id="label-login-password">Contraseña</label>
+          <div class="password-wrapper">
+            <input type="password" id="input-login-password" placeholder="Escribí tu contraseña y apretá Enter..." autocomplete="off">
+            <button type="button" id="btn-toggle-login-pass" class="btn-eye" title="Mostrar u ocultar contraseña">👁️</button>
+          </div>
+        </div>
+        <div id="login-error-msg" class="login-error hidden"></div>
+        <div class="form-actions">
+          <button type="button" id="btn-cancel-login" class="btn-secondary">Cancelar</button>
+          <button type="button" id="btn-confirm-login" class="btn-primary">Entrar (Enter)</button>
+        </div>
+      </div>
+
+      <!-- CUADRO PARA CREAR UN + NUEVO USUARIO -->
+      <div id="create-user-box" class="task-form-box hidden" style="max-width: 580px; margin: 0 auto 24px auto;">
+        <h3>➕ Crear nuevo usuario</h3>
+        <p class="subtitle-text" style="margin-bottom: 14px;">Se creará una agenda nueva e independiente protegida por esta contraseña.</p>
+        <div class="form-row">
+          <div class="form-group flex-grow">
+            <label for="input-new-user-name">Nombre del usuario</label>
+            <input type="text" id="input-new-user-name" placeholder="Ej: Julita, Mamá, Franco..." autocomplete="off">
+          </div>
+          <div class="form-group flex-grow">
+            <label for="input-new-user-pass">Crear contraseña</label>
+            <div class="password-wrapper">
+              <input type="password" id="input-new-user-pass" placeholder="Contraseña privada..." autocomplete="off">
+              <button type="button" id="btn-toggle-new-pass" class="btn-eye" title="Mostrar u ocultar contraseña">👁️</button>
+            </div>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button type="button" id="btn-cancel-new-user" class="btn-secondary">Cancelar</button>
+          <button type="button" id="btn-save-new-user" class="btn-primary">Crear usuario (Enter)</button>
+        </div>
+      </div>
+
+      <!-- GRILLA DE BOTONES DE USUARIOS (ALEJANDRO + OTROS USUARIOS) -->
+      <div id="users-grid" class="home-grid"></div>
+    </section>
+
+    <!-- ========================================================== -->
+    <!-- CUADRO: PEDIR TAREA A OTRO USUARIO DE LA APP               -->
+    <!-- ========================================================== -->
+    <div id="ask-user-task-box" class="task-form-box share-box hidden">
+      <div class="share-box-header">
+        <h3>📨 Pedirle una tarea a otro usuario</h3>
+        <button id="btn-close-ask-user" class="btn-alert-dismiss">✕</button>
+      </div>
+      <p class="subtitle-text" style="margin-bottom: 14px;">
+        La tarea aparecerá directamente en la Lista de Tareas de esa persona indicando que se la pediste vos:
+      </p>
+      <div class="form-row">
+        <div class="form-group" style="min-width: 210px;">
+          <label for="select-target-user">¿Para qué usuario es?</label>
+          <select id="select-target-user" class="select-input"></select>
+        </div>
+        <div class="form-group flex-grow">
+          <label for="input-ask-user-text">¿Qué tarea necesitás que haga?</label>
+          <input type="text" id="input-ask-user-text" placeholder="Escribí la tarea y apretá Enter..." autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label>Prioridad</label>
+          <div class="priority-selector" id="ask-user-priority-selector">
+            <button type="button" class="prio-option prio-verde active" data-priority="simple">
+              <span class="dot dot-verde"></span> Simple
+            </button>
+            <button type="button" class="prio-option prio-amarillo" data-priority="intermedio">
+              <span class="dot dot-amarillo"></span> Intermedio
+            </button>
+            <button type="button" class="prio-option prio-rojo" data-priority="urgente">
+              <span class="dot dot-rojo"></span> Urgente
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button type="button" id="btn-send-ask-user" class="btn-primary">Enviar tarea al usuario (Enter)</button>
+      </div>
+      <div id="ask-user-success-msg" class="share-copied-msg hidden">✓ ¡Tarea enviada correctamente al usuario!</div>
+    </div>
+
+    <!-- ========================================================== -->
+    <!-- CUADRO EXCLUSIVO DE ALEJANDRO: ELIMINAR USUARIOS           -->
+    <!-- ========================================================== -->
+    <div id="admin-users-box" class="task-form-box admin-box hidden">
+      <div class="share-box-header">
+        <h3>🛡️ Administración de Usuarios (Exclusivo Alejandro)</h3>
+        <button id="btn-close-admin-users" class="btn-alert-dismiss">✕</button>
+      </div>
+      <p class="subtitle-text" style="margin-bottom: 14px;">
+        Como administrador podés eliminar usuarios de la aplicación (por privacidad no se muestra su contenido interno):
+      </p>
+      <div id="admin-users-list" class="tasks-list"></div>
+    </div>
+
+    <!-- CARTEL DE COMPARTIR LINK EXTERNO -->
+    <div id="share-modal-box" class="task-form-box share-box hidden">
+      <div class="share-box-header">
+        <h3>🔗 Link para que personas de afuera te sumen tareas</h3>
+        <button id="btn-close-share" class="btn-alert-dismiss">✕</button>
+      </div>
+      <p class="subtitle-text" style="margin-bottom: 12px;">
+        Cualquier persona que entre a este link podrá enviarte una tarea poniendo su nombre y la prioridad, sin ver tu agenda:
+      </p>
+      <div class="share-url-row">
+        <input type="text" id="input-share-url" readonly>
+        <button type="button" id="btn-copy-share-url" class="btn-primary">Copiar link</button>
+        <button type="button" id="btn-whatsapp-share" class="btn-whatsapp">Enviar por WhatsApp</button>
+      </div>
+      <div id="share-copied-msg" class="share-copied-msg hidden">✓ ¡Link copiado al portapapeles!</div>
+    </div>
+
+    <!-- SELECTOR DE AVATAR PARA LOS DEMÁS USUARIOS (LA CORONA 👑 ES EXCLUSIVA DEL ADMIN ALEJANDRO) -->
+    <div id="avatar-picker-box" class="task-form-box share-box hidden">
+      <div class="share-box-header">
+        <h3>🎨 Elegí tu avatar personal</h3>
+        <button id="btn-close-avatar-picker" class="btn-alert-dismiss">✕</button>
+      </div>
+      <p class="subtitle-text" style="margin-bottom: 12px;">
+        Tocá el icono que más te guste para tu perfil (la corona 👑 es exclusiva del administrador):
+      </p>
+      <div id="avatar-options-grid" class="avatar-options-grid"></div>
+    </div>
+
+    <!-- MODAL DE CONFIGURACIÓN DE HUELLA DIGITAL -->
+    <div id="biometrics-modal-box" class="task-form-box share-box hidden" style="border-color: #10b981; max-width: 540px; margin: 0 auto 24px auto;">
+      <div class="share-box-header">
+        <h3 style="display:flex; align-items:center; gap:8px;">👆 Ingreso con huella digital</h3>
+        <button id="btn-close-biometrics-modal" class="btn-alert-dismiss">✕</button>
+      </div>
+      <p id="biometrics-modal-status-text" class="subtitle-text" style="margin-bottom: 14px;"></p>
+      <div id="biometrics-modal-actions" class="form-actions" style="margin-top: 14px;"></div>
+    </div>
+
+    <!-- PREGUNTA POR ÚNICA VEZ AL ENTRAR: ¿CON QUIÉN VIVÍS? -->
+    <div id="housemates-prompt-box" class="task-form-box hidden" style="border-color: #10b981; margin-bottom: 24px;">
+      <h3 style="margin-bottom: 6px;">🏠 ¿Con quién vivís en la misma casa?</h3>
+      <p class="subtitle-text" style="margin-bottom: 14px;">
+        Te lo preguntamos por única vez para que la Lista de Supermercado quede compartida automáticamente entre ustedes:
+      </p>
+      <div id="housemates-options-list" class="priority-selector" style="margin-bottom: 16px;"></div>
+      <div class="form-actions">
+        <button type="button" id="btn-live-alone" class="btn-secondary">Vivo solo / Con nadie de la lista</button>
+        <button type="button" id="btn-save-housemates" class="btn-primary">Guardar mi casa</button>
+      </div>
+    </div>
+
+    <!-- AVISO DE TAREAS QUE ENVIÓ EL USUARIO Y FUERON REALIZADAS O RECHAZADAS -->
+    <div id="task-responses-banner" class="today-alert hidden" style="border-color: #34d399; background: rgba(6, 78, 59, 0.9);">
+      <div class="today-alert-header">
+        <div class="today-alert-title">
+          <span class="bell-icon">📨</span>
+          <strong>Respuesta a las tareas que enviaste:</strong>
+        </div>
+        <div class="today-alert-actions">
+          <button id="btn-clear-task-responses" class="btn-alert-link">✓ Entendido (Limpiar avisos)</button>
+        </div>
+      </div>
+      <ul id="task-responses-list" class="today-alert-list"></ul>
+    </div>
+
+    <!-- AVISO AUTOMÁTICO DE ACTIVIDADES DE HOY -->
     <div id="today-alert-banner" class="today-alert hidden">
       <div class="today-alert-header">
         <div class="today-alert-title">
@@ -32,9 +250,31 @@
       <ul id="today-alert-list" class="today-alert-list"></ul>
     </div>
 
-    <!-- PANTALLA DE INGRESO: 3 GRANDES BOTONES -->
-    <section id="view-home" class="view">
-      <h2 class="section-subtitle">Seleccioná una sección para empezar</h2>
+    <!-- PANTALLA INTERNA DEL USUARIO: 4 GRANDES BOTONES -->
+    <section id="view-home" class="view hidden">
+      <h2 class="section-subtitle" id="user-welcome-subtitle">Seleccioná una sección de tu agenda</h2>
+
+      <!-- BANNER SUGERENCIA DE HUELLA DIGITAL -->
+      <div id="banner-enroll-biometrics" class="today-alert hidden" style="border-color: #10b981; background: rgba(6, 78, 59, 0.95); margin-bottom: 20px;">
+        <div class="today-alert-header">
+          <div class="today-alert-title">
+            <span class="bell-icon">👆</span>
+            <div>
+              <strong id="banner-bio-title">¿Desbloquear con tu huella digital en este celular?</strong>
+              <p style="margin: 4px 0 0 0; font-size: 0.85rem; color: #d1fae5;">
+                Podés activar el desbloqueo biométrico para entrar a tu agenda en 1 segundo con tu huella, sin escribir tu contraseña cada vez. Solo tu huella abrirá tu perfil.
+              </p>
+            </div>
+          </div>
+          <div class="today-alert-actions" style="margin-top: 8px;">
+            <button type="button" id="btn-activate-bio-banner" class="btn-primary" style="background: #10b981; font-weight: 700; padding: 7px 16px; font-size: 0.88rem;">
+              👆 Activar mi huella ahora
+            </button>
+            <button type="button" id="btn-dismiss-bio-banner" class="btn-alert-dismiss" title="Descartar por ahora">✕</button>
+          </div>
+        </div>
+      </div>
+
       <div class="home-grid">
         <button id="btn-open-tasks" class="big-card card-primary">
           <div class="card-icon">📋</div>
@@ -50,11 +290,18 @@
           <div class="card-badge badge-agenda" id="home-agenda-counter">0 para hoy</div>
         </button>
 
-        <button id="btn-open-mod3" class="big-card card-tertiary">
-          <div class="card-icon">🗂️</div>
-          <div class="card-title">3. Próximo Módulo</div>
-          <div class="card-desc">Disponible para el tercer punto que definamos</div>
-          <div class="card-badge badge-muted">En espera</div>
+        <button id="btn-open-wallet" class="big-card card-wallet">
+          <div class="card-icon">💰</div>
+          <div class="card-title">3. Billetera</div>
+          <div class="card-desc">Sueldo, ingresos y gastos corrientes con saldo disponible en efectivo y virtual</div>
+          <div class="card-badge badge-wallet" id="home-wallet-counter">Efectivo $0 | Virtual $0</div>
+        </button>
+
+        <button id="btn-open-extras" class="big-card card-extras">
+          <div class="card-icon">✨</div>
+          <div class="card-title">4. Extras</div>
+          <div class="card-desc">1. Supermercado, 2. Gemini IA, 3. Heladera (Recetas) y 4. Entrenamiento (Rutinas IA)</div>
+          <div class="card-badge badge-extras" id="home-extras-counter">Súper + Gemini + Heladera + Gym</div>
         </button>
       </div>
     </section>
@@ -66,12 +313,16 @@
           <h2>Lista de Tareas del Día a Día</h2>
           <p class="subtitle-text">Marcá si la realizaste o eliminala de la lista</p>
         </div>
-        <button id="btn-new-task" class="btn-add-plus" title="Agregar nueva tarea">
-          <span class="plus-symbol">+</span> Nueva tarea
-        </button>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button id="btn-share-from-tasks" class="btn-share" title="Compartir link para que me agreguen tareas">
+            🔗 Compartir
+          </button>
+          <button id="btn-new-task" class="btn-add-plus" title="Agregar nueva tarea">
+            <span class="plus-symbol">+</span> Nueva tarea
+          </button>
+        </div>
       </div>
 
-      <!-- FORMULARIO DESPLEGABLE CON EL BOTÓN + -->
       <div id="form-new-task-box" class="task-form-box hidden">
         <h3>Cargar nueva tarea</h3>
         <div class="form-row">
@@ -100,14 +351,12 @@
         </div>
       </div>
 
-      <!-- FILTROS RÁPIDOS -->
       <div class="tasks-filters">
         <button class="filter-chip active" data-filter="todas">Todas</button>
         <button class="filter-chip" data-filter="pendientes">Pendientes</button>
         <button class="filter-chip" data-filter="realizadas">Realizadas</button>
       </div>
 
-      <!-- LISTA DE TAREAS -->
       <div id="tasks-list" class="tasks-list"></div>
     </section>
 
@@ -122,7 +371,6 @@
       </div>
 
       <div class="agenda-layout">
-        <!-- COLUMNA IZQUIERDA: CALENDARIO DEL MES -->
         <div class="calendar-card">
           <div class="calendar-header">
             <button id="btn-prev-month" class="btn-month-nav" title="Mes anterior">◀</button>
@@ -143,7 +391,6 @@
           <div id="calendar-grid" class="calendar-grid"></div>
         </div>
 
-        <!-- COLUMNA DERECHA: RECORDATORIOS DEL DÍA SELECCIONADO -->
         <div class="day-panel-card">
           <div class="day-panel-header">
             <div>
@@ -155,11 +402,10 @@
             </button>
           </div>
 
-          <!-- FORMULARIO PARA GUARDAR RECORDATORIO EN EL DÍA -->
           <div id="form-reminder-box" class="reminder-form-box">
             <div class="reminder-inputs-row">
               <div class="form-group time-group">
-                <label for="input-reminder-time">Hora (opcional)</label>
+                <label for="input-reminder-time">Hora de la actividad</label>
                 <input type="time" id="input-reminder-time">
               </div>
               <div class="form-group flex-grow">
@@ -167,13 +413,368 @@
                 <input type="text" id="input-reminder-text" placeholder="Escribí el recordatorio y apretá Enter..." autocomplete="off">
               </div>
             </div>
+
+            <div class="reminder-notify-row" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:14px;">
+              <label class="super-edible-check-label" for="check-reminder-notify" id="label-reminder-notify">
+                <input type="checkbox" id="check-reminder-notify" checked>
+                <span class="super-edible-box">✓</span>
+                <span>🔔 <b>Notificarme en el celular</b></span>
+              </label>
+
+              <div id="reminder-advance-wrap" class="form-group" style="flex:1 1 200px; margin-bottom:0;">
+                <label for="select-reminder-advance" style="font-size:0.82rem;">¿Cuánto tiempo antes avisar?</label>
+                <select id="select-reminder-advance" class="select-input">
+                  <option value="0">A la hora exacta (0 min antes)</option>
+                  <option value="5">5 minutos antes</option>
+                  <option value="10">10 minutos antes</option>
+                  <option value="15" selected>15 minutos antes</option>
+                  <option value="30">30 minutos antes</option>
+                  <option value="60">1 hora antes</option>
+                  <option value="120">2 horas antes</option>
+                  <option value="1440">1 día antes (24 hs antes)</option>
+                </select>
+              </div>
+            </div>
+
             <div class="form-actions">
               <button type="button" id="btn-save-reminder" class="btn-primary">Guardar en este día (Enter)</button>
             </div>
           </div>
 
-          <!-- LISTA DE RECORDATORIOS DE ESE DÍA -->
           <div id="day-reminders-list" class="tasks-list"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- MÓDULO 3: BILLETERA -->
+    <section id="view-wallet" class="view hidden">
+      <div class="tasks-top-bar">
+        <div>
+          <h2>Billetera Personal</h2>
+          <p class="subtitle-text">Control de dinero disponible en efectivo y billetera virtual</p>
+        </div>
+      </div>
+
+      <div class="wallet-balances-grid">
+        <div class="balance-card balance-efectivo">
+          <div class="balance-label">💵 Dinero Disponible en Efectivo</div>
+          <div class="balance-amount" id="balance-efectivo-val">$ 0</div>
+        </div>
+        <div class="balance-card balance-virtual">
+          <div class="balance-label">📱 Dinero Disponible en Billetera Virtual</div>
+          <div class="balance-amount" id="balance-virtual-val">$ 0</div>
+        </div>
+      </div>
+
+      <div class="wallet-buttons-grid">
+        <button type="button" class="wallet-action-btn btn-sueldo" data-wallet-type="sueldo">
+          <span class="wallet-btn-icon">💼</span>
+          <span class="wallet-btn-title">Sueldo</span>
+          <span class="wallet-btn-sub">Cargar ingreso mensual</span>
+        </button>
+
+        <button type="button" class="wallet-action-btn btn-ingreso" data-wallet-type="ingreso">
+          <span class="wallet-btn-icon">➕</span>
+          <span class="wallet-btn-title">Ingresos corrientes</span>
+          <span class="wallet-btn-sub">Sumar un ingreso extra</span>
+        </button>
+
+        <button type="button" class="wallet-action-btn btn-gasto" data-wallet-type="gasto">
+          <span class="wallet-btn-icon">➖</span>
+          <span class="wallet-btn-title">Gasto corriente</span>
+          <span class="wallet-btn-sub">Descontar un gasto</span>
+        </button>
+      </div>
+
+      <div id="wallet-form-box" class="task-form-box hidden">
+        <h3 id="wallet-form-title">Cargar movimiento</h3>
+        <div class="form-row">
+          <div class="form-group" style="min-width: 200px;">
+            <label for="input-wallet-amount">Monto ($)</label>
+            <input type="number" id="input-wallet-amount" placeholder="Ej: 50000" min="0" step="any">
+          </div>
+
+          <div class="form-group">
+            <label>¿Dónde impacta?</label>
+            <div class="priority-selector" id="wallet-medio-selector">
+              <button type="button" class="prio-option prio-verde active" data-medio="efectivo">
+                💵 Efectivo
+              </button>
+              <button type="button" class="prio-option prio-virtual" data-medio="virtual">
+                📱 Billetera Virtual
+              </button>
+            </div>
+          </div>
+
+          <div class="form-group flex-grow" id="wallet-desc-group">
+            <label for="input-wallet-desc" id="label-wallet-desc">¿De qué es?</label>
+            <input type="text" id="input-wallet-desc" placeholder="Escribí de qué es..." autocomplete="off">
+          </div>
+        </div>
+        <div class="form-actions">
+          <button type="button" id="btn-cancel-wallet" class="btn-secondary">Cancelar</button>
+          <button type="button" id="btn-save-wallet" class="btn-primary">Guardar movimiento (Enter)</button>
+        </div>
+      </div>
+
+      <div class="wallet-history-header">
+        <h3 class="wallet-history-title" style="margin-bottom: 0;">Movimientos por fecha</h3>
+        <div class="wallet-date-filter-wrap">
+          <label for="select-wallet-date" style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600;">📅 Elegir día:</label>
+          <select id="select-wallet-date" class="select-input wallet-date-select"></select>
+        </div>
+      </div>
+      <div id="wallet-movements-list" class="tasks-list"></div>
+    </section>
+
+    <!-- MÓDULO 4: EXTRAS (MENÚ INTERNO CON 1. LISTA DE SUPERMERCADO Y 2. GEMINI IA) -->
+    <section id="view-extras" class="view hidden">
+      <!-- SELECTOR DE HERRAMIENTA DENTRO DE EXTRAS -->
+      <div class="extras-tabs-bar">
+        <button type="button" id="tab-extra-super" class="extra-tab-btn active">
+          🛒 1. Supermercado
+        </button>
+        <button type="button" id="tab-extra-gemini" class="extra-tab-btn">
+          ✨ 2. Gemini IA
+        </button>
+        <button type="button" id="tab-extra-fridge" class="extra-tab-btn">
+          🧊 3. Heladera
+        </button>
+        <button type="button" id="tab-extra-workout" class="extra-tab-btn">
+          💪 4. Entrenamiento
+        </button>
+      </div>
+
+      <!-- SUB-SECCIÓN 1: LISTA DE SUPERMERCADO -->
+      <div id="subview-super">
+        <div class="tasks-top-bar">
+          <div>
+            <h2>1. Lista de Supermercado</h2>
+            <p class="subtitle-text" id="super-subtitle-info">Agregá productos con su cantidad; los marcados como "Comestibles" pasan solos a tu Heladera al comprarlos</p>
+          </div>
+          <button id="btn-finish-shopping" class="btn-buy-finish" title="Cerrar compra, quitar lo tildado y pasar los comestibles a la Heladera">
+            🛒 Comprar (Cerrar compra)
+          </button>
+        </div>
+
+        <div class="task-form-box" style="margin-bottom: 20px;">
+          <div class="form-row" style="margin-bottom: 12px; align-items: flex-end;">
+            <div class="form-group flex-grow">
+              <label for="input-super-item">Producto</label>
+              <input type="text" id="input-super-item" placeholder="Ej: Leche, pollo, arroz, detergente..." autocomplete="off">
+            </div>
+            <div class="form-group" style="min-width: 170px; flex: 1 1 170px;">
+              <label for="input-super-qty">Cantidad</label>
+              <input type="text" id="input-super-qty" placeholder="Ej: 2 litros, 1 kg, 3 u." autocomplete="off">
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+            <label class="super-edible-check-label" for="check-super-edible">
+              <input type="checkbox" id="check-super-edible" checked>
+              <span class="super-edible-box" id="super-edible-box-ui">✓</span>
+              <span>🍎 <b>Comestibles</b> <small style="color: #bbf7d0;">(se suma directo a 🧊 Heladera al comprar)</small></span>
+            </label>
+            <button type="button" id="btn-add-super-item" class="btn-add-plus">
+              <span class="plus-symbol">+</span> Añadir a la lista
+            </button>
+          </div>
+        </div>
+
+        <div id="super-items-list" class="tasks-list"></div>
+      </div>
+
+      <!-- SUB-SECCIÓN 2: GEMINI IA (CHAT GENERAL PARA TODO) -->
+      <div id="subview-gemini" class="hidden">
+        <div class="tasks-top-bar">
+          <div>
+            <h2>✨ 2. Gemini IA</h2>
+            <p class="subtitle-text">Preguntame sobre cualquier tema, pedime ideas, textos, cálculos o lo que necesites</p>
+          </div>
+          <button id="btn-clear-chat" class="btn-secondary">Nueva conversación</button>
+        </div>
+
+        <div class="chat-box-container">
+          <div id="chat-messages" class="chat-messages"></div>
+          <div class="chat-input-row">
+            <input type="text" id="input-chat-msg" placeholder="Preguntale cualquier cosa a Gemini..." autocomplete="off">
+            <button type="button" id="btn-send-chat" class="btn-primary">Enviar</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- SUB-SECCIÓN 3: HELADERA (INGREDIENTES DISPONIBLES + GENERAR RECETA CON IA) -->
+      <div id="subview-fridge" class="hidden">
+        <div class="tasks-top-bar">
+          <div>
+            <h2>🧊 3. Heladera — ¿Qué cocinamos hoy?</h2>
+            <p class="subtitle-text">Cargá los ingredientes y cantidades que tenés disponibles y la IA te armará la receta paso a paso</p>
+          </div>
+          <button type="button" id="btn-generate-recipe" class="btn-buy-finish" title="Generar una receta con los ingredientes de tu heladera">
+            🍳 Generar Receta
+          </button>
+        </div>
+
+        <!-- FORMULARIO PARA CARGAR INGREDIENTE Y CANTIDAD -->
+        <div class="task-form-box" style="margin-bottom: 20px;">
+          <div class="form-row" style="margin-bottom: 0; align-items: flex-end;">
+            <div class="form-group flex-grow">
+              <label for="input-fridge-name">Ingrediente disponible</label>
+              <input type="text" id="input-fridge-name" placeholder="Ej: Pollo, papas, huevos, arroz, queso..." autocomplete="off">
+            </div>
+            <div class="form-group" style="min-width: 180px; flex: 1 1 180px;">
+              <label for="input-fridge-qty">Cantidad que tenés</label>
+              <input type="text" id="input-fridge-qty" placeholder="Ej: 2 pechugas, 500g, 3 u." autocomplete="off">
+            </div>
+            <button type="button" id="btn-add-fridge-item" class="btn-add-plus">
+              <span class="plus-symbol">+</span> Agregar ingrediente
+            </button>
+          </div>
+        </div>
+
+        <!-- LISTA DE INGREDIENTES EN LA HELADERA -->
+        <div id="fridge-items-list" class="tasks-list" style="margin-bottom: 22px;"></div>
+
+        <!-- RESULTADO DE LA RECETA GENERADA POR LA IA -->
+        <div id="fridge-recipe-box" class="task-form-box hidden" style="border-color: #f59e0b;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+            <h3 style="margin-bottom:0; color:#fbbf24;">👨‍🍳 Receta sugerida con tus ingredientes</h3>
+            <button type="button" id="btn-another-recipe" class="btn-secondary">🔄 Probar otra receta distinta</button>
+          </div>
+          <div id="fridge-recipe-content" class="recipe-text-body"></div>
+        </div>
+      </div>
+
+      <!-- SUB-SECCIÓN 4: ENTRENAMIENTO (ZONAS + DÍAS + TIEMPO + DURACIÓN + IA CON MANCUERNAS Y MULTIGYM) -->
+      <div id="subview-workout" class="hidden">
+        <div class="tasks-top-bar">
+          <div>
+            <h2>💪 4. Entrenamiento — Rutina Paso a Paso</h2>
+            <p class="subtitle-text">Seleccioná los grupos musculares (se dividen de a 2 grupos por día) y elegí cuántos días por semana vas a entrenar con <b>Mancuernas + Máquina Multigym con poleas</b></p>
+          </div>
+          <button type="button" id="btn-generate-workout" class="btn-buy-finish" title="Generar rutina de entrenamiento con listado de ejercicios paso a paso">
+            💪 Generar Rutina
+          </button>
+        </div>
+
+        <div class="task-form-box" style="margin-bottom: 20px;">
+          <div class="form-group" style="margin-bottom: 16px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:6px;">
+              <label style="margin-bottom:0;">1. Grupos musculares a entrenar (podés tildar varios o todos)</label>
+              <button type="button" id="btn-select-all-zones" class="btn-secondary" style="padding:5px 12px; font-size:0.82rem;">
+                ✓ Seleccionar todos (dividir de a 2 por día)
+              </button>
+            </div>
+            <div class="priority-selector" id="workout-zones-selector">
+              <button type="button" class="prio-option prio-verde active" data-zone="Pecho">
+                <span class="super-edible-box" style="width:20px; height:20px; font-size:0.8rem;">✓</span> Pecho
+              </button>
+              <button type="button" class="prio-option prio-verde" data-zone="Espalda">
+                <span class="super-edible-box" style="width:20px; height:20px; font-size:0.8rem; background:transparent; color:transparent; border-color:#64748b;"></span> Espalda
+              </button>
+              <button type="button" class="prio-option prio-verde" data-zone="Bíceps">
+                <span class="super-edible-box" style="width:20px; height:20px; font-size:0.8rem; background:transparent; color:transparent; border-color:#64748b;"></span> Bíceps
+              </button>
+              <button type="button" class="prio-option prio-verde" data-zone="Tríceps">
+                <span class="super-edible-box" style="width:20px; height:20px; font-size:0.8rem; background:transparent; color:transparent; border-color:#64748b;"></span> Tríceps
+              </button>
+              <button type="button" class="prio-option prio-verde" data-zone="Hombros">
+                <span class="super-edible-box" style="width:20px; height:20px; font-size:0.8rem; background:transparent; color:transparent; border-color:#64748b;"></span> Hombros
+              </button>
+              <button type="button" class="prio-option prio-verde" data-zone="Piernas">
+                <span class="super-edible-box" style="width:20px; height:20px; font-size:0.8rem; background:transparent; color:transparent; border-color:#64748b;"></span> Piernas
+              </button>
+            </div>
+            <div id="workout-split-preview" class="workout-split-preview"></div>
+          </div>
+
+          <div class="form-row" style="margin-bottom: 0; align-items: flex-end;">
+            <div class="form-group flex-grow">
+              <label for="input-workout-days">2. ¿Cuántos días a la semana harás ejercicio?</label>
+              <select id="input-workout-days" class="select-input">
+                <option value="1">1 día por semana</option>
+                <option value="2">2 días por semana</option>
+                <option value="3" selected>3 días por semana (Ideal 2 grupos por día)</option>
+                <option value="4">4 días por semana</option>
+                <option value="5">5 días por semana</option>
+                <option value="6">6 días por semana</option>
+              </select>
+            </div>
+            <div class="form-group flex-grow">
+              <label for="input-workout-time">3. Tiempo por sesión</label>
+              <select id="input-workout-time" class="select-input">
+                <option value="30 minutos">30 minutos</option>
+                <option value="45 minutos" selected>45 minutos</option>
+                <option value="60 minutos">60 minutos (1 hora)</option>
+                <option value="90 minutos">90 minutos (1 hora y media)</option>
+              </select>
+            </div>
+            <div class="form-group flex-grow">
+              <label for="input-workout-duration">4. Duración antes de vencer</label>
+              <select id="input-workout-duration" class="select-input">
+                <option value="2 semanas">2 semanas</option>
+                <option value="1 mes" selected>1 mes</option>
+                <option value="2 meses">2 meses</option>
+                <option value="3 meses">3 meses</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- RESULTADO DE LA RUTINA GENERADA CON LISTADO DE EJERCICIOS PASO A PASO -->
+        <div id="workout-routine-box" class="task-form-box hidden" style="border-color: #22c55e;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:14px;">
+            <div>
+              <h3 style="margin-bottom:4px; color:#4ade80;">🏋️‍♂️ Tu Plan Semanal de Ejercicios Paso a Paso</h3>
+              <span id="workout-expiry-badge" class="priority-pill pill-simple">Vigencia: 1 mes</span>
+            </div>
+            <button type="button" id="btn-another-workout" class="btn-secondary">🔄 Cambiar variante de ejercicios</button>
+          </div>
+          <div id="workout-routine-content" class="workout-days-container"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PANTALLA PÚBLICA PARA PERSONAS EXTERNAS (?modo=externo) -->
+    <section id="view-external" class="view hidden">
+      <div class="task-form-box" style="max-width: 680px; margin: 10px auto;">
+        <h2 style="font-size: 1.4rem; margin-bottom: 6px;">📋 Agregar una tarea</h2>
+        <p class="subtitle-text" style="margin-bottom: 20px;">
+          Completá tu nombre, escribí la tarea y elegí el nivel de prioridad.
+        </p>
+
+        <div class="form-group" style="margin-bottom: 16px;">
+          <label for="input-ext-name">Tu nombre</label>
+          <input type="text" id="input-ext-name" placeholder="Ej: Julita, Martín, Proveedor..." autocomplete="name">
+        </div>
+
+        <div class="form-group" style="margin-bottom: 16px;">
+          <label for="input-ext-task">¿Qué tarea querés agregar?</label>
+          <input type="text" id="input-ext-task" placeholder="Escribí acá lo que debe hacer..." autocomplete="off">
+        </div>
+
+        <div class="form-group" style="margin-bottom: 22px;">
+          <label>Orden de prioridad</label>
+          <div class="priority-selector" id="ext-priority-selector">
+            <button type="button" class="prio-option prio-verde active" data-priority="simple">
+              <span class="dot dot-verde"></span> Simple
+            </button>
+            <button type="button" class="prio-option prio-amarillo" data-priority="intermedio">
+              <span class="dot dot-amarillo"></span> Intermedio
+            </button>
+            <button type="button" class="prio-option prio-rojo" data-priority="urgente">
+              <span class="dot dot-rojo"></span> Urgente
+            </button>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" id="btn-send-ext-task" class="btn-add-plus" style="width: 100%; justify-content: center;">
+            Enviar tarea (Enter)
+          </button>
+        </div>
+
+        <div id="ext-success-msg" class="ext-success-banner hidden">
+          ✓ ¡Listo! La tarea ya fue enviada y agregada a la lista.
         </div>
       </div>
     </section>
