@@ -120,6 +120,69 @@ export default async function handler(req, res) {
     });
   }
 
+  // Propagar listas de compras/presupuestos compartidas entre usuarios y notificar invitaciones
+  async function propagarListasCompartidas(db, usuarioOrigen) {
+    const listasOrigen = Array.isArray(usuarioOrigen.listasPresupuestos) ? usuarioOrigen.listasPresupuestos : [];
+
+    for (const lista of listasOrigen) {
+      const compartidaCon = Array.isArray(lista.compartidaCon) ? lista.compartidaCon : [];
+      if (compartidaCon.length === 0) continue;
+
+      const destinatariosIds = new Set(compartidaCon);
+      if (lista.creadorId && lista.creadorId !== usuarioOrigen.id) {
+        destinatariosIds.add(lista.creadorId);
+      }
+      destinatariosIds.delete(usuarioOrigen.id);
+
+      for (const targetId of destinatariosIds) {
+        const targetUser = db.usuarios[targetId];
+        if (!targetUser) continue;
+        if (!Array.isArray(targetUser.listasPresupuestos)) targetUser.listasPresupuestos = [];
+
+        const idx = targetUser.listasPresupuestos.findIndex(l => l.id === lista.id);
+        if (idx === -1) {
+          // Invitación a nueva lista compartida
+          targetUser.listasPresupuestos.push(JSON.parse(JSON.stringify(lista)));
+
+          // Enviar Push notification al celular del invitado si tiene suscripción
+          if (Array.isArray(targetUser.pushSubscriptions) && targetUser.pushSubscriptions.length > 0) {
+            const payload = {
+              title: `📋 Lista compartida por ${usuarioOrigen.nombre}`,
+              body: `Te compartió la lista "${lista.nombre}". Podés verla y agregar materiales.`,
+              tag: 'lista-invitacion-' + lista.id,
+              url: '/'
+            };
+            for (const sub of targetUser.pushSubscriptions) {
+              await sendWebPushNotification(sub, payload);
+            }
+          }
+        } else {
+          // Ya existe: actualizar contenido de la lista con los cambios más recientes
+          const listaExistente = targetUser.listasPresupuestos[idx];
+          const fechaOrigen = Number(lista.updatedAt) || Number(lista.creadoEl) || 0;
+          const fechaTarget = Number(listaExistente.updatedAt) || Number(listaExistente.creadoEl) || 0;
+          if (fechaOrigen >= fechaTarget) {
+            targetUser.listasPresupuestos[idx] = JSON.parse(JSON.stringify(lista));
+          }
+        }
+      }
+    }
+
+    // Propagar listas eliminadas
+    const borradosListas = Array.isArray(usuarioOrigen.borradosListas) ? usuarioOrigen.borradosListas : [];
+    if (borradosListas.length > 0) {
+      for (const listaIdBorrada of borradosListas) {
+        Object.values(db.usuarios).forEach(otro => {
+          if (otro.id !== usuarioOrigen.id && Array.isArray(otro.listasPresupuestos)) {
+            otro.listasPresupuestos = otro.listasPresupuestos.filter(
+              l => l.id !== listaIdBorrada || (l.creadorId && l.creadorId !== usuarioOrigen.id)
+            );
+          }
+        });
+      }
+    }
+  }
+
   try {
     if (req.method === 'GET') {
       const { db } = await leerBaseDeDatos();
@@ -439,7 +502,9 @@ export default async function handler(req, res) {
       }
 
       propagarSupermercadoCompartido(db, u);
+      await propagarListasCompartidas(db, u);
       u.borrados = Array.from(new Set([...(u.borrados || []), ...(body.borrados || [])]));
+      u.borradosListas = Array.from(new Set([...(u.borradosListas || []), ...(body.borradosListas || [])]));
 
       await guardarBaseDeDatos(db, sha, `Sincronizar agenda de ${u.nombre}`);
 
