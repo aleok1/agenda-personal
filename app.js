@@ -61,6 +61,7 @@ let usuarioSeleccionadoParaLogin = null;
 
 // Datos privados del usuario que ingresó
 let borrados = [];
+let borradosListas = [];
 let tareas = [];
 let avisosTareas = [];
 let recordatorios = [];
@@ -70,6 +71,9 @@ let heladera = [];
 let entrenamiento = null;
 let listasPresupuestos = [];
 let idListaPresupuestoActiva = null;
+let modoNuevaLista = 'solo';
+let usuariosSeleccionadosNuevaLista = new Set();
+let usuariosSeleccionadosEdicionLista = new Set();
 let superCompartidoCon = [];
 let yaConfiguroCasa = false;
 let seleccionConvivientesTemp = new Set();
@@ -557,6 +561,7 @@ async function intentarIngresoConPassword(u, pass, eraAutomatico) {
     superCompartidoCon = Array.isArray(data.superCompartidoCon) ? data.superCompartidoCon : [];
     yaConfiguroCasa = Boolean(data.yaConfiguroCasa);
     borrados = Array.isArray(data.borrados) ? data.borrados : [];
+    borradosListas = Array.isArray(data.borradosListas) ? data.borradosListas : [];
 
     registrarActividadSesion();
     loginPasswordBox.classList.add('hidden');
@@ -643,6 +648,7 @@ async function crearNuevoUsuarioFamiliar() {
       superCompartidoCon = [];
       yaConfiguroCasa = false;
       borrados = [];
+      borradosListas = [];
       registrarActividadSesion();
       createUserBox.classList.add('hidden');
       entrarAMenuDeUsuarioActivo();
@@ -1680,6 +1686,9 @@ async function sincronizarDesdeNube() {
     const setBorrados = new Set([...(cloud.borrados || []), ...borrados]);
     borrados = Array.from(setBorrados);
 
+    const setBorradosListas = new Set([...(cloud.borradosListas || []), ...borradosListas]);
+    borradosListas = Array.from(setBorradosListas);
+
     tareas = (cloud.tareas || []).filter(x => !IDS_EJEMPLO.has(x.id) && !setBorrados.has(x.id));
     recordatorios = (cloud.recordatorios || []).filter(x => !IDS_EJEMPLO.has(x.id) && !setBorrados.has(x.id));
     movimientos = (cloud.movimientos || []).filter(x => !setBorrados.has(x.id));
@@ -1687,7 +1696,9 @@ async function sincronizarDesdeNube() {
     heladera = Array.isArray(cloud.heladera) ? cloud.heladera : heladera;
     avisosTareas = Array.isArray(cloud.avisosTareas) ? cloud.avisosTareas : avisosTareas;
     if (cloud.entrenamiento !== undefined) entrenamiento = cloud.entrenamiento;
-    if (Array.isArray(cloud.listasPresupuestos)) listasPresupuestos = cloud.listasPresupuestos;
+    if (Array.isArray(cloud.listasPresupuestos)) {
+      listasPresupuestos = cloud.listasPresupuestos.filter(l => !setBorradosListas.has(l.id));
+    }
     if (cloud.avatar && !usuarioActivo.esAdmin) {
       usuarioActivo.avatar = cloud.avatar;
       activeUserBadge.textContent = `${usuarioActivo.avatar} ${usuarioActivo.nombre}`;
@@ -1739,6 +1750,7 @@ async function guardarEnNube(avisoParaAutor) {
       heladera: heladera,
       entrenamiento: entrenamiento,
       listasPresupuestos: listasPresupuestos,
+      borradosListas: borradosListas,
       tiempoBloqueoMin: usuarioActivo.tiempoBloqueoMin || 60,
       borrados: borrados
     };
@@ -2873,13 +2885,25 @@ function renderizarListaAdminEnSettings(cont) {
 const btnCreateListToggle = document.getElementById('btn-create-list-toggle');
 const createListBox = document.getElementById('create-list-box');
 const inputNewListName = document.getElementById('input-new-list-name');
+const btnModeSolo = document.getElementById('btn-mode-solo');
+const btnModeShared = document.getElementById('btn-mode-shared');
+const newListShareUsersBox = document.getElementById('new-list-share-users-box');
+const newListShareCheckboxes = document.getElementById('new-list-share-checkboxes');
 const btnCancelCreateList = document.getElementById('btn-cancel-create-list');
 const btnSaveNewList = document.getElementById('btn-save-new-list');
+
+const editShareModalBox = document.getElementById('edit-share-modal-box');
+const editShareModalSubtitle = document.getElementById('edit-share-modal-subtitle');
+const editShareCheckboxes = document.getElementById('edit-share-checkboxes');
+const btnCloseEditShare = document.getElementById('btn-close-edit-share');
+const btnSaveEditShare = document.getElementById('btn-save-edit-share');
 
 const listsPillsContainer = document.getElementById('lists-pills-container');
 const activeListContent = document.getElementById('active-list-content');
 const activeListTotalDisplay = document.getElementById('active-list-total-display');
+const activeListShareBadge = document.getElementById('active-list-share-badge');
 const activeListItemsCount = document.getElementById('active-list-items-count');
+const btnToggleShareActiveList = document.getElementById('btn-toggle-share-active-list');
 const btnDeleteActiveList = document.getElementById('btn-delete-active-list');
 
 const inputItemCant = document.getElementById('input-item-cant');
@@ -2896,6 +2920,77 @@ function actualizarPreviewSubtotalItem() {
   const vunit = parseFloat(inputItemVunit && inputItemVunit.value ? inputItemVunit.value : '0') || 0;
   const subtotal = Math.round(cant * vunit * 100) / 100;
   itemSubtotalPreview.textContent = formatearPesos(subtotal);
+}
+
+function renderizarCheckboxesCompartirNuevaLista() {
+  if (!newListShareCheckboxes) return;
+  newListShareCheckboxes.innerHTML = '';
+  const otrosUsuarios = (listaUsuariosPublica || []).filter(u => usuarioActivo && u.id !== usuarioActivo.id);
+  if (otrosUsuarios.length === 0) {
+    newListShareCheckboxes.innerHTML = '<div style="color: #94a3b8; font-size: 0.88rem; font-style: italic; padding: 6px;">No hay otros usuarios registrados en la agenda.</div>';
+    return;
+  }
+  otrosUsuarios.forEach(u => {
+    const item = document.createElement('label');
+    item.className = 'share-user-check-item';
+    const checked = usuariosSeleccionadosNuevaLista.has(u.id);
+    item.innerHTML = `
+      <input type="checkbox" data-user-id="${u.id}" ${checked ? 'checked' : ''}>
+      <span class="user-avatar">${u.avatar || '👤'}</span>
+      <span class="user-name">${escaparHTML(u.nombre)}</span>
+    `;
+    const chk = item.querySelector('input');
+    chk.addEventListener('change', () => {
+      if (chk.checked) {
+        usuariosSeleccionadosNuevaLista.add(u.id);
+      } else {
+        usuariosSeleccionadosNuevaLista.delete(u.id);
+      }
+    });
+    newListShareCheckboxes.appendChild(item);
+  });
+}
+
+function renderizarCheckboxesEdicionCompartir() {
+  if (!editShareCheckboxes) return;
+  editShareCheckboxes.innerHTML = '';
+  const otrosUsuarios = (listaUsuariosPublica || []).filter(u => usuarioActivo && u.id !== usuarioActivo.id);
+  if (otrosUsuarios.length === 0) {
+    editShareCheckboxes.innerHTML = '<div style="color: #94a3b8; font-size: 0.88rem; font-style: italic; padding: 6px;">No hay otros usuarios registrados en la agenda.</div>';
+    return;
+  }
+  otrosUsuarios.forEach(u => {
+    const item = document.createElement('label');
+    item.className = 'share-user-check-item';
+    const checked = usuariosSeleccionadosEdicionLista.has(u.id);
+    item.innerHTML = `
+      <input type="checkbox" data-user-id="${u.id}" ${checked ? 'checked' : ''}>
+      <span class="user-avatar">${u.avatar || '👤'}</span>
+      <span class="user-name">${escaparHTML(u.nombre)}</span>
+    `;
+    const chk = item.querySelector('input');
+    chk.addEventListener('change', () => {
+      if (chk.checked) {
+        usuariosSeleccionadosEdicionLista.add(u.id);
+      } else {
+        usuariosSeleccionadosEdicionLista.delete(u.id);
+      }
+    });
+    editShareCheckboxes.appendChild(item);
+  });
+}
+
+function abrirModalCompartirListaActiva() {
+  if (!idListaPresupuestoActiva) return;
+  const listaActiva = listasPresupuestos.find(l => l.id === idListaPresupuestoActiva);
+  if (!listaActiva) return;
+
+  if (editShareModalSubtitle) {
+    editShareModalSubtitle.textContent = `Seleccioná qué usuarios tienen acceso a "${listaActiva.nombre}":`;
+  }
+  usuariosSeleccionadosEdicionLista = new Set(Array.isArray(listaActiva.compartidaCon) ? listaActiva.compartidaCon : []);
+  renderizarCheckboxesEdicionCompartir();
+  if (editShareModalBox) editShareModalBox.classList.remove('hidden');
 }
 
 function renderizarListasPresupuestos() {
@@ -2933,9 +3028,11 @@ function renderizarListasPresupuestos() {
       const esActiva = l.id === idListaPresupuestoActiva;
       btn.className = `btn-list-pill ${esActiva ? 'active' : ''}`;
       const cantItems = Array.isArray(l.items) ? l.items.length : 0;
-      btn.textContent = `📋 ${l.nombre} (${cantItems})`;
+      const esCompartida = Array.isArray(l.compartidaCon) && l.compartidaCon.length > 0;
+      btn.textContent = `${esCompartida ? '👥' : '📋'} ${l.nombre} (${cantItems})`;
       btn.onclick = () => {
         idListaPresupuestoActiva = l.id;
+        if (editShareModalBox) editShareModalBox.classList.add('hidden');
         renderizarListasPresupuestos();
       };
       listsPillsContainer.appendChild(btn);
@@ -2945,6 +3042,26 @@ function renderizarListasPresupuestos() {
   const listaActiva = listasPresupuestos.find(l => l.id === idListaPresupuestoActiva);
   if (!listaActiva) return;
   if (!Array.isArray(listaActiva.items)) listaActiva.items = [];
+
+  // Badge de estado de compartir
+  if (activeListShareBadge) {
+    const esCompartida = Array.isArray(listaActiva.compartidaCon) && listaActiva.compartidaCon.length > 0;
+    if (esCompartida) {
+      activeListShareBadge.className = 'list-share-status-tag shared';
+      if (listaActiva.creadorId && usuarioActivo && listaActiva.creadorId !== usuarioActivo.id) {
+        activeListShareBadge.textContent = `👥 Compartida por ${listaActiva.creadorNombre || 'otro usuario'}`;
+      } else {
+        const nombres = listaActiva.compartidaCon.map(uid => {
+          const u = (listaUsuariosPublica || []).find(x => x.id === uid);
+          return u ? u.nombre : uid;
+        }).join(', ');
+        activeListShareBadge.textContent = `👥 Compartida con ${nombres}`;
+      }
+    } else {
+      activeListShareBadge.className = 'list-share-status-tag';
+      activeListShareBadge.textContent = '👤 En solitario (solo para mí)';
+    }
+  }
 
   // Calcular total general de la lista: suma de todos los totales de los elementos
   const totalGeneral = listaActiva.items.reduce((acc, it) => acc + (Number(it.total) || 0), 0);
@@ -2990,6 +3107,7 @@ function renderizarListasPresupuestos() {
         if (check) {
           check.onchange = async () => {
             it.comprado = check.checked;
+            listaActiva.updatedAt = Date.now();
             renderizarListasPresupuestos();
             await guardarEnNube();
           };
@@ -2999,6 +3117,7 @@ function renderizarListasPresupuestos() {
         if (btnDel) {
           btnDel.onclick = async () => {
             listaActiva.items = listaActiva.items.filter(x => x.id !== it.id);
+            listaActiva.updatedAt = Date.now();
             renderizarListasPresupuestos();
             await guardarEnNube();
           };
@@ -3041,6 +3160,8 @@ async function agregarMaterialAListaActiva() {
     creadoEl: Date.now()
   });
 
+  listaActiva.updatedAt = Date.now();
+
   if (inputItemMaterial) inputItemMaterial.value = '';
   if (inputItemVunit) inputItemVunit.value = '';
   if (inputItemCant) inputItemCant.value = '1';
@@ -3057,15 +3178,23 @@ async function crearNuevaListaPresupuesto() {
     if (inputNewListName) inputNewListName.focus();
     return;
   }
+  const compartidaCon = (modoNuevaLista === 'shared') ? Array.from(usuariosSeleccionadosNuevaLista) : [];
+  const ahora = Date.now();
   const nueva = {
-    id: 'lista-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+    id: 'lista-' + ahora + '-' + Math.random().toString(36).slice(2, 6),
     nombre: nombre,
     items: [],
-    creadoEl: Date.now()
+    creadoEl: ahora,
+    updatedAt: ahora,
+    creadorId: usuarioActivo ? usuarioActivo.id : null,
+    creadorNombre: usuarioActivo ? usuarioActivo.nombre : 'Usuario',
+    compartidaCon: compartidaCon
   };
   listasPresupuestos.push(nueva);
   idListaPresupuestoActiva = nueva.id;
   if (inputNewListName) inputNewListName.value = '';
+  modoNuevaLista = 'solo';
+  usuariosSeleccionadosNuevaLista.clear();
   if (createListBox) createListBox.classList.add('hidden');
   renderizarListasPresupuestos();
   await guardarEnNube();
@@ -3075,19 +3204,49 @@ async function eliminarListaPresupuestoActiva() {
   const listaActiva = listasPresupuestos.find(l => l.id === idListaPresupuestoActiva);
   if (!listaActiva) return;
   if (confirm(`¿Querés eliminar la lista "${listaActiva.nombre}" y todos sus materiales?`)) {
+    borradosListas.push(listaActiva.id);
     listasPresupuestos = listasPresupuestos.filter(l => l.id !== idListaPresupuestoActiva);
     idListaPresupuestoActiva = listasPresupuestos.length > 0 ? listasPresupuestos[0].id : null;
+    if (editShareModalBox) editShareModalBox.classList.add('hidden');
     renderizarListasPresupuestos();
     await guardarEnNube();
   }
 }
 
+// Botones de modo En solitario vs Compartida
+if (btnModeSolo) {
+  btnModeSolo.addEventListener('click', () => {
+    modoNuevaLista = 'solo';
+    btnModeSolo.classList.add('active');
+    if (btnModeShared) btnModeShared.classList.remove('active');
+    if (newListShareUsersBox) newListShareUsersBox.classList.add('hidden');
+  });
+}
+
+if (btnModeShared) {
+  btnModeShared.addEventListener('click', () => {
+    modoNuevaLista = 'shared';
+    btnModeShared.classList.add('active');
+    if (btnModeSolo) btnModeSolo.classList.remove('active');
+    if (newListShareUsersBox) newListShareUsersBox.classList.remove('hidden');
+    renderizarCheckboxesCompartirNuevaLista();
+  });
+}
+
 if (btnCreateListToggle) {
   btnCreateListToggle.addEventListener('click', () => {
     if (createListBox) {
-      createListBox.classList.toggle('hidden');
-      if (!createListBox.classList.contains('hidden') && inputNewListName) {
-        inputNewListName.focus();
+      const estaOculto = createListBox.classList.contains('hidden');
+      if (estaOculto) {
+        modoNuevaLista = 'solo';
+        usuariosSeleccionadosNuevaLista.clear();
+        if (btnModeSolo) btnModeSolo.classList.add('active');
+        if (btnModeShared) btnModeShared.classList.remove('active');
+        if (newListShareUsersBox) newListShareUsersBox.classList.add('hidden');
+        createListBox.classList.remove('hidden');
+        if (inputNewListName) inputNewListName.focus();
+      } else {
+        createListBox.classList.add('hidden');
       }
     }
   });
@@ -3109,6 +3268,29 @@ if (inputNewListName) {
       e.preventDefault();
       crearNuevaListaPresupuesto();
     }
+  });
+}
+
+// Modal para editar compartir de la lista activa
+if (btnToggleShareActiveList) {
+  btnToggleShareActiveList.addEventListener('click', abrirModalCompartirListaActiva);
+}
+
+if (btnCloseEditShare) {
+  btnCloseEditShare.addEventListener('click', () => {
+    if (editShareModalBox) editShareModalBox.classList.add('hidden');
+  });
+}
+
+if (btnSaveEditShare) {
+  btnSaveEditShare.addEventListener('click', async () => {
+    const listaActiva = listasPresupuestos.find(l => l.id === idListaPresupuestoActiva);
+    if (!listaActiva) return;
+    listaActiva.compartidaCon = Array.from(usuariosSeleccionadosEdicionLista);
+    listaActiva.updatedAt = Date.now();
+    if (editShareModalBox) editShareModalBox.classList.add('hidden');
+    renderizarListasPresupuestos();
+    await guardarEnNube();
   });
 }
 
