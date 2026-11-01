@@ -8,7 +8,7 @@
   <link rel="icon" type="image/svg+xml" href="logo.svg">
   <link rel="apple-touch-icon" href="logo.svg">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="styles.css?v=20261101_01">
+  <link rel="stylesheet" href="styles.css?v=20261101_02">
 </head>
 <body>
   <header class="app-header">
@@ -909,16 +909,46 @@
         </div>
 
         <!-- CUADRO MODAL PARA CREAR NUEVA LISTA -->
-        <div id="create-list-box" class="task-form-box hidden" style="max-width: 520px; margin: 0 auto 20px auto;">
-          <h3>➕ Crear nueva lista de compras</h3>
-          <p class="subtitle-text" style="margin-bottom: 12px;">Elegí un nombre para tu lista (ej: Corralón, Materiales, Repuestos, etc.)</p>
+        <div id="create-list-box" class="task-form-box hidden" style="max-width: 540px; margin: 0 auto 20px auto;">
+          <h3>➕ Crear nueva lista</h3>
+          <p class="subtitle-text" style="margin-bottom: 14px;">Elegí un nombre y si querés usarla solo vos o compartirla con otro usuario:</p>
+          
           <div class="form-group" style="margin-bottom: 14px;">
             <label for="input-new-list-name">Nombre de la lista</label>
             <input type="text" id="input-new-list-name" placeholder="Ej: Materiales corralón, Pintura, Repuestos..." autocomplete="off">
           </div>
+
+          <div class="form-group" style="margin-bottom: 14px;">
+            <label>Modo de la lista</label>
+            <div class="priority-selector" id="new-list-mode-selector">
+              <button type="button" class="prio-option prio-verde active" id="btn-mode-solo" data-mode="solo">
+                👤 En solitario (mía)
+              </button>
+              <button type="button" class="prio-option prio-amarillo" id="btn-mode-shared" data-mode="shared">
+                👥 Compartida con otro
+              </button>
+            </div>
+          </div>
+
+          <div id="new-list-share-users-box" class="form-group hidden" style="margin-bottom: 16px; background: rgba(255,255,255,0.03); padding: 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08);">
+            <label style="margin-bottom: 8px;">¿Con quién la compartís? (podrá verla y modificarla)</label>
+            <div id="new-list-share-checkboxes" style="display: flex; flex-direction: column; gap: 8px;"></div>
+          </div>
+
           <div class="form-actions">
             <button type="button" id="btn-cancel-create-list" class="btn-secondary">Cancelar</button>
             <button type="button" id="btn-save-new-list" class="btn-primary">Crear lista (Enter)</button>
+          </div>
+        </div>
+
+        <!-- CUADRO MODAL PARA EDITAR COMPARTIR DE LA LISTA ACTIVA -->
+        <div id="edit-share-modal-box" class="task-form-box hidden" style="max-width: 520px; margin: 0 auto 20px auto;">
+          <h3>👥 Compartir esta lista</h3>
+          <p class="subtitle-text" style="margin-bottom: 12px;" id="edit-share-modal-subtitle">Seleccioná qué usuarios tienen acceso para ver y modificar esta lista:</p>
+          <div id="edit-share-checkboxes" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px;"></div>
+          <div class="form-actions">
+            <button type="button" id="btn-close-edit-share" class="btn-secondary">Cancelar</button>
+            <button type="button" id="btn-save-edit-share" class="btn-primary">Guardar cambios</button>
           </div>
         </div>
 
@@ -934,10 +964,14 @@
             <div class="budget-total-left">
               <span class="budget-total-label">Total general =</span>
               <span class="budget-total-val" id="active-list-total-display">$ 0</span>
+              <span id="active-list-share-badge" class="list-share-status-tag" style="margin-top: 6px;">👤 En solitario</span>
             </div>
             <div class="budget-total-right">
               <span id="active-list-items-count" class="budget-items-tag">0 materiales</span>
-              <button type="button" id="btn-delete-active-list" class="btn-delete-list-icon" title="Eliminar esta lista completa">🗑️ Eliminar lista</button>
+              <div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end;">
+                <button type="button" id="btn-toggle-share-active-list" class="btn-share-list-icon" title="Modificar con quién compartís esta lista">👥 Compartir</button>
+                <button type="button" id="btn-delete-active-list" class="btn-delete-list-icon" title="Eliminar esta lista completa">🗑️ Eliminar</button>
+              </div>
             </div>
           </div>
 
@@ -1038,6 +1072,6 @@
     </section>
   </main>
 
-  <script src="app.js?v=20261101_01"></script>
+  <script src="app.js?v=20261101_02"></script>
 </body>
 </html>
