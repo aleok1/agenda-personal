@@ -8,7 +8,7 @@
   <link rel="icon" type="image/svg+xml" href="logo.svg">
   <link rel="apple-touch-icon" href="logo.svg">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="styles.css?v=20261031_06">
+  <link rel="stylesheet" href="styles.css?v=20261101_01">
 </head>
 <body>
   <header class="app-header">
@@ -573,9 +573,16 @@
             <div class="card-badge" style="border-color: #34d399; color: #a7f3d0;">Ver rutina</div>
           </button>
 
+          <button type="button" id="card-extra-lists" class="big-card card-primary" style="background: linear-gradient(135deg, rgba(30, 58, 138, 0.9), rgba(15, 23, 42, 0.9)); border-color: #38bdf8;">
+            <div class="card-icon">📋</div>
+            <div class="card-title">5. Listas y Presupuestos</div>
+            <div class="card-desc">Creá listas personalizadas (materiales, compras) con cálculo automático de valor unitario y presupuesto total.</div>
+            <div class="card-badge" id="extra-lists-counter" style="border-color: #38bdf8; color: #7dd3fc;">Ver listas</div>
+          </button>
+
           <button type="button" id="card-extra-settings" class="big-card" style="background: linear-gradient(135deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.9)); border: 1.5px solid #64748b;">
             <div class="card-icon">⚙️</div>
-            <div class="card-title">5. Configuración</div>
+            <div class="card-title">6. Configuración</div>
             <div class="card-desc">Tiempo de bloqueo de sesión, huella digital, notificaciones, compartir y administración.</div>
             <div class="card-badge" style="border-color: #94a3b8; color: #cbd5e1;">Ajustes</div>
           </button>
@@ -600,8 +607,11 @@
           <button type="button" id="tab-extra-workout" class="extra-tab-btn">
             💪 4. Entrenamiento
           </button>
+          <button type="button" id="tab-extra-lists" class="extra-tab-btn">
+            📋 5. Listas y Presupuestos
+          </button>
           <button type="button" id="tab-extra-settings" class="extra-tab-btn">
-            ⚙️ 5. Configuración
+            ⚙️ 6. Configuración
           </button>
         </div>
       </div>
@@ -885,6 +895,101 @@
           </div>
         </div>
       </div>
+
+      <!-- SUB-SECCIÓN 5: LISTAS DE COMPRAS Y PRESUPUESTOS (NUEVO) -->
+      <div id="subview-lists" class="hidden">
+        <div class="tasks-top-bar">
+          <div>
+            <h2>📋 Listas y Presupuestos</h2>
+            <p class="subtitle-text">Creá listas de compras con cálculo automático de valor unitario y presupuesto total</p>
+          </div>
+          <button type="button" id="btn-create-list-toggle" class="btn-add-plus">
+            <span class="plus-symbol">+</span> Nueva lista
+          </button>
+        </div>
+
+        <!-- CUADRO MODAL PARA CREAR NUEVA LISTA -->
+        <div id="create-list-box" class="task-form-box hidden" style="max-width: 520px; margin: 0 auto 20px auto;">
+          <h3>➕ Crear nueva lista de compras</h3>
+          <p class="subtitle-text" style="margin-bottom: 12px;">Elegí un nombre para tu lista (ej: Corralón, Materiales, Repuestos, etc.)</p>
+          <div class="form-group" style="margin-bottom: 14px;">
+            <label for="input-new-list-name">Nombre de la lista</label>
+            <input type="text" id="input-new-list-name" placeholder="Ej: Materiales corralón, Pintura, Repuestos..." autocomplete="off">
+          </div>
+          <div class="form-actions">
+            <button type="button" id="btn-cancel-create-list" class="btn-secondary">Cancelar</button>
+            <button type="button" id="btn-save-new-list" class="btn-primary">Crear lista (Enter)</button>
+          </div>
+        </div>
+
+        <!-- SELECTOR DE LISTAS EN FORMATO PÍLDORAS -->
+        <div class="lists-switcher-wrap" id="lists-switcher-wrap">
+          <div class="lists-pill-selector" id="lists-pills-container"></div>
+        </div>
+
+        <!-- CONTENIDO DE LA LISTA ACTIVA -->
+        <div id="active-list-content" class="active-list-container">
+          <!-- TARJETA DEL TOTAL GENERAL = PRESUPUESTO TOTAL (IDÉNTICO AL BOCETO) -->
+          <div class="budget-total-banner">
+            <div class="budget-total-left">
+              <span class="budget-total-label">Total general =</span>
+              <span class="budget-total-val" id="active-list-total-display">$ 0</span>
+            </div>
+            <div class="budget-total-right">
+              <span id="active-list-items-count" class="budget-items-tag">0 materiales</span>
+              <button type="button" id="btn-delete-active-list" class="btn-delete-list-icon" title="Eliminar esta lista completa">🗑️ Eliminar lista</button>
+            </div>
+          </div>
+
+          <!-- FORMULARIO DE CARGA RÁPIDA: CANT | MATERIAL | V. UNITARIO -->
+          <div class="task-form-box" style="margin-bottom: 22px;">
+            <h3 style="font-size: 1.05rem; margin-bottom: 12px; color: #38bdf8;">➕ Cargar material a la lista</h3>
+            <div class="list-item-form-grid">
+              <div class="form-group" style="flex: 1 1 90px; max-width: 120px;">
+                <label for="input-item-cant">Cant</label>
+                <input type="number" id="input-item-cant" value="1" min="0.01" step="any" placeholder="1">
+              </div>
+              <div class="form-group" style="flex: 3 1 200px;">
+                <label for="input-item-material">Material / Elemento</label>
+                <input type="text" id="input-item-material" placeholder="Ej: Bolsa de cemento, Caño 3/4..." autocomplete="off">
+              </div>
+              <div class="form-group" style="flex: 2 1 130px;">
+                <label for="input-item-vunit">V. unitario ($)</label>
+                <input type="number" id="input-item-vunit" min="0" step="any" placeholder="Ej: 1500">
+              </div>
+              <div class="form-group form-preview-group" style="flex: 2 1 130px;">
+                <label>Total ítem</label>
+                <div class="item-subtotal-badge" id="item-subtotal-preview">$ 0</div>
+              </div>
+            </div>
+            <div class="form-actions" style="margin-top: 14px;">
+              <button type="button" id="btn-add-item-to-list" class="btn-add-plus" style="width: 100%; justify-content: center;">
+                + Agregar a la lista (Enter)
+              </button>
+            </div>
+          </div>
+
+          <!-- TABLA DE MATERIALES / ELEMENTOS DE LA LISTA -->
+          <div class="budget-table-card">
+            <div class="budget-table-header">
+              <div class="col-cant">Cant</div>
+              <div class="col-material">Material</div>
+              <div class="col-vunit">V. Unitario</div>
+              <div class="col-total">Total</div>
+              <div class="col-actions"></div>
+            </div>
+            <div id="budget-table-rows" class="budget-table-body">
+              <!-- Filas dinámicas -->
+            </div>
+          </div>
+        </div>
+
+        <div id="no-lists-placeholder" class="empty-state hidden" style="padding: 40px 20px;">
+          <div style="font-size: 3rem; margin-bottom: 10px;">📋</div>
+          <h3 style="color: #cbd5e1; margin-bottom: 8px;">No tenés ninguna lista creada</h3>
+          <p class="subtitle-text">Tocá el botón <strong>+ Nueva lista</strong> arriba para armar tu primer presupuesto de compras.</p>
+        </div>
+      </div>
     </section>
 
     <!-- PANTALLA PÚBLICA PARA PERSONAS EXTERNAS (?modo=externo) -->
@@ -933,6 +1038,6 @@
     </section>
   </main>
 
-  <script src="app.js?v=20261031_06"></script>
+  <script src="app.js?v=20261101_01"></script>
 </body>
 </html>
