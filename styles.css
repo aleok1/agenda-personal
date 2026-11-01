@@ -1902,6 +1902,295 @@ body {
   line-height: 1.45;
 }
 
+/* ========================================================== */
+/* MÓDULO LISTAS DE COMPRAS Y PRESUPUESTOS (NUEVO)            */
+/* ========================================================== */
+.lists-switcher-wrap {
+  margin-bottom: 18px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 6px;
+}
+
+.lists-pill-selector {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  width: max-content;
+}
+
+.btn-list-pill {
+  padding: 8px 18px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1.5px solid rgba(255, 255, 255, 0.12);
+  color: var(--text-muted);
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn-list-pill:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.btn-list-pill.active {
+  background: linear-gradient(135deg, #0284c7, #0369a1);
+  border-color: #38bdf8;
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.4);
+}
+
+.budget-total-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 58, 138, 0.25));
+  border: 2px solid #38bdf8;
+  border-radius: 16px;
+  padding: 18px 22px;
+  margin-bottom: 20px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.35);
+}
+
+.budget-total-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.budget-total-label {
+  font-size: 0.92rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #94a3b8;
+  font-weight: 700;
+}
+
+.budget-total-val {
+  font-size: 2rem;
+  font-weight: 900;
+  color: #38bdf8;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.budget-total-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.budget-items-tag {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  background: rgba(56, 189, 248, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  color: #7dd3fc;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.btn-delete-list-icon {
+  background: transparent;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: #fca5a5;
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-delete-list-icon:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: #ef4444;
+}
+
+.list-item-form-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+}
+
+.item-subtotal-badge {
+  display: flex;
+  align-items: center;
+  height: 42px;
+  padding: 0 14px;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1.5px dashed rgba(56, 189, 248, 0.4);
+  border-radius: 10px;
+  color: #38bdf8;
+  font-weight: 800;
+  font-size: 1.05rem;
+}
+
+.budget-table-card {
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.budget-table-header {
+  display: grid;
+  grid-template-columns: 85px 1fr 125px 135px 50px;
+  gap: 8px;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #94a3b8;
+}
+
+.budget-table-body {
+  display: flex;
+  flex-direction: column;
+}
+
+.budget-table-row {
+  display: grid;
+  grid-template-columns: 85px 1fr 125px 135px 50px;
+  gap: 8px;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  font-size: 0.95rem;
+  transition: background 0.15s ease;
+}
+
+.budget-table-row:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.budget-table-row:last-child {
+  border-bottom: none;
+}
+
+.budget-table-row.is-bought {
+  opacity: 0.6;
+}
+
+.budget-table-row.is-bought .col-material {
+  text-decoration: line-through;
+  color: #94a3b8;
+}
+
+.col-cant {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  color: #e2e8f0;
+}
+
+.check-item-bought {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #10b981;
+}
+
+.col-material {
+  font-weight: 600;
+  color: #ffffff;
+  word-break: break-word;
+}
+
+.col-vunit {
+  color: #cbd5e1;
+  font-size: 0.9rem;
+}
+
+.col-total {
+  font-weight: 800;
+  color: #38bdf8;
+  font-size: 1rem;
+}
+
+.col-actions {
+  display: flex;
+  justify-content: center;
+}
+
+.btn-del-item-icon {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  opacity: 0.65;
+  transition: opacity 0.2s, transform 0.2s;
+  padding: 4px;
+}
+
+.btn-del-item-icon:hover {
+  opacity: 1;
+  transform: scale(1.15);
+}
+
+@media (max-width: 640px) {
+  .budget-table-header {
+    display: none;
+  }
+
+  .budget-table-row {
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "cant-mat actions"
+      "prices actions";
+    gap: 6px;
+    padding: 12px 14px;
+  }
+
+  .budget-table-row .col-cant {
+    grid-area: cant-mat;
+    display: inline-flex;
+    font-size: 0.95rem;
+  }
+
+  .budget-table-row .col-material {
+    display: inline;
+    margin-left: 4px;
+  }
+
+  .budget-table-row .col-vunit {
+    grid-area: prices;
+    font-size: 0.85rem;
+    color: #94a3b8;
+  }
+
+  .budget-table-row .col-vunit::after {
+    content: " → ";
+  }
+
+  .budget-table-row .col-total {
+    display: inline;
+  }
+
+  .budget-table-row .col-actions {
+    grid-area: actions;
+    align-self: center;
+  }
+
+  .budget-total-val {
+    font-size: 1.7rem;
+  }
+}
+
+
 
 
 
