@@ -71,6 +71,8 @@ let heladera = [];
 let entrenamiento = null;
 let listasPresupuestos = [];
 let idListaPresupuestoActiva = null;
+let deudores = [];
+let idDeudorActivo = null;
 let modoNuevaLista = 'solo';
 let usuariosSeleccionadosNuevaLista = new Set();
 let usuariosSeleccionadosEdicionLista = new Set();
@@ -558,6 +560,8 @@ async function intentarIngresoConPassword(u, pass, eraAutomatico) {
     heladera = Array.isArray(data.heladera) ? data.heladera : [];
     entrenamiento = data.entrenamiento || null;
     listasPresupuestos = Array.isArray(data.listasPresupuestos) ? data.listasPresupuestos : [];
+    deudores = Array.isArray(data.deudores) ? data.deudores : [];
+    idDeudorActivo = null;
     superCompartidoCon = Array.isArray(data.superCompartidoCon) ? data.superCompartidoCon : [];
     yaConfiguroCasa = Boolean(data.yaConfiguroCasa);
     borrados = Array.isArray(data.borrados) ? data.borrados : [];
@@ -645,6 +649,8 @@ async function crearNuevoUsuarioFamiliar() {
       entrenamiento = null;
       listasPresupuestos = [];
       idListaPresupuestoActiva = null;
+      deudores = [];
+      idDeudorActivo = null;
       superCompartidoCon = [];
       yaConfiguroCasa = false;
       borrados = [];
@@ -1699,6 +1705,7 @@ async function sincronizarDesdeNube() {
     if (Array.isArray(cloud.listasPresupuestos)) {
       listasPresupuestos = cloud.listasPresupuestos.filter(l => !setBorradosListas.has(l.id));
     }
+    if (Array.isArray(cloud.deudores)) deudores = cloud.deudores;
     if (cloud.avatar && !usuarioActivo.esAdmin) {
       usuarioActivo.avatar = cloud.avatar;
       activeUserBadge.textContent = `${usuarioActivo.avatar} ${usuarioActivo.nombre}`;
@@ -1716,6 +1723,7 @@ async function sincronizarDesdeNube() {
     renderizarHeladera();
     renderizarEntrenamiento();
     renderizarListasPresupuestos();
+    renderizarDeudores();
     verificarPreguntaUnicaConvivencia();
     verificarNotificacionesPendientes(false);
 
@@ -1750,6 +1758,7 @@ async function guardarEnNube(avisoParaAutor) {
       heladera: heladera,
       entrenamiento: entrenamiento,
       listasPresupuestos: listasPresupuestos,
+      deudores: deudores,
       borradosListas: borradosListas,
       tiempoBloqueoMin: usuarioActivo.tiempoBloqueoMin || 60,
       borrados: borrados
@@ -2569,6 +2578,7 @@ const cardExtraGemini = document.getElementById('card-extra-gemini');
 const cardExtraFridge = document.getElementById('card-extra-fridge');
 const cardExtraWorkout = document.getElementById('card-extra-workout');
 const cardExtraLists = document.getElementById('card-extra-lists');
+const cardExtraDebts = document.getElementById('card-extra-debts');
 const cardExtraSettings = document.getElementById('card-extra-settings');
 
 const tabExtraSuper = document.getElementById('tab-extra-super');
@@ -2576,6 +2586,7 @@ const tabExtraGemini = document.getElementById('tab-extra-gemini');
 const tabExtraFridge = document.getElementById('tab-extra-fridge');
 const tabExtraWorkout = document.getElementById('tab-extra-workout');
 const tabExtraLists = document.getElementById('tab-extra-lists');
+const tabExtraDebts = document.getElementById('tab-extra-debts');
 const tabExtraSettings = document.getElementById('tab-extra-settings');
 
 const subviewSuper = document.getElementById('subview-super');
@@ -2583,6 +2594,7 @@ const subviewGemini = document.getElementById('subview-gemini');
 const subviewFridge = document.getElementById('subview-fridge');
 const subviewWorkout = document.getElementById('subview-workout');
 const subviewLists = document.getElementById('subview-lists');
+const subviewDebts = document.getElementById('subview-debts');
 const subviewSettings = document.getElementById('subview-settings');
 
 function mostrarMenuExtras() {
@@ -2593,6 +2605,7 @@ function mostrarMenuExtras() {
   if (subviewFridge) subviewFridge.classList.add('hidden');
   if (subviewWorkout) subviewWorkout.classList.add('hidden');
   if (subviewLists) subviewLists.classList.add('hidden');
+  if (subviewDebts) subviewDebts.classList.add('hidden');
   if (subviewSettings) subviewSettings.classList.add('hidden');
 
   const extraSuperCounter = document.getElementById('extra-super-counter');
@@ -2610,6 +2623,15 @@ function mostrarMenuExtras() {
     const cantL = Array.isArray(listasPresupuestos) ? listasPresupuestos.length : 0;
     extraListsCounter.textContent = cantL === 1 ? '1 lista creada' : `${cantL} listas creadas`;
   }
+  const extraDebtsCounter = document.getElementById('extra-debts-counter');
+  if (extraDebtsCounter) {
+    const cantD = Array.isArray(deudores) ? deudores.length : 0;
+    const totalPendiente = (deudores || []).reduce((acc, d) => {
+      const sumaD = (d.conceptos || []).filter(c => !c.pagado).reduce((a, c) => a + (Number(c.monto) || 0), 0);
+      return acc + sumaD;
+    }, 0);
+    extraDebtsCounter.textContent = cantD === 1 ? `1 deudor (${formatearPesos(totalPendiente)})` : `${cantD} deudores (${formatearPesos(totalPendiente)})`;
+  }
 }
 
 function abrirHerramientaExtras(cual) {
@@ -2621,6 +2643,7 @@ function abrirHerramientaExtras(cual) {
   if (tabExtraFridge) tabExtraFridge.classList.toggle('active', cual === 'fridge');
   if (tabExtraWorkout) tabExtraWorkout.classList.toggle('active', cual === 'workout');
   if (tabExtraLists) tabExtraLists.classList.toggle('active', cual === 'lists');
+  if (tabExtraDebts) tabExtraDebts.classList.toggle('active', cual === 'debts');
   if (tabExtraSettings) tabExtraSettings.classList.toggle('active', cual === 'settings');
 
   if (subviewSuper) subviewSuper.classList.toggle('hidden', cual !== 'super');
@@ -2628,6 +2651,7 @@ function abrirHerramientaExtras(cual) {
   if (subviewFridge) subviewFridge.classList.toggle('hidden', cual !== 'fridge');
   if (subviewWorkout) subviewWorkout.classList.toggle('hidden', cual !== 'workout');
   if (subviewLists) subviewLists.classList.toggle('hidden', cual !== 'lists');
+  if (subviewDebts) subviewDebts.classList.toggle('hidden', cual !== 'debts');
   if (subviewSettings) subviewSettings.classList.toggle('hidden', cual !== 'settings');
 
   if (cual === 'super') {
@@ -2646,6 +2670,10 @@ function abrirHerramientaExtras(cual) {
     renderizarListasPresupuestos();
     const mInput = document.getElementById('input-item-material');
     if (mInput) mInput.focus();
+  } else if (cual === 'debts') {
+    renderizarDeudores();
+    const cInput = document.getElementById('input-debt-concept');
+    if (cInput) cInput.focus();
   } else if (cual === 'settings') {
     renderizarConfiguracion();
   }
@@ -2656,6 +2684,7 @@ if (cardExtraGemini) cardExtraGemini.addEventListener('click', () => abrirHerram
 if (cardExtraFridge) cardExtraFridge.addEventListener('click', () => abrirHerramientaExtras('fridge'));
 if (cardExtraWorkout) cardExtraWorkout.addEventListener('click', () => abrirHerramientaExtras('workout'));
 if (cardExtraLists) cardExtraLists.addEventListener('click', () => abrirHerramientaExtras('lists'));
+if (cardExtraDebts) cardExtraDebts.addEventListener('click', () => abrirHerramientaExtras('debts'));
 if (cardExtraSettings) cardExtraSettings.addEventListener('click', () => abrirHerramientaExtras('settings'));
 
 if (btnBackToExtrasMenu) btnBackToExtrasMenu.addEventListener('click', mostrarMenuExtras);
@@ -3329,6 +3358,316 @@ if (inputItemCant) {
 
 if (btnDeleteActiveList) {
   btnDeleteActiveList.addEventListener('click', eliminarListaPresupuestoActiva);
+}
+
+// ==========================================
+// MÓDULO: CONTROL DE DEUDAS (DENTRO DE EXTRAS)
+// ==========================================
+const btnCreateDebtorToggle = document.getElementById('btn-create-debtor-toggle');
+const createDebtorBox = document.getElementById('create-debtor-box');
+const inputNewDebtorName = document.getElementById('input-new-debtor-name');
+const btnCancelCreateDebtor = document.getElementById('btn-cancel-create-debtor');
+const btnSaveNewDebtor = document.getElementById('btn-save-new-debtor');
+
+const globalDebtBanner = document.getElementById('global-debt-banner');
+const globalDebtAmount = document.getElementById('global-debt-amount');
+const globalDebtSub = document.getElementById('global-debt-sub');
+
+const debtorsSwitcherWrap = document.getElementById('debtors-switcher-wrap');
+const debtorsPillsContainer = document.getElementById('debtors-pills-container');
+
+const activeDebtorContent = document.getElementById('active-debtor-content');
+const activeDebtorNameLabel = document.getElementById('active-debtor-name-label');
+const activeDebtorTotalDisplay = document.getElementById('active-debtor-total-display');
+const activeDebtorItemsCount = document.getElementById('active-debtor-items-count');
+const btnDeleteActiveDebtor = document.getElementById('btn-delete-active-debtor');
+
+const inputDebtConcept = document.getElementById('input-debt-concept');
+const inputDebtAmount = document.getElementById('input-debt-amount');
+const btnAddDebtConcept = document.getElementById('btn-add-debt-concept');
+const debtorConceptsRows = document.getElementById('debtor-concepts-rows');
+const noDebtorsPlaceholder = document.getElementById('no-debtors-placeholder');
+
+function renderizarDeudores() {
+  if (!Array.isArray(deudores)) deudores = [];
+
+  // 1. Cálculo del Total general ("por fuera de ese deudor, deudas totales que tienen todos los deudores conmigo")
+  const totalGeneralDeudas = deudores.reduce((acc, d) => {
+    const sumaD = (d.conceptos || []).filter(c => !c.pagado).reduce((a, c) => a + (Number(c.monto) || 0), 0);
+    return acc + sumaD;
+  }, 0);
+
+  const cantConDeuda = deudores.filter(d => (d.conceptos || []).some(c => !c.pagado)).length;
+
+  if (globalDebtAmount) {
+    globalDebtAmount.textContent = formatearPesos(totalGeneralDeudas);
+  }
+  if (globalDebtSub) {
+    globalDebtSub.textContent = cantConDeuda === 1
+      ? '1 deudor con saldo pendiente'
+      : `${cantConDeuda} deudores con saldo pendiente`;
+  }
+
+  // Contador en el menú principal de Extras
+  const extraDebtsCounter = document.getElementById('extra-debts-counter');
+  if (extraDebtsCounter) {
+    const cantD = deudores.length;
+    extraDebtsCounter.textContent = cantD === 1
+      ? `1 deudor (${formatearPesos(totalGeneralDeudas)})`
+      : `${cantD} deudores (${formatearPesos(totalGeneralDeudas)})`;
+  }
+
+  // Si no hay deudores registrados
+  if (deudores.length === 0) {
+    if (noDebtorsPlaceholder) noDebtorsPlaceholder.classList.remove('hidden');
+    if (activeDebtorContent) activeDebtorContent.classList.add('hidden');
+    if (debtorsSwitcherWrap) debtorsSwitcherWrap.classList.add('hidden');
+    if (debtorsPillsContainer) debtorsPillsContainer.innerHTML = '';
+    return;
+  }
+
+  if (noDebtorsPlaceholder) noDebtorsPlaceholder.classList.add('hidden');
+  if (activeDebtorContent) activeDebtorContent.classList.remove('hidden');
+  if (debtorsSwitcherWrap) debtorsSwitcherWrap.classList.remove('hidden');
+
+  // Asegurar que haya un deudor activo seleccionado válido
+  if (!idDeudorActivo || !deudores.find(d => d.id === idDeudorActivo)) {
+    idDeudorActivo = deudores[0].id;
+  }
+
+  // Renderizar píldoras selectoras de deudores
+  if (debtorsPillsContainer) {
+    debtorsPillsContainer.innerHTML = '';
+    deudores.forEach(d => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      const esActivo = d.id === idDeudorActivo;
+      const totalD = (d.conceptos || []).filter(c => !c.pagado).reduce((a, c) => a + (Number(c.monto) || 0), 0);
+      const estaSaldado = totalD === 0 && (d.conceptos || []).length > 0;
+
+      btn.className = `btn-debtor-pill ${esActivo ? 'active' : ''} ${estaSaldado ? 'settled' : ''}`;
+      if (estaSaldado) {
+        btn.textContent = `👤 ${d.nombre} (✓ Al día)`;
+      } else {
+        btn.textContent = `👤 ${d.nombre} (${formatearPesos(totalD)})`;
+      }
+
+      btn.onclick = () => {
+        idDeudorActivo = d.id;
+        renderizarDeudores();
+      };
+      debtorsPillsContainer.appendChild(btn);
+    });
+  }
+
+  const deudorActivo = deudores.find(d => d.id === idDeudorActivo);
+  if (!deudorActivo) return;
+  if (!Array.isArray(deudorActivo.conceptos)) deudorActivo.conceptos = [];
+
+  // Actualizar apartado "Total deuda" del deudor
+  if (activeDebtorNameLabel) {
+    activeDebtorNameLabel.textContent = `👤 Deudor: ${deudorActivo.nombre}`;
+  }
+
+  const totalDeudaDeudor = deudorActivo.conceptos
+    .filter(c => !c.pagado)
+    .reduce((acc, c) => acc + (Number(c.monto) || 0), 0);
+
+  if (activeDebtorTotalDisplay) {
+    activeDebtorTotalDisplay.textContent = formatearPesos(totalDeudaDeudor);
+  }
+
+  const cantPendientes = deudorActivo.conceptos.filter(c => !c.pagado).length;
+  const cantCobrados = deudorActivo.conceptos.filter(c => c.pagado).length;
+  if (activeDebtorItemsCount) {
+    const totalCount = deudorActivo.conceptos.length;
+    activeDebtorItemsCount.textContent = totalCount === 1
+      ? `1 concepto ${cantCobrados > 0 ? '(saldado)' : '(pendiente)'}`
+      : `${totalCount} conceptos ${cantCobrados > 0 ? `(${cantCobrados} saldados)` : ''}`;
+  }
+
+  // Renderizar filas de la tabla de conceptos del deudor
+  if (debtorConceptsRows) {
+    debtorConceptsRows.innerHTML = '';
+    if (deudorActivo.conceptos.length === 0) {
+      debtorConceptsRows.innerHTML = `
+        <div style="padding: 24px; text-align: center; color: #94a3b8; font-size: 0.95rem;">
+          Este deudor aún no tiene conceptos cargados. Usá el formulario arriba para cargar la primera deuda.
+        </div>
+      `;
+    } else {
+      deudorActivo.conceptos.forEach(c => {
+        const fila = document.createElement('div');
+        fila.className = `debt-table-row ${c.pagado ? 'is-settled' : ''}`;
+        fila.innerHTML = `
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <input type="checkbox" class="check-item-bought" ${c.pagado ? 'checked' : ''} title="Marcar como cobrado/saldado">
+            <span class="debt-status-tag ${c.pagado ? 'paid' : 'pending'}">${c.pagado ? 'Cobrado' : 'Debe'}</span>
+          </div>
+          <div class="debt-col-concept" style="font-weight: 600; color: #f1f5f9;">${escaparHTML(c.concepto)}</div>
+          <div style="text-align: right; font-weight: 700; color: ${c.pagado ? '#86efac' : '#fbbf24'};">${formatearPesos(c.monto)}</div>
+          <div class="debt-col-date" style="text-align: center; color: #94a3b8; font-size: 0.85rem;">${escaparHTML(c.fecha || '')}</div>
+          <div style="text-align: center;">
+            <button type="button" class="btn-del-item-icon" title="Eliminar este concepto">🗑️</button>
+          </div>
+        `;
+
+        const check = fila.querySelector('.check-item-bought');
+        if (check) {
+          check.onchange = async () => {
+            c.pagado = check.checked;
+            deudorActivo.updatedAt = Date.now();
+            renderizarDeudores();
+            await guardarEnNube();
+          };
+        }
+
+        const btnDel = fila.querySelector('.btn-del-item-icon');
+        if (btnDel) {
+          btnDel.onclick = async () => {
+            deudorActivo.conceptos = deudorActivo.conceptos.filter(x => x.id !== c.id);
+            deudorActivo.updatedAt = Date.now();
+            renderizarDeudores();
+            await guardarEnNube();
+          };
+        }
+
+        debtorConceptsRows.appendChild(fila);
+      });
+    }
+  }
+}
+
+async function agregarConceptoDeuda() {
+  if (!idDeudorActivo) {
+    alert('Primero seleccioná o registrá un deudor.');
+    return;
+  }
+  const deudorActivo = deudores.find(d => d.id === idDeudorActivo);
+  if (!deudorActivo) return;
+
+  const concepto = inputDebtConcept ? inputDebtConcept.value.trim() : '';
+  if (!concepto) {
+    if (inputDebtConcept) inputDebtConcept.focus();
+    return;
+  }
+
+  const montoVal = parseFloat(inputDebtAmount && inputDebtAmount.value ? inputDebtAmount.value : '0') || 0;
+  if (montoVal <= 0) {
+    if (inputDebtAmount) inputDebtAmount.focus();
+    return;
+  }
+
+  const ahora = new Date();
+  const fechaStr = ahora.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' });
+
+  if (!Array.isArray(deudorActivo.conceptos)) deudorActivo.conceptos = [];
+  deudorActivo.conceptos.push({
+    id: 'concepto-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+    concepto: concepto,
+    monto: montoVal,
+    pagado: false,
+    fecha: fechaStr,
+    creadoEl: Date.now()
+  });
+
+  deudorActivo.updatedAt = Date.now();
+
+  if (inputDebtConcept) inputDebtConcept.value = '';
+  if (inputDebtAmount) inputDebtAmount.value = '';
+  if (inputDebtConcept) inputDebtConcept.focus();
+
+  renderizarDeudores();
+  await guardarEnNube();
+}
+
+async function crearNuevoDeudor() {
+  const nombre = inputNewDebtorName ? inputNewDebtorName.value.trim() : '';
+  if (!nombre) {
+    if (inputNewDebtorName) inputNewDebtorName.focus();
+    return;
+  }
+  const nuevo = {
+    id: 'deudor-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+    nombre: nombre,
+    conceptos: [],
+    creadoEl: Date.now(),
+    updatedAt: Date.now()
+  };
+  deudores.push(nuevo);
+  idDeudorActivo = nuevo.id;
+  if (inputNewDebtorName) inputNewDebtorName.value = '';
+  if (createDebtorBox) createDebtorBox.classList.add('hidden');
+  renderizarDeudores();
+  if (inputDebtConcept) inputDebtConcept.focus();
+  await guardarEnNube();
+}
+
+async function eliminarDeudorActivo() {
+  const deudorActivo = deudores.find(d => d.id === idDeudorActivo);
+  if (!deudorActivo) return;
+  if (confirm(`¿Querés eliminar al deudor "${deudorActivo.nombre}" y todo su historial de deudas?`)) {
+    deudores = deudores.filter(d => d.id !== idDeudorActivo);
+    idDeudorActivo = deudores.length > 0 ? deudores[0].id : null;
+    renderizarDeudores();
+    await guardarEnNube();
+  }
+}
+
+if (btnCreateDebtorToggle) {
+  btnCreateDebtorToggle.addEventListener('click', () => {
+    if (createDebtorBox) {
+      createDebtorBox.classList.toggle('hidden');
+      if (!createDebtorBox.classList.contains('hidden') && inputNewDebtorName) {
+        inputNewDebtorName.focus();
+      }
+    }
+  });
+}
+
+if (btnCancelCreateDebtor) {
+  btnCancelCreateDebtor.addEventListener('click', () => {
+    if (createDebtorBox) createDebtorBox.classList.add('hidden');
+  });
+}
+
+if (btnSaveNewDebtor) {
+  btnSaveNewDebtor.addEventListener('click', crearNuevoDeudor);
+}
+
+if (inputNewDebtorName) {
+  inputNewDebtorName.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      crearNuevoDeudor();
+    }
+  });
+}
+
+if (btnAddDebtConcept) {
+  btnAddDebtConcept.addEventListener('click', agregarConceptoDeuda);
+}
+
+if (inputDebtConcept) {
+  inputDebtConcept.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (inputDebtAmount) inputDebtAmount.focus();
+    }
+  });
+}
+
+if (inputDebtAmount) {
+  inputDebtAmount.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      agregarConceptoDeuda();
+    }
+  });
+}
+
+if (btnDeleteActiveDebtor) {
+  btnDeleteActiveDebtor.addEventListener('click', eliminarDeudorActivo);
 }
 
 // ==========================================
