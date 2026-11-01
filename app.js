@@ -68,6 +68,8 @@ let movimientos = [];
 let supermercado = [];
 let heladera = [];
 let entrenamiento = null;
+let listasPresupuestos = [];
+let idListaPresupuestoActiva = null;
 let superCompartidoCon = [];
 let yaConfiguroCasa = false;
 let seleccionConvivientesTemp = new Set();
@@ -551,6 +553,7 @@ async function intentarIngresoConPassword(u, pass, eraAutomatico) {
     supermercado = Array.isArray(data.supermercado) ? data.supermercado : [];
     heladera = Array.isArray(data.heladera) ? data.heladera : [];
     entrenamiento = data.entrenamiento || null;
+    listasPresupuestos = Array.isArray(data.listasPresupuestos) ? data.listasPresupuestos : [];
     superCompartidoCon = Array.isArray(data.superCompartidoCon) ? data.superCompartidoCon : [];
     yaConfiguroCasa = Boolean(data.yaConfiguroCasa);
     borrados = Array.isArray(data.borrados) ? data.borrados : [];
@@ -635,6 +638,8 @@ async function crearNuevoUsuarioFamiliar() {
       supermercado = [];
       heladera = [];
       entrenamiento = null;
+      listasPresupuestos = [];
+      idListaPresupuestoActiva = null;
       superCompartidoCon = [];
       yaConfiguroCasa = false;
       borrados = [];
@@ -1682,6 +1687,7 @@ async function sincronizarDesdeNube() {
     heladera = Array.isArray(cloud.heladera) ? cloud.heladera : heladera;
     avisosTareas = Array.isArray(cloud.avisosTareas) ? cloud.avisosTareas : avisosTareas;
     if (cloud.entrenamiento !== undefined) entrenamiento = cloud.entrenamiento;
+    if (Array.isArray(cloud.listasPresupuestos)) listasPresupuestos = cloud.listasPresupuestos;
     if (cloud.avatar && !usuarioActivo.esAdmin) {
       usuarioActivo.avatar = cloud.avatar;
       activeUserBadge.textContent = `${usuarioActivo.avatar} ${usuarioActivo.nombre}`;
@@ -1698,6 +1704,7 @@ async function sincronizarDesdeNube() {
     renderizarSupermercado();
     renderizarHeladera();
     renderizarEntrenamiento();
+    renderizarListasPresupuestos();
     verificarPreguntaUnicaConvivencia();
     verificarNotificacionesPendientes(false);
 
@@ -1731,6 +1738,7 @@ async function guardarEnNube(avisoParaAutor) {
       supermercado: supermercado,
       heladera: heladera,
       entrenamiento: entrenamiento,
+      listasPresupuestos: listasPresupuestos,
       tiempoBloqueoMin: usuarioActivo.tiempoBloqueoMin || 60,
       borrados: borrados
     };
@@ -2548,18 +2556,21 @@ const cardExtraSuper = document.getElementById('card-extra-super');
 const cardExtraGemini = document.getElementById('card-extra-gemini');
 const cardExtraFridge = document.getElementById('card-extra-fridge');
 const cardExtraWorkout = document.getElementById('card-extra-workout');
+const cardExtraLists = document.getElementById('card-extra-lists');
 const cardExtraSettings = document.getElementById('card-extra-settings');
 
 const tabExtraSuper = document.getElementById('tab-extra-super');
 const tabExtraGemini = document.getElementById('tab-extra-gemini');
 const tabExtraFridge = document.getElementById('tab-extra-fridge');
 const tabExtraWorkout = document.getElementById('tab-extra-workout');
+const tabExtraLists = document.getElementById('tab-extra-lists');
 const tabExtraSettings = document.getElementById('tab-extra-settings');
 
 const subviewSuper = document.getElementById('subview-super');
 const subviewGemini = document.getElementById('subview-gemini');
 const subviewFridge = document.getElementById('subview-fridge');
 const subviewWorkout = document.getElementById('subview-workout');
+const subviewLists = document.getElementById('subview-lists');
 const subviewSettings = document.getElementById('subview-settings');
 
 function mostrarMenuExtras() {
@@ -2569,6 +2580,7 @@ function mostrarMenuExtras() {
   if (subviewGemini) subviewGemini.classList.add('hidden');
   if (subviewFridge) subviewFridge.classList.add('hidden');
   if (subviewWorkout) subviewWorkout.classList.add('hidden');
+  if (subviewLists) subviewLists.classList.add('hidden');
   if (subviewSettings) subviewSettings.classList.add('hidden');
 
   const extraSuperCounter = document.getElementById('extra-super-counter');
@@ -2581,6 +2593,11 @@ function mostrarMenuExtras() {
     const cantF = Array.isArray(heladera) ? heladera.length : 0;
     extraFridgeCounter.textContent = cantF === 1 ? '1 ingrediente' : `${cantF} ingredientes`;
   }
+  const extraListsCounter = document.getElementById('extra-lists-counter');
+  if (extraListsCounter) {
+    const cantL = Array.isArray(listasPresupuestos) ? listasPresupuestos.length : 0;
+    extraListsCounter.textContent = cantL === 1 ? '1 lista creada' : `${cantL} listas creadas`;
+  }
 }
 
 function abrirHerramientaExtras(cual) {
@@ -2591,12 +2608,14 @@ function abrirHerramientaExtras(cual) {
   if (tabExtraGemini) tabExtraGemini.classList.toggle('active', cual === 'gemini');
   if (tabExtraFridge) tabExtraFridge.classList.toggle('active', cual === 'fridge');
   if (tabExtraWorkout) tabExtraWorkout.classList.toggle('active', cual === 'workout');
+  if (tabExtraLists) tabExtraLists.classList.toggle('active', cual === 'lists');
   if (tabExtraSettings) tabExtraSettings.classList.toggle('active', cual === 'settings');
 
   if (subviewSuper) subviewSuper.classList.toggle('hidden', cual !== 'super');
   if (subviewGemini) subviewGemini.classList.toggle('hidden', cual !== 'gemini');
   if (subviewFridge) subviewFridge.classList.toggle('hidden', cual !== 'fridge');
   if (subviewWorkout) subviewWorkout.classList.toggle('hidden', cual !== 'workout');
+  if (subviewLists) subviewLists.classList.toggle('hidden', cual !== 'lists');
   if (subviewSettings) subviewSettings.classList.toggle('hidden', cual !== 'settings');
 
   if (cual === 'super') {
@@ -2611,6 +2630,10 @@ function abrirHerramientaExtras(cual) {
     if (fInput) fInput.focus();
   } else if (cual === 'workout') {
     renderizarEntrenamiento();
+  } else if (cual === 'lists') {
+    renderizarListasPresupuestos();
+    const mInput = document.getElementById('input-item-material');
+    if (mInput) mInput.focus();
   } else if (cual === 'settings') {
     renderizarConfiguracion();
   }
@@ -2620,6 +2643,7 @@ if (cardExtraSuper) cardExtraSuper.addEventListener('click', () => abrirHerramie
 if (cardExtraGemini) cardExtraGemini.addEventListener('click', () => abrirHerramientaExtras('gemini'));
 if (cardExtraFridge) cardExtraFridge.addEventListener('click', () => abrirHerramientaExtras('fridge'));
 if (cardExtraWorkout) cardExtraWorkout.addEventListener('click', () => abrirHerramientaExtras('workout'));
+if (cardExtraLists) cardExtraLists.addEventListener('click', () => abrirHerramientaExtras('lists'));
 if (cardExtraSettings) cardExtraSettings.addEventListener('click', () => abrirHerramientaExtras('settings'));
 
 if (btnBackToExtrasMenu) btnBackToExtrasMenu.addEventListener('click', mostrarMenuExtras);
@@ -2628,6 +2652,7 @@ if (tabExtraSuper) tabExtraSuper.addEventListener('click', () => abrirHerramient
 if (tabExtraGemini) tabExtraGemini.addEventListener('click', () => abrirHerramientaExtras('gemini'));
 if (tabExtraFridge) tabExtraFridge.addEventListener('click', () => abrirHerramientaExtras('fridge'));
 if (tabExtraWorkout) tabExtraWorkout.addEventListener('click', () => abrirHerramientaExtras('workout'));
+if (tabExtraLists) tabExtraLists.addEventListener('click', () => abrirHerramientaExtras('lists'));
 if (tabExtraSettings) tabExtraSettings.addEventListener('click', () => abrirHerramientaExtras('settings'));
 
 async function renderizarConfiguracion() {
@@ -2840,6 +2865,288 @@ function renderizarListaAdminEnSettings(cont) {
     };
     cont.appendChild(fila);
   });
+}
+
+// ==========================================
+// MÓDULO: LISTAS DE COMPRAS Y PRESUPUESTOS (DENTRO DE EXTRAS)
+// ==========================================
+const btnCreateListToggle = document.getElementById('btn-create-list-toggle');
+const createListBox = document.getElementById('create-list-box');
+const inputNewListName = document.getElementById('input-new-list-name');
+const btnCancelCreateList = document.getElementById('btn-cancel-create-list');
+const btnSaveNewList = document.getElementById('btn-save-new-list');
+
+const listsPillsContainer = document.getElementById('lists-pills-container');
+const activeListContent = document.getElementById('active-list-content');
+const activeListTotalDisplay = document.getElementById('active-list-total-display');
+const activeListItemsCount = document.getElementById('active-list-items-count');
+const btnDeleteActiveList = document.getElementById('btn-delete-active-list');
+
+const inputItemCant = document.getElementById('input-item-cant');
+const inputItemMaterial = document.getElementById('input-item-material');
+const inputItemVunit = document.getElementById('input-item-vunit');
+const itemSubtotalPreview = document.getElementById('item-subtotal-preview');
+const btnAddItemToList = document.getElementById('btn-add-item-to-list');
+const budgetTableRows = document.getElementById('budget-table-rows');
+const noListsPlaceholder = document.getElementById('no-lists-placeholder');
+
+function actualizarPreviewSubtotalItem() {
+  if (!itemSubtotalPreview) return;
+  const cant = parseFloat(inputItemCant && inputItemCant.value ? inputItemCant.value : '1') || 0;
+  const vunit = parseFloat(inputItemVunit && inputItemVunit.value ? inputItemVunit.value : '0') || 0;
+  const subtotal = Math.round(cant * vunit * 100) / 100;
+  itemSubtotalPreview.textContent = formatearPesos(subtotal);
+}
+
+function renderizarListasPresupuestos() {
+  if (!Array.isArray(listasPresupuestos)) listasPresupuestos = [];
+
+  // Contador en el menú
+  const extraListsCounter = document.getElementById('extra-lists-counter');
+  if (extraListsCounter) {
+    const cantL = listasPresupuestos.length;
+    extraListsCounter.textContent = cantL === 1 ? '1 lista creada' : `${cantL} listas creadas`;
+  }
+
+  // Si no hay listas creadas
+  if (listasPresupuestos.length === 0) {
+    if (noListsPlaceholder) noListsPlaceholder.classList.remove('hidden');
+    if (activeListContent) activeListContent.classList.add('hidden');
+    if (listsPillsContainer) listsPillsContainer.innerHTML = '';
+    return;
+  }
+
+  if (noListsPlaceholder) noListsPlaceholder.classList.add('hidden');
+  if (activeListContent) activeListContent.classList.remove('hidden');
+
+  // Asegurar que haya una lista activa seleccionada válida
+  if (!idListaPresupuestoActiva || !listasPresupuestos.find(l => l.id === idListaPresupuestoActiva)) {
+    idListaPresupuestoActiva = listasPresupuestos[0].id;
+  }
+
+  // Renderizar píldoras selectoras de listas
+  if (listsPillsContainer) {
+    listsPillsContainer.innerHTML = '';
+    listasPresupuestos.forEach(l => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      const esActiva = l.id === idListaPresupuestoActiva;
+      btn.className = `btn-list-pill ${esActiva ? 'active' : ''}`;
+      const cantItems = Array.isArray(l.items) ? l.items.length : 0;
+      btn.textContent = `📋 ${l.nombre} (${cantItems})`;
+      btn.onclick = () => {
+        idListaPresupuestoActiva = l.id;
+        renderizarListasPresupuestos();
+      };
+      listsPillsContainer.appendChild(btn);
+    });
+  }
+
+  const listaActiva = listasPresupuestos.find(l => l.id === idListaPresupuestoActiva);
+  if (!listaActiva) return;
+  if (!Array.isArray(listaActiva.items)) listaActiva.items = [];
+
+  // Calcular total general de la lista: suma de todos los totales de los elementos
+  const totalGeneral = listaActiva.items.reduce((acc, it) => acc + (Number(it.total) || 0), 0);
+  if (activeListTotalDisplay) {
+    activeListTotalDisplay.textContent = formatearPesos(totalGeneral);
+  }
+
+  const comprados = listaActiva.items.filter(it => it.comprado).length;
+  if (activeListItemsCount) {
+    const totalCount = listaActiva.items.length;
+    activeListItemsCount.textContent = totalCount === 1
+      ? `1 material ${comprados > 0 ? '(comprado)' : ''}`
+      : `${totalCount} materiales ${comprados > 0 ? `(${comprados} comprados)` : ''}`;
+  }
+
+  // Renderizar filas de la tabla de materiales
+  if (budgetTableRows) {
+    budgetTableRows.innerHTML = '';
+    if (listaActiva.items.length === 0) {
+      budgetTableRows.innerHTML = `
+        <div style="padding: 24px; text-align: center; color: #94a3b8; font-size: 0.95rem;">
+          Esta lista aún no tiene materiales. Usá el formulario arriba para agregar el primero.
+        </div>
+      `;
+    } else {
+      listaActiva.items.forEach(it => {
+        const fila = document.createElement('div');
+        fila.className = `budget-table-row ${it.comprado ? 'is-bought' : ''}`;
+        fila.innerHTML = `
+          <div class="col-cant">
+            <input type="checkbox" class="check-item-bought" ${it.comprado ? 'checked' : ''} title="Marcar como comprado">
+            <span>${it.cant}</span>
+          </div>
+          <div class="col-material">${escaparHTML(it.material)}</div>
+          <div class="col-vunit">${formatearPesos(it.vUnitario)}</div>
+          <div class="col-total">${formatearPesos(it.total)}</div>
+          <div class="col-actions">
+            <button type="button" class="btn-del-item-icon" title="Eliminar material">🗑️</button>
+          </div>
+        `;
+
+        const check = fila.querySelector('.check-item-bought');
+        if (check) {
+          check.onchange = async () => {
+            it.comprado = check.checked;
+            renderizarListasPresupuestos();
+            await guardarEnNube();
+          };
+        }
+
+        const btnDel = fila.querySelector('.btn-del-item-icon');
+        if (btnDel) {
+          btnDel.onclick = async () => {
+            listaActiva.items = listaActiva.items.filter(x => x.id !== it.id);
+            renderizarListasPresupuestos();
+            await guardarEnNube();
+          };
+        }
+
+        budgetTableRows.appendChild(fila);
+      });
+    }
+  }
+
+  actualizarPreviewSubtotalItem();
+}
+
+async function agregarMaterialAListaActiva() {
+  if (!idListaPresupuestoActiva) {
+    alert('Primero creá o seleccioná una lista.');
+    return;
+  }
+  const listaActiva = listasPresupuestos.find(l => l.id === idListaPresupuestoActiva);
+  if (!listaActiva) return;
+
+  const matText = inputItemMaterial ? inputItemMaterial.value.trim() : '';
+  if (!matText) {
+    if (inputItemMaterial) inputItemMaterial.focus();
+    return;
+  }
+
+  const cantVal = parseFloat(inputItemCant && inputItemCant.value ? inputItemCant.value : '1') || 1;
+  const vunitVal = parseFloat(inputItemVunit && inputItemVunit.value ? inputItemVunit.value : '0') || 0;
+  const totalVal = Math.round(cantVal * vunitVal * 100) / 100;
+
+  if (!Array.isArray(listaActiva.items)) listaActiva.items = [];
+  listaActiva.items.push({
+    id: 'item-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+    cant: cantVal,
+    material: matText,
+    vUnitario: vunitVal,
+    total: totalVal,
+    comprado: false,
+    creadoEl: Date.now()
+  });
+
+  if (inputItemMaterial) inputItemMaterial.value = '';
+  if (inputItemVunit) inputItemVunit.value = '';
+  if (inputItemCant) inputItemCant.value = '1';
+  actualizarPreviewSubtotalItem();
+  if (inputItemMaterial) inputItemMaterial.focus();
+
+  renderizarListasPresupuestos();
+  await guardarEnNube();
+}
+
+async function crearNuevaListaPresupuesto() {
+  const nombre = inputNewListName ? inputNewListName.value.trim() : '';
+  if (!nombre) {
+    if (inputNewListName) inputNewListName.focus();
+    return;
+  }
+  const nueva = {
+    id: 'lista-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+    nombre: nombre,
+    items: [],
+    creadoEl: Date.now()
+  };
+  listasPresupuestos.push(nueva);
+  idListaPresupuestoActiva = nueva.id;
+  if (inputNewListName) inputNewListName.value = '';
+  if (createListBox) createListBox.classList.add('hidden');
+  renderizarListasPresupuestos();
+  await guardarEnNube();
+}
+
+async function eliminarListaPresupuestoActiva() {
+  const listaActiva = listasPresupuestos.find(l => l.id === idListaPresupuestoActiva);
+  if (!listaActiva) return;
+  if (confirm(`¿Querés eliminar la lista "${listaActiva.nombre}" y todos sus materiales?`)) {
+    listasPresupuestos = listasPresupuestos.filter(l => l.id !== idListaPresupuestoActiva);
+    idListaPresupuestoActiva = listasPresupuestos.length > 0 ? listasPresupuestos[0].id : null;
+    renderizarListasPresupuestos();
+    await guardarEnNube();
+  }
+}
+
+if (btnCreateListToggle) {
+  btnCreateListToggle.addEventListener('click', () => {
+    if (createListBox) {
+      createListBox.classList.toggle('hidden');
+      if (!createListBox.classList.contains('hidden') && inputNewListName) {
+        inputNewListName.focus();
+      }
+    }
+  });
+}
+
+if (btnCancelCreateList) {
+  btnCancelCreateList.addEventListener('click', () => {
+    if (createListBox) createListBox.classList.add('hidden');
+  });
+}
+
+if (btnSaveNewList) {
+  btnSaveNewList.addEventListener('click', crearNuevaListaPresupuesto);
+}
+
+if (inputNewListName) {
+  inputNewListName.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      crearNuevaListaPresupuesto();
+    }
+  });
+}
+
+if (btnAddItemToList) {
+  btnAddItemToList.addEventListener('click', agregarMaterialAListaActiva);
+}
+
+if (inputItemMaterial) {
+  inputItemMaterial.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      agregarMaterialAListaActiva();
+    }
+  });
+}
+
+if (inputItemVunit) {
+  inputItemVunit.addEventListener('input', actualizarPreviewSubtotalItem);
+  inputItemVunit.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      agregarMaterialAListaActiva();
+    }
+  });
+}
+
+if (inputItemCant) {
+  inputItemCant.addEventListener('input', actualizarPreviewSubtotalItem);
+  inputItemCant.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      agregarMaterialAListaActiva();
+    }
+  });
+}
+
+if (btnDeleteActiveList) {
+  btnDeleteActiveList.addEventListener('click', eliminarListaPresupuestoActiva);
 }
 
 // ==========================================
