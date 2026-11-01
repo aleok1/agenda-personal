@@ -71,6 +71,7 @@ export default async function handler(req, res) {
     Object.values(raw.usuarios).forEach(u => {
       if (!Array.isArray(u.supermercado)) u.supermercado = [];
       if (!Array.isArray(u.heladera)) u.heladera = [];
+      if (!Array.isArray(u.listasPresupuestos)) u.listasPresupuestos = [];
       if (!Array.isArray(u.superCompartidoCon)) u.superCompartidoCon = [];
       if (typeof u.yaConfiguroCasa !== 'boolean') u.yaConfiguroCasa = false;
     });
@@ -149,6 +150,7 @@ export default async function handler(req, res) {
         supermercado: u.supermercado || [],
         heladera: u.heladera || [],
         entrenamiento: u.entrenamiento || null,
+        listasPresupuestos: u.listasPresupuestos || [],
         superCompartidoCon: u.superCompartidoCon || [],
         yaConfiguroCasa: Boolean(u.yaConfiguroCasa),
         tiempoBloqueoMin: u.tiempoBloqueoMin || 60,
@@ -181,6 +183,7 @@ export default async function handler(req, res) {
           supermercado: u.supermercado || [],
           heladera: u.heladera || [],
           entrenamiento: u.entrenamiento || null,
+          listasPresupuestos: u.listasPresupuestos || [],
           superCompartidoCon: u.superCompartidoCon || [],
           yaConfiguroCasa: Boolean(u.yaConfiguroCasa),
           tiempoBloqueoMin: u.tiempoBloqueoMin || 60,
@@ -206,6 +209,7 @@ export default async function handler(req, res) {
           supermercado: u.supermercado || [],
           heladera: u.heladera || [],
           entrenamiento: u.entrenamiento || null,
+          listasPresupuestos: u.listasPresupuestos || [],
           superCompartidoCon: u.superCompartidoCon || [],
           yaConfiguroCasa: Boolean(u.yaConfiguroCasa),
           tiempoBloqueoMin: u.tiempoBloqueoMin || 60,
@@ -388,6 +392,9 @@ export default async function handler(req, res) {
       if (body.entrenamiento !== undefined) {
         u.entrenamiento = body.entrenamiento;
       }
+      if (Array.isArray(body.listasPresupuestos)) {
+        u.listasPresupuestos = body.listasPresupuestos;
+      }
       if (body.tiempoBloqueoMin !== undefined) {
         u.tiempoBloqueoMin = Number(body.tiempoBloqueoMin) || 60;
       }
@@ -445,6 +452,7 @@ export default async function handler(req, res) {
         supermercado: u.supermercado,
         heladera: u.heladera,
         entrenamiento: u.entrenamiento || null,
+        listasPresupuestos: u.listasPresupuestos || [],
         superCompartidoCon: u.superCompartidoCon,
         borrados: u.borrados,
         usuarios: resumenPublicoUsuarios(db.usuarios)
