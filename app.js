@@ -291,6 +291,8 @@ function formatearFechaLegible(isoStr) {
 function actualizarEstadoSync(texto, color) {
   if (!syncStatusEl) return;
   syncStatusEl.textContent = texto;
+  syncStatusEl.style.cursor = 'pointer';
+  syncStatusEl.title = 'Tocá para ver el estado técnico o copiar código de diagnóstico';
   if (color === 'amarillo') {
     syncStatusEl.style.background = 'rgba(234, 179, 8, 0.15)';
     syncStatusEl.style.color = '#facc15';
@@ -300,6 +302,21 @@ function actualizarEstadoSync(texto, color) {
     syncStatusEl.style.color = '#4ade80';
     syncStatusEl.style.borderColor = 'rgba(34, 197, 94, 0.4)';
   }
+}
+
+if (syncStatusEl) {
+  syncStatusEl.addEventListener('click', () => {
+    if (typeof window.mostrarDiagnosticoError === 'function') {
+      const enLinea = syncStatusEl.textContent.includes('En línea');
+      window.mostrarDiagnosticoError({
+        tipo: enLinea ? 'INFO_ESTADO' : 'ESTADO_SYNC',
+        mensaje: enLinea 
+          ? `Aplicación sincronizada correctamente. Usuario activo: ${usuarioActivo ? usuarioActivo.nombre : 'Ninguno seleccionado'}.`
+          : `Estado de sincronización: ${syncStatusEl.textContent.trim()}. Detalle técnico: ${window.__LAST_SYNC_ERROR || 'Sin respuesta del servidor o sin conexión a internet'}.`,
+        archivo: 'api/sync'
+      });
+    }
+  });
 }
 
 // =========================================================================
@@ -389,12 +406,15 @@ async function cargarListaDeUsuarios() {
         } catch (e) {}
         renderizarGrillaUsuarios();
       }
+      window.__LAST_SYNC_ERROR = null;
       actualizarEstadoSync('☁️ En línea', 'verde');
     } else {
+      window.__LAST_SYNC_ERROR = `HTTP ${res.status}: ${res.statusText || 'Error de servidor'}`;
       actualizarEstadoSync('☁️ Sin conexión', 'amarillo');
     }
   } catch (e) {
     clearTimeout(timer);
+    window.__LAST_SYNC_ERROR = (e && e.message) || String(e);
     actualizarEstadoSync('☁️ Sin conexión', 'amarillo');
   }
 }
@@ -5851,3 +5871,5 @@ if (esEstadoCuenta) {
     }
   }, 15000);
 }
+
+window.__APP_INITIALIZED = true;
