@@ -73,6 +73,7 @@ export default async function handler(req, res) {
       if (!Array.isArray(u.heladera)) u.heladera = [];
       if (!Array.isArray(u.listasPresupuestos)) u.listasPresupuestos = [];
       if (!Array.isArray(u.deudores)) u.deudores = [];
+      if (!Array.isArray(u.yoDebo)) u.yoDebo = [];
       if (!Array.isArray(u.superCompartidoCon)) u.superCompartidoCon = [];
       if (typeof u.yaConfiguroCasa !== 'boolean') u.yaConfiguroCasa = false;
     });
@@ -216,6 +217,8 @@ export default async function handler(req, res) {
         entrenamiento: u.entrenamiento || null,
         listasPresupuestos: u.listasPresupuestos || [],
         deudores: u.deudores || [],
+        yoDebo: u.yoDebo || [],
+        yoDebo: u.yoDebo || [],
         superCompartidoCon: u.superCompartidoCon || [],
         yaConfiguroCasa: Boolean(u.yaConfiguroCasa),
         tiempoBloqueoMin: u.tiempoBloqueoMin || 60,
@@ -249,7 +252,9 @@ export default async function handler(req, res) {
           heladera: u.heladera || [],
           entrenamiento: u.entrenamiento || null,
           listasPresupuestos: u.listasPresupuestos || [],
-        deudores: u.deudores || [],
+          deudores: u.deudores || [],
+        yoDebo: u.yoDebo || [],
+          yoDebo: u.yoDebo || [],
           superCompartidoCon: u.superCompartidoCon || [],
           yaConfiguroCasa: Boolean(u.yaConfiguroCasa),
           tiempoBloqueoMin: u.tiempoBloqueoMin || 60,
@@ -276,7 +281,9 @@ export default async function handler(req, res) {
           heladera: u.heladera || [],
           entrenamiento: u.entrenamiento || null,
           listasPresupuestos: u.listasPresupuestos || [],
-        deudores: u.deudores || [],
+          deudores: u.deudores || [],
+        yoDebo: u.yoDebo || [],
+          yoDebo: u.yoDebo || [],
           superCompartidoCon: u.superCompartidoCon || [],
           yaConfiguroCasa: Boolean(u.yaConfiguroCasa),
           tiempoBloqueoMin: u.tiempoBloqueoMin || 60,
@@ -306,6 +313,7 @@ export default async function handler(req, res) {
           supermercado: [],
           superCompartidoCon: [],
           deudores: [],
+          yoDebo: [],
           borrados: []
         };
 
@@ -320,6 +328,7 @@ export default async function handler(req, res) {
           supermercado: [],
           superCompartidoCon: [],
           deudores: [],
+          yoDebo: [],
           borrados: [],
           usuarios: resumenPublicoUsuarios(db.usuarios)
         });
@@ -427,6 +436,71 @@ export default async function handler(req, res) {
         });
       }
 
+      if (accion === 'obtener_estado_cuenta') {
+        const propId = body.propietarioId || 'alejandro';
+        const u = db.usuarios[propId];
+        if (!u) return res.status(404).json({ error: 'Acreedor no encontrado' });
+        const d = (u.deudores || []).find(x => x.id === body.deudorId);
+        if (!d) return res.status(404).json({ error: 'Registro de deuda no encontrado' });
+        return res.status(200).json({
+          ok: true,
+          acreedorNombre: u.nombre,
+          acreedorId: u.id,
+          deudor: {
+            id: d.id,
+            nombre: d.nombre,
+            conceptos: d.conceptos || [],
+            pagosPendientes: d.pagosPendientes || []
+          }
+        });
+      }
+
+      if (accion === 'informar_pago_deudor') {
+        const propId = body.propietarioId || 'alejandro';
+        const u = db.usuarios[propId];
+        if (!u) return res.status(404).json({ error: 'Acreedor no encontrado' });
+        const d = (u.deudores || []).find(x => x.id === body.deudorId);
+        if (!d) return res.status(404).json({ error: 'Registro de deuda no encontrado' });
+        if (!Array.isArray(d.pagosPendientes)) d.pagosPendientes = [];
+
+        const concId = body.conceptoId || null;
+        let concNombre = 'Abono general / a distribuir';
+        if (concId) {
+          const encontrado = (d.conceptos || []).find(c => c.id === concId);
+          if (encontrado) concNombre = encontrado.concepto;
+        }
+
+        const monto = Number(body.monto) || 0;
+        if (monto <= 0) return res.status(400).json({ error: 'El monto debe ser mayor a 0' });
+
+        const nuevoPago = {
+          id: 'pago_inf_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+          conceptoId: concId,
+          conceptoNombre: concNombre,
+          monto: monto,
+          nota: String(body.nota || '').trim(),
+          fechaHora: Date.now(),
+          estado: 'pendiente'
+        };
+
+        d.pagosPendientes.unshift(nuevoPago);
+        await guardarBaseDeDatos(db, sha, `Pago informado por ${d.nombre}: $${monto}`);
+
+        if (Array.isArray(u.pushSubscriptions) && u.pushSubscriptions.length > 0) {
+          const payload = {
+            title: `💵 Pago informado por ${d.nombre}`,
+            body: `Informó un pago de $${monto.toLocaleString('es-AR')} (${concNombre}). Abrí la app para aceptarlo o rechazarlo.`,
+            tag: 'pago-deudor-' + Date.now(),
+            url: '/'
+          };
+          for (const sub of u.pushSubscriptions) {
+            try { await sendWebPushNotification(sub, payload); } catch (e) {}
+          }
+        }
+
+        return res.status(200).json({ ok: true, pago: nuevoPago });
+      }
+
       if (accion === 'agregar_externa' && body.nuevaTarea) {
         const targetId = body.destinoUsuarioId || 'alejandro';
         const uDestino = db.usuarios[targetId] || db.usuarios['alejandro'];
@@ -466,6 +540,9 @@ export default async function handler(req, res) {
       }
       if (Array.isArray(body.deudores)) {
         u.deudores = body.deudores;
+      }
+      if (Array.isArray(body.yoDebo)) {
+        u.yoDebo = body.yoDebo;
       }
       if (body.tiempoBloqueoMin !== undefined) {
         u.tiempoBloqueoMin = Number(body.tiempoBloqueoMin) || 60;
@@ -528,6 +605,7 @@ export default async function handler(req, res) {
         entrenamiento: u.entrenamiento || null,
         listasPresupuestos: u.listasPresupuestos || [],
         deudores: u.deudores || [],
+        yoDebo: u.yoDebo || [],
         superCompartidoCon: u.superCompartidoCon,
         borrados: u.borrados,
         usuarios: resumenPublicoUsuarios(db.usuarios)
