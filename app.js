@@ -73,6 +73,11 @@ let listasPresupuestos = [];
 let idListaPresupuestoActiva = null;
 let deudores = [];
 let idDeudorActivo = null;
+let yoDebo = [];
+let subtabEconomiaActiva = 'wallet';
+let subtabDeudaActiva = 'me-deben';
+let idConceptoParaPagar = null;
+let recordatorioYoDeboActivo = '1d';
 let modoNuevaLista = 'solo';
 let usuariosSeleccionadosNuevaLista = new Set();
 let usuariosSeleccionadosEdicionLista = new Set();
@@ -561,6 +566,7 @@ async function intentarIngresoConPassword(u, pass, eraAutomatico) {
     entrenamiento = data.entrenamiento || null;
     listasPresupuestos = Array.isArray(data.listasPresupuestos) ? data.listasPresupuestos : [];
     deudores = Array.isArray(data.deudores) ? data.deudores : [];
+    yoDebo = Array.isArray(data.yoDebo) ? data.yoDebo : [];
     idDeudorActivo = null;
     superCompartidoCon = Array.isArray(data.superCompartidoCon) ? data.superCompartidoCon : [];
     yaConfiguroCasa = Boolean(data.yaConfiguroCasa);
@@ -650,6 +656,7 @@ async function crearNuevoUsuarioFamiliar() {
       listasPresupuestos = [];
       idListaPresupuestoActiva = null;
       deudores = [];
+      yoDebo = [];
       idDeudorActivo = null;
       superCompartidoCon = [];
       yaConfiguroCasa = false;
@@ -1706,6 +1713,7 @@ async function sincronizarDesdeNube() {
       listasPresupuestos = cloud.listasPresupuestos.filter(l => !setBorradosListas.has(l.id));
     }
     if (Array.isArray(cloud.deudores)) deudores = cloud.deudores;
+    if (Array.isArray(cloud.yoDebo)) yoDebo = cloud.yoDebo;
     if (cloud.avatar && !usuarioActivo.esAdmin) {
       usuarioActivo.avatar = cloud.avatar;
       activeUserBadge.textContent = `${usuarioActivo.avatar} ${usuarioActivo.nombre}`;
@@ -1759,6 +1767,7 @@ async function guardarEnNube(avisoParaAutor) {
       entrenamiento: entrenamiento,
       listasPresupuestos: listasPresupuestos,
       deudores: deudores,
+      yoDebo: yoDebo,
       borradosListas: borradosListas,
       tiempoBloqueoMin: usuarioActivo.tiempoBloqueoMin || 60,
       borrados: borrados
@@ -1806,11 +1815,12 @@ function actualizarContadoresYAlertas() {
 
   const saldos = calcularSaldosBilletera();
   if (homeWalletCounter) {
-    homeWalletCounter.textContent = `Efectivo ${formatearPesos(saldos.efectivo)} | Virtual ${formatearPesos(saldos.virtual)}`;
+    const totalDeudasMeDeben = (deudores || []).reduce((acc, d) => acc + (calcularResumenDeudor(d).saldoPendiente || 0), 0);
+    homeWalletCounter.textContent = `Billetera: ${formatearPesos(saldos.efectivo + saldos.virtual)} | Me deben: ${formatearPesos(totalDeudasMeDeben)}`;
   }
 
   if (homeExtrasCounter) {
-    homeExtrasCounter.textContent = '5 herramientas y ajustes';
+    homeExtrasCounter.textContent = '6 herramientas y ajustes';
   }
 
   if (cantHoy > 0) {
@@ -1899,7 +1909,7 @@ function irAAgenda(fechaISO) {
   renderizarRecordatoriosDelDia();
 }
 
-function irABilletera() {
+function irABilletera(subtabDeseada) {
   registrarPasoHistorial('wallet');
   viewHome.classList.add('hidden');
   viewTasks.classList.add('hidden');
@@ -1908,7 +1918,11 @@ function irABilletera() {
   if (viewExtras) viewExtras.classList.add('hidden');
   viewWallet.classList.remove('hidden');
   btnHome.classList.remove('hidden');
-  renderizarBilletera();
+  if (subtabDeseada === 'debts') {
+    cambiarPestanaEconomia('debts');
+  } else {
+    cambiarPestanaEconomia('wallet');
+  }
 }
 
 function irAAsistente() {
@@ -3368,6 +3382,60 @@ const btnBackToDebtorsList = document.getElementById('btn-back-to-debtors-list')
 
 const btnCreateDebtorToggle = document.getElementById('btn-create-debtor-toggle');
 const createDebtorBox = document.getElementById('create-debtor-box');
+// ==========================================
+// MÓDULO 3: ECONOMÍA PERSONAL (BILLETERA + DEUDAS)
+// ==========================================
+const tabEconWallet = document.getElementById('tab-econ-wallet');
+const tabEconDebts = document.getElementById('tab-econ-debts');
+const subviewEconWallet = document.getElementById('subview-econ-wallet');
+const subviewEconDebts = document.getElementById('subview-econ-debts');
+
+const subtabDebtsOwedToMe = document.getElementById('subtab-debts-owed-to-me');
+const subtabDebtsIOwe = document.getElementById('subtab-debts-i-owe');
+const debtsOwedToMeSection = document.getElementById('debts-owed-to-me-section');
+const debtsIOweSection = document.getElementById('debts-i-owe-section');
+
+function cambiarPestanaEconomia(tab) {
+  subtabEconomiaActiva = tab;
+  if (tabEconWallet) tabEconWallet.classList.toggle('active', tab === 'wallet');
+  if (tabEconDebts) tabEconDebts.classList.toggle('active', tab === 'debts');
+  if (subviewEconWallet) subviewEconWallet.classList.toggle('hidden', tab !== 'wallet');
+  if (subviewEconDebts) subviewEconDebts.classList.toggle('hidden', tab !== 'debts');
+
+  if (tab === 'wallet') {
+    renderizarBilletera();
+  } else {
+    cambiarSubtabDeudas(subtabDeudaActiva || 'me-deben');
+  }
+}
+
+if (tabEconWallet) tabEconWallet.addEventListener('click', () => cambiarPestanaEconomia('wallet'));
+if (tabEconDebts) tabEconDebts.addEventListener('click', () => cambiarPestanaEconomia('debts'));
+
+function cambiarSubtabDeudas(sub) {
+  subtabDeudaActiva = sub;
+  if (subtabDebtsOwedToMe) subtabDebtsOwedToMe.classList.toggle('active', sub === 'me-deben');
+  if (subtabDebtsIOwe) subtabDebtsIOwe.classList.toggle('active', sub === 'yo-debo');
+  if (debtsOwedToMeSection) debtsOwedToMeSection.classList.toggle('hidden', sub !== 'me-deben');
+  if (debtsIOweSection) debtsIOweSection.classList.toggle('hidden', sub !== 'yo-debo');
+
+  if (sub === 'me-deben') {
+    renderizarDeudores();
+  } else {
+    renderizarYoDebo();
+  }
+}
+
+if (subtabDebtsOwedToMe) subtabDebtsOwedToMe.addEventListener('click', () => cambiarSubtabDeudas('me-deben'));
+if (subtabDebtsIOwe) subtabDebtsIOwe.addEventListener('click', () => cambiarSubtabDeudas('yo-debo'));
+
+// ------------------------------------------
+// DEUDAS: "ME DEBEN" (Acreedor / Deudores)
+// ------------------------------------------
+const debtsMainView = document.getElementById('debts-main-view');
+const debtorDetailView = document.getElementById('debtor-detail-view');
+const btnCreateDebtorToggle = document.getElementById('btn-create-debtor-toggle');
+const createDebtorBox = document.getElementById('create-debtor-box');
 const inputNewDebtorName = document.getElementById('input-new-debtor-name');
 const btnCancelCreateDebtor = document.getElementById('btn-cancel-create-debtor');
 const btnSaveNewDebtor = document.getElementById('btn-save-new-debtor');
@@ -3378,58 +3446,77 @@ const globalDebtSub = document.getElementById('global-debt-sub');
 const debtorsCardsGrid = document.getElementById('debtors-cards-grid');
 const noDebtorsPlaceholder = document.getElementById('no-debtors-placeholder');
 
+const btnBackToDebtorsList = document.getElementById('btn-back-to-debtors-list');
+const btnDeleteActiveDebtor = document.getElementById('btn-delete-active-debtor');
+const btnDebtorShareLink = document.getElementById('btn-debtor-share-link');
+const debtorShareModal = document.getElementById('debtor-share-modal');
+const inputDebtorShareUrl = document.getElementById('input-debtor-share-url');
+const btnCopyDebtorShare = document.getElementById('btn-copy-debtor-share');
+const btnWhatsappDebtorShare = document.getElementById('btn-whatsapp-debtor-share');
+const debtorShareCopiedMsg = document.getElementById('debtor-share-copied-msg');
+
 const activeDebtorNameLabel = document.getElementById('active-debtor-name-label');
 const activeDebtorTotalDisplay = document.getElementById('active-debtor-total-display');
 const activeDebtorBreakdown = document.getElementById('active-debtor-breakdown');
 const activeDebtorItemsCount = document.getElementById('active-debtor-items-count');
-const btnDeleteActiveDebtor = document.getElementById('btn-delete-active-debtor');
 
 const btnShowAddDebt = document.getElementById('btn-show-add-debt');
-const btnShowAddPayment = document.getElementById('btn-show-add-payment');
 const debtMovementFormBox = document.getElementById('debt-movement-form-box');
 const debtMovementFormTitle = document.getElementById('debt-movement-form-title');
 const debtMovementFormSub = document.getElementById('debt-movement-form-sub');
-const labelDebtConcept = document.getElementById('label-debt-concept');
 const inputDebtConcept = document.getElementById('input-debt-concept');
 const inputDebtAmount = document.getElementById('input-debt-amount');
 const btnCancelDebtMovement = document.getElementById('btn-cancel-debt-movement');
 const btnSaveDebtMovement = document.getElementById('btn-save-debt-movement');
-const debtorConceptsRows = document.getElementById('debtor-concepts-rows');
 
-let tipoMovimientoDeudaActual = 'deuda'; // 'deuda' | 'pago'
+const debtorPendingPaymentsBox = document.getElementById('debtor-pending-payments-box');
+const pendingPaymentsCountBadge = document.getElementById('pending-payments-count-badge');
+const debtorPendingPaymentsList = document.getElementById('debtor-pending-payments-list');
+
+const conceptPaymentModalBox = document.getElementById('concept-payment-modal-box');
+const conceptPaymentModalSub = document.getElementById('concept-payment-modal-sub');
+const inputConceptPaymentName = document.getElementById('input-concept-payment-name');
+const inputConceptPaymentAmount = document.getElementById('input-concept-payment-amount');
+const inputConceptPaymentNote = document.getElementById('input-concept-payment-note');
+const btnCancelConceptPayment = document.getElementById('btn-cancel-concept-payment');
+const btnSaveConceptPayment = document.getElementById('btn-save-concept-payment');
+const debtorConceptsList = document.getElementById('debtor-concepts-list');
 
 function calcularResumenDeudor(deudor) {
   if (!deudor || !Array.isArray(deudor.conceptos)) {
-    return { totalDeudas: 0, totalPagos: 0, saldoPendiente: 0, cantidad: 0 };
+    return { totalDeudas: 0, totalPagos: 0, saldoPendiente: 0, cantidad: 0, cantPagosPendientes: 0 };
   }
   let totalDeudas = 0;
   let totalPagos = 0;
 
-  deudor.conceptos.forEach(m => {
-    const val = Number(m.monto) || 0;
-    if (m.tipo === 'pago') {
-      totalPagos += val;
-    } else {
-      totalDeudas += val;
-      if (m.pagado && m.tipo === undefined) {
-        totalPagos += val;
-      }
+  deudor.conceptos.forEach(c => {
+    if (!c.tipo || c.tipo === 'deuda') {
+      const monto = Number(c.monto) || 0;
+      totalDeudas += monto;
+      const pagos = Array.isArray(c.pagos) ? c.pagos : [];
+      const sumPagos = pagos.reduce((acc, p) => acc + (Number(p.monto) || 0), 0);
+      totalPagos += sumPagos;
+      if (c.pagado && sumPagos === 0) totalPagos += monto;
+    } else if (c.tipo === 'pago') {
+      totalPagos += (Number(c.monto) || 0);
     }
   });
 
   const saldoPendiente = Math.max(0, totalDeudas - totalPagos);
+  const cantPagosPendientes = (deudor.pagosPendientes || []).filter(p => p.estado === 'pendiente').length;
+
   return {
     totalDeudas,
     totalPagos,
     saldoPendiente,
-    cantidad: deudor.conceptos.length
+    cantidad: deudor.conceptos.length,
+    cantPagosPendientes
   };
 }
 
 function renderizarDeudores() {
   if (!Array.isArray(deudores)) deudores = [];
 
-  // 1. Total general de todas las deudas con todos los deudores
   let sumaGeneralDeudas = 0;
   let cantConDeuda = 0;
 
@@ -3439,31 +3526,18 @@ function renderizarDeudores() {
     if (res.saldoPendiente > 0) cantConDeuda++;
   });
 
-  if (globalDebtAmount) {
-    globalDebtAmount.textContent = formatearPesos(sumaGeneralDeudas);
-  }
+  if (globalDebtAmount) globalDebtAmount.textContent = formatearPesos(sumaGeneralDeudas);
   if (globalDebtSub) {
     globalDebtSub.textContent = cantConDeuda === 1
       ? '1 deudor con saldo pendiente'
       : `${cantConDeuda} deudores con saldo pendiente`;
   }
 
-  // Contador en el menú principal Extras
-  const extraDebtsCounter = document.getElementById('extra-debts-counter');
-  if (extraDebtsCounter) {
-    const cantD = deudores.length;
-    extraDebtsCounter.textContent = cantD === 1
-      ? `1 deudor (${formatearPesos(sumaGeneralDeudas)})`
-      : `${cantD} deudores (${formatearPesos(sumaGeneralDeudas)})`;
-  }
-
-  // Si estamos en la vista de detalle de un deudor específico
   if (idDeudorActivo && deudores.find(d => d.id === idDeudorActivo)) {
     mostrarDetalleDeudor(idDeudorActivo);
     return;
   }
 
-  // Vista principal de botones de deudores
   if (debtsMainView) debtsMainView.classList.remove('hidden');
   if (debtorDetailView) debtorDetailView.classList.add('hidden');
 
@@ -3475,7 +3549,6 @@ function renderizarDeudores() {
 
   if (noDebtorsPlaceholder) noDebtorsPlaceholder.classList.add('hidden');
 
-  // Renderizar cada deudor como un botón
   if (debtorsCardsGrid) {
     debtorsCardsGrid.innerHTML = '';
     deudores.forEach(d => {
@@ -3485,15 +3558,19 @@ function renderizarDeudores() {
       card.className = 'debtor-card-btn';
 
       const badgeHtml = res.saldoPendiente > 0
-        ? `<span class="debtor-card-badge owing">Deuda: ${formatearPesos(res.saldoPendiente)}</span>`
+        ? `<span class="debtor-card-badge owing">Debe: ${formatearPesos(res.saldoPendiente)}</span>`
         : `<span class="debtor-card-badge settled">✓ Al día: $ 0</span>`;
+
+      const alertPendiente = res.cantPagosPendientes > 0
+        ? `<span class="priority-pill pill-intermedio" style="font-size:0.75rem; margin-top:4px;">🔔 ${res.cantPagosPendientes} pago(s) a revisar</span>`
+        : '';
 
       card.innerHTML = `
         <div class="debtor-card-btn-left">
           <div class="debtor-card-avatar">👤</div>
           <div>
             <div class="debtor-card-name">${escaparHTML(d.nombre)}</div>
-            <div class="debtor-card-info">${res.cantidad} movimiento${res.cantidad === 1 ? '' : 's'} en su historial</div>
+            <div class="debtor-card-info">${res.cantidad} deuda${res.cantidad === 1 ? '' : 's'} registradas ${alertPendiente}</div>
           </div>
         </div>
         <div class="debtor-card-btn-right">
@@ -3520,109 +3597,365 @@ function mostrarDetalleDeudor(debtorId) {
   }
   idDeudorActivo = deudor.id;
   if (!Array.isArray(deudor.conceptos)) deudor.conceptos = [];
+  if (!Array.isArray(deudor.pagosPendientes)) deudor.pagosPendientes = [];
 
   if (debtsMainView) debtsMainView.classList.add('hidden');
   if (debtorDetailView) debtorDetailView.classList.remove('hidden');
   if (debtMovementFormBox) debtMovementFormBox.classList.add('hidden');
+  if (conceptPaymentModalBox) conceptPaymentModalBox.classList.add('hidden');
+  if (debtorShareModal) debtorShareModal.classList.add('hidden');
 
   const res = calcularResumenDeudor(deudor);
 
-  if (activeDebtorNameLabel) {
-    activeDebtorNameLabel.textContent = `👤 Deudor: ${deudor.nombre}`;
-  }
-  if (activeDebtorTotalDisplay) {
-    activeDebtorTotalDisplay.textContent = formatearPesos(res.saldoPendiente);
-  }
+  if (activeDebtorNameLabel) activeDebtorNameLabel.textContent = `👤 Deudor: ${deudor.nombre}`;
+  if (activeDebtorTotalDisplay) activeDebtorTotalDisplay.textContent = formatearPesos(res.saldoPendiente);
   if (activeDebtorBreakdown) {
     activeDebtorBreakdown.textContent = `Total cargado: ${formatearPesos(res.totalDeudas)} • Total pagado: ${formatearPesos(res.totalPagos)}`;
   }
   if (activeDebtorItemsCount) {
-    activeDebtorItemsCount.textContent = res.cantidad === 1
-      ? '1 movimiento'
-      : `${res.cantidad} movimientos`;
+    activeDebtorItemsCount.textContent = res.cantidad === 1 ? '1 deuda' : `${res.cantidad} deudas`;
   }
 
-  // Renderizar historial de movimientos
-  if (debtorConceptsRows) {
-    debtorConceptsRows.innerHTML = '';
-    if (deudor.conceptos.length === 0) {
-      debtorConceptsRows.innerHTML = `
-        <div style="padding: 26px; text-align: center; color: #94a3b8; font-size: 0.95rem;">
-          No hay movimientos registrados para ${escaparHTML(deudor.nombre)}.<br>
-          Usá los botones de arriba para cargarle una deuda o registrar un pago.
+  // Configurar link de compartir
+  if (inputDebtorShareUrl && usuarioActivo) {
+    const origin = window.location.origin;
+    inputDebtorShareUrl.value = `${origin}/?estado_cuenta=${deudor.id}&owner=${usuarioActivo.id}`;
+  }
+
+  // 1. Renderizar pagos pendientes de aprobación informados por el deudor
+  renderizarPagosPendientesDeudor(deudor);
+
+  // 2. Renderizar lista de deudas individuales
+  renderizarDeudasIndividualesDeudor(deudor);
+}
+
+function renderizarPagosPendientesDeudor(deudor) {
+  if (!debtorPendingPaymentsBox || !debtorPendingPaymentsList) return;
+  const pendientes = (deudor.pagosPendientes || []).filter(p => p.estado === 'pendiente');
+
+  if (pendientes.length === 0) {
+    debtorPendingPaymentsBox.classList.add('hidden');
+    return;
+  }
+
+  debtorPendingPaymentsBox.classList.remove('hidden');
+  if (pendingPaymentsCountBadge) pendingPaymentsCountBadge.textContent = pendientes.length;
+  debtorPendingPaymentsList.innerHTML = '';
+
+  pendientes.forEach(p => {
+    const item = document.createElement('div');
+    item.className = 'pending-payment-card';
+
+    const fechaStr = p.fechaHora ? new Date(p.fechaHora).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
+    const notaHtml = p.nota ? `<div style="font-size:0.85rem; color:#cbd5e1; margin-top:2px;">Nota: "${escaparHTML(p.nota)}"</div>` : '';
+
+    item.innerHTML = `
+      <div>
+        <div style="font-weight: 700; color: #93c5fd; font-size: 1.05rem;">
+          💵 ${formatearPesos(p.monto)} 
+          <span style="font-weight: 400; font-size: 0.9rem; color: #cbd5e1;">para: <strong>${escaparHTML(p.conceptoNombre || 'Abono general')}</strong></span>
+        </div>
+        <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 2px;">Informado: ${fechaStr}</div>
+        ${notaHtml}
+      </div>
+      <div style="display: flex; gap: 8px;">
+        <button type="button" class="btn-approve-payment" data-id="${p.id}">✓ Aceptar</button>
+        <button type="button" class="btn-reject-payment" data-id="${p.id}">✕ Rechazar</button>
+      </div>
+    `;
+
+    const btnApprove = item.querySelector('.btn-approve-payment');
+    if (btnApprove) {
+      btnApprove.onclick = async () => {
+        await aprobarPagoInformado(deudor, p);
+      };
+    }
+
+    const btnReject = item.querySelector('.btn-reject-payment');
+    if (btnReject) {
+      btnReject.onclick = async () => {
+        await rechazarPagoInformado(deudor, p);
+      };
+    }
+
+    debtorPendingPaymentsList.appendChild(item);
+  });
+}
+
+async function aprobarPagoInformado(deudor, pago) {
+  pago.estado = 'aceptado';
+  pago.fechaAprobado = Date.now();
+
+  // Buscar deuda/concepto específico al que imputar
+  let conc = null;
+  if (pago.conceptoId) {
+    conc = deudor.conceptos.find(c => c.id === pago.conceptoId);
+  }
+  if (!conc) {
+    // Si no tiene concepto específico o ya no existe, imputar a la primera deuda con saldo
+    conc = deudor.conceptos.find(c => {
+      const sum = (c.pagos || []).reduce((a, x) => a + (Number(x.monto) || 0), 0);
+      return (Number(c.monto) || 0) > sum;
+    });
+  }
+
+  const nuevoAbono = {
+    id: 'pago_' + Date.now(),
+    monto: pago.monto,
+    nota: pago.nota ? `Pago informado por ${deudor.nombre}: ${pago.nota}` : `Pago informado por ${deudor.nombre}`,
+    fecha: new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' }),
+    creadoEl: Date.now()
+  };
+
+  if (conc) {
+    if (!Array.isArray(conc.pagos)) conc.pagos = [];
+    conc.pagos.push(nuevoAbono);
+    const sumP = conc.pagos.reduce((a, x) => a + (Number(x.monto) || 0), 0);
+    if (sumP >= (Number(conc.monto) || 0)) conc.pagado = true;
+  } else {
+    // Si no había deudas, agregar como pago general
+    deudor.conceptos.push({
+      id: 'mov_pago_' + Date.now(),
+      tipo: 'pago',
+      concepto: 'Pago informado por ' + deudor.nombre,
+      monto: pago.monto,
+      fecha: nuevoAbono.fecha,
+      creadoEl: Date.now()
+    });
+  }
+
+  deudor.updatedAt = Date.now();
+  mostrarDetalleDeudor(deudor.id);
+  await guardarEnNube();
+  alert(`✓ ¡Pago de ${formatearPesos(pago.monto)} aceptado y descontado exitosamente!`);
+}
+
+async function rechazarPagoInformado(deudor, pago) {
+  if (!confirm(`¿Querés rechazar el pago informado de ${formatearPesos(pago.monto)}? No se descontará ningún saldo.`)) return;
+  pago.estado = 'rechazado';
+  pago.fechaRechazado = Date.now();
+  deudor.updatedAt = Date.now();
+  mostrarDetalleDeudor(deudor.id);
+  await guardarEnNube();
+}
+
+function renderizarDeudasIndividualesDeudor(deudor) {
+  if (!debtorConceptsList) return;
+  debtorConceptsList.innerHTML = '';
+
+  if (deudor.conceptos.length === 0) {
+    debtorConceptsList.innerHTML = `
+      <div style="padding: 24px; text-align: center; color: #94a3b8; background: var(--surface); border-radius: 12px; border: 1px dashed rgba(255,255,255,0.1);">
+        No hay deudas registradas para ${escaparHTML(deudor.nombre)}.<br>
+        Tocá <strong>+ Cargar nueva deuda</strong> arriba para abrirle su primer concepto.
+      </div>
+    `;
+    return;
+  }
+
+  deudor.conceptos.forEach((c, idx) => {
+    // Si es legacy pago
+    if (c.tipo === 'pago') {
+      const cardP = document.createElement('div');
+      cardP.className = 'debt-concept-card paid';
+      cardP.innerHTML = `
+        <div class="debt-concept-header">
+          <div>
+            <span class="debt-status-tag paid">🟢 Pago / Entrega</span>
+            <span class="debt-concept-title" style="margin-left: 8px;">${escaparHTML(c.concepto)}</span>
+          </div>
+          <div style="font-weight: 700; color: #86efac;">-${formatearPesos(c.monto)}</div>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.85rem; color:#94a3b8;">
+          <span>Fecha: ${escaparHTML(c.fecha || '')}</span>
+          <button type="button" class="btn-del-item-icon" title="Eliminar este movimiento">🗑️</button>
         </div>
       `;
-    } else {
-      // Ordenar por fecha de creación descendente (los más recientes arriba)
-      const listaOrdenada = [...deudor.conceptos].reverse();
-      listaOrdenada.forEach(m => {
-        const esPago = m.tipo === 'pago';
-        const fila = document.createElement('div');
-        fila.className = `debt-table-row ${esPago ? 'is-settled' : ''}`;
-        fila.style.gridTemplateColumns = '110px 1fr 130px 105px 50px';
-
-        const tagTipo = esPago
-          ? `<span class="debt-status-tag paid">🟢 Pago/Cuota</span>`
-          : `<span class="debt-status-tag pending">🔴 Deuda</span>`;
-
-        const montoSigno = esPago
-          ? `-${formatearPesos(m.monto)}`
-          : `+${formatearPesos(m.monto)}`;
-
-        const colorMonto = esPago ? '#86efac' : '#fbbf24';
-
-        fila.innerHTML = `
-          <div>${tagTipo}</div>
-          <div class="debt-col-concept" style="font-weight: 600; color: #f1f5f9;">${escaparHTML(m.concepto)}</div>
-          <div style="text-align: right; font-weight: 700; color: ${colorMonto};">${montoSigno}</div>
-          <div class="debt-col-date" style="text-align: center; color: #94a3b8; font-size: 0.85rem;">${escaparHTML(m.fecha || '')}</div>
-          <div style="text-align: center;">
-            <button type="button" class="btn-del-item-icon" title="Eliminar este movimiento">🗑️</button>
-          </div>
-        `;
-
-        const btnDel = fila.querySelector('.btn-del-item-icon');
-        if (btnDel) {
-          btnDel.onclick = async () => {
-            if (confirm(`¿Querés eliminar el movimiento "${m.concepto}" (${montoSigno})?`)) {
-              deudor.conceptos = deudor.conceptos.filter(x => x.id !== m.id);
-              deudor.updatedAt = Date.now();
-              mostrarDetalleDeudor(deudor.id);
-              await guardarEnNube();
-            }
-          };
-        }
-
-        debtorConceptsRows.appendChild(fila);
-      });
+      const btnDelP = cardP.querySelector('.btn-del-item-icon');
+      if (btnDelP) {
+        btnDelP.onclick = async () => {
+          if (confirm(`¿Eliminar este pago de ${formatearPesos(c.monto)}?`)) {
+            deudor.conceptos = deudor.conceptos.filter(x => x.id !== c.id);
+            deudor.updatedAt = Date.now();
+            mostrarDetalleDeudor(deudor.id);
+            await guardarEnNube();
+          }
+        };
+      }
+      debtorConceptsList.appendChild(cardP);
+      return;
     }
+
+    // Deuda formal
+    const montoTotal = Number(c.monto) || 0;
+    const pagos = Array.isArray(c.pagos) ? c.pagos : [];
+    const sumPagos = pagos.reduce((a, p) => a + (Number(p.monto) || 0), 0);
+    const saldoRestante = Math.max(0, montoTotal - sumPagos);
+    const estaAlDia = c.pagado || (saldoRestante === 0 && montoTotal > 0);
+
+    const card = document.createElement('div');
+    card.className = `debt-concept-card ${estaAlDia ? 'paid' : ''}`;
+
+    const tagStatus = estaAlDia
+      ? `<span class="debt-status-tag paid">✓ Pagada al 100%</span>`
+      : `<span class="debt-status-tag pending">🔴 Saldo pendiente: ${formatearPesos(saldoRestante)}</span>`;
+
+    // Historial de pagos si existen
+    let historialPagosHtml = '';
+    if (pagos.length > 0) {
+      historialPagosHtml = `
+        <div style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed rgba(255,255,255,0.08); font-size: 0.85rem;">
+          <div style="color: #94a3b8; font-weight: 600; margin-bottom: 4px;">Historial de pagos (${pagos.length}):</div>
+          ${pagos.map(p => `
+            <div style="display: flex; justify-content: space-between; color: #86efac; padding: 2px 0;">
+              <span>• ${escaparHTML(p.nota || 'Abono / Cuota')} (${escaparHTML(p.fecha || '')})</span>
+              <strong>-${formatearPesos(p.monto)}</strong>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+
+    card.innerHTML = `
+      <div class="debt-concept-header">
+        <div>
+          <div class="debt-concept-title">${escaparHTML(c.concepto)}</div>
+          <div style="margin-top: 4px;">${tagStatus}</div>
+        </div>
+        <div style="text-align: right;">
+          <div style="font-size: 0.85rem; color: #94a3b8;">Total original:</div>
+          <div style="font-size: 1.15rem; font-weight: 800; color: #fbbf24;">${formatearPesos(montoTotal)}</div>
+        </div>
+      </div>
+
+      <div class="debt-concept-stats">
+        <span>Abonado: <strong>${formatearPesos(sumPagos)}</strong></span>
+        <span>Resta pagar: <strong style="color: ${estaAlDia ? '#86efac' : '#f87171'};">${formatearPesos(saldoRestante)}</strong></span>
+        <span>Fecha: <strong>${escaparHTML(c.fecha || '')}</strong></span>
+      </div>
+
+      ${historialPagosHtml}
+
+      <div class="debt-concept-actions">
+        <div>
+          ${!estaAlDia ? `
+            <button type="button" class="btn-pay-concept" data-concept-id="${c.id}">
+              💵 Cargar pago / cuota
+            </button>
+          ` : `
+            <span style="color: #86efac; font-weight: 700; font-size: 0.88rem;">🎉 Deuda cancelada</span>
+          `}
+        </div>
+        <button type="button" class="btn-del-item-icon btn-del-concept" data-concept-id="${c.id}" title="Eliminar esta deuda">
+          🗑️
+        </button>
+      </div>
+    `;
+
+    // Handler botón "💵 Cargar pago / cuota" en esta deuda específica
+    const btnPay = card.querySelector('.btn-pay-concept');
+    if (btnPay) {
+      btnPay.onclick = () => {
+        abrirModalPagoConcepto(deudor, c, saldoRestante);
+      };
+    }
+
+    // Handler botón eliminar deuda
+    const btnDel = card.querySelector('.btn-del-concept');
+    if (btnDel) {
+      btnDel.onclick = async () => {
+        if (confirm(`¿Querés eliminar la deuda "${c.concepto}" (${formatearPesos(montoTotal)}) de ${deudor.nombre}?`)) {
+          deudor.conceptos = deudor.conceptos.filter(x => x.id !== c.id);
+          deudor.updatedAt = Date.now();
+          mostrarDetalleDeudor(deudor.id);
+          await guardarEnNube();
+        }
+      };
+    }
+
+    debtorConceptsList.appendChild(card);
+  });
+}
+
+function abrirModalPagoConcepto(deudor, concepto, saldoRestante) {
+  idConceptoParaPagar = concepto.id;
+  if (!conceptPaymentModalBox) return;
+
+  conceptPaymentModalBox.classList.remove('hidden');
+  if (debtMovementFormBox) debtMovementFormBox.classList.add('hidden');
+
+  if (conceptPaymentModalSub) {
+    conceptPaymentModalSub.textContent = `Abonar a la deuda de ${deudor.nombre} (Saldo restante: ${formatearPesos(saldoRestante)}):`;
   }
+  if (inputConceptPaymentName) {
+    inputConceptPaymentName.value = `${concepto.concepto} (Resta ${formatearPesos(saldoRestante)})`;
+  }
+  if (inputConceptPaymentAmount) {
+    inputConceptPaymentAmount.value = saldoRestante > 0 ? saldoRestante : '';
+    inputConceptPaymentAmount.focus();
+  }
+  if (inputConceptPaymentNote) {
+    inputConceptPaymentNote.value = '';
+  }
+}
+
+async function guardarPagoConcepto() {
+  if (!idDeudorActivo || !idConceptoParaPagar) return;
+  const deudor = deudores.find(d => d.id === idDeudorActivo);
+  if (!deudor) return;
+  const concepto = (deudor.conceptos || []).find(c => c.id === idConceptoParaPagar);
+  if (!concepto) return;
+
+  const monto = parseFloat(inputConceptPaymentAmount && inputConceptPaymentAmount.value ? inputConceptPaymentAmount.value : '0') || 0;
+  if (monto <= 0) {
+    if (inputConceptPaymentAmount) inputConceptPaymentAmount.focus();
+    return;
+  }
+
+  const nota = inputConceptPaymentNote ? inputConceptPaymentNote.value.trim() : '';
+
+  if (!Array.isArray(concepto.pagos)) concepto.pagos = [];
+  concepto.pagos.push({
+    id: 'pago_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+    monto: monto,
+    nota: nota || 'Pago / cuota',
+    fecha: new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' }),
+    creadoEl: Date.now()
+  });
+
+  const sumP = concepto.pagos.reduce((a, x) => a + (Number(x.monto) || 0), 0);
+  if (sumP >= (Number(concepto.monto) || 0)) {
+    concepto.pagado = true;
+  }
+
+  deudor.updatedAt = Date.now();
+  if (conceptPaymentModalBox) conceptPaymentModalBox.classList.add('hidden');
+  mostrarDetalleDeudor(deudor.id);
+  await guardarEnNube();
+}
+
+if (btnCancelConceptPayment) {
+  btnCancelConceptPayment.addEventListener('click', () => {
+    if (conceptPaymentModalBox) conceptPaymentModalBox.classList.add('hidden');
+  });
+}
+if (btnSaveConceptPayment) {
+  btnSaveConceptPayment.addEventListener('click', guardarPagoConcepto);
 }
 
 function volverAListaDeudores() {
   idDeudorActivo = null;
+  idConceptoParaPagar = null;
   if (debtMovementFormBox) debtMovementFormBox.classList.add('hidden');
+  if (conceptPaymentModalBox) conceptPaymentModalBox.classList.add('hidden');
+  if (debtorShareModal) debtorShareModal.classList.add('hidden');
   renderizarDeudores();
 }
 
-function abrirFormularioMovimiento(tipo) {
-  tipoMovimientoDeudaActual = tipo;
+function abrirFormularioNuevaDeuda() {
   if (!debtMovementFormBox) return;
-
   debtMovementFormBox.classList.remove('hidden');
-
-  if (tipo === 'pago') {
-    if (debtMovementFormTitle) debtMovementFormTitle.textContent = '💵 Registrar pago / cuota';
-    if (debtMovementFormSub) debtMovementFormSub.textContent = 'Ingresá el detalle del pago (ej: Cuota 1, Entrega, Transferencia) y el monto:';
-    if (labelDebtConcept) labelDebtConcept.textContent = 'Detalle o número de cuota';
-    if (inputDebtConcept) inputDebtConcept.placeholder = 'Ej: Cuota 1, Pago en efectivo, Entrega parcial...';
-  } else {
-    if (debtMovementFormTitle) debtMovementFormTitle.textContent = '➕ Cargar nueva deuda';
-    if (debtMovementFormSub) debtMovementFormSub.textContent = 'Ingresá el concepto del dinero que te debe y el monto:';
-    if (labelDebtConcept) labelDebtConcept.textContent = 'Concepto o motivo de la deuda';
-    if (inputDebtConcept) inputDebtConcept.placeholder = 'Ej: Préstamo, Cena, Repuesto de moto, etc.';
-  }
-
+  if (conceptPaymentModalBox) conceptPaymentModalBox.classList.add('hidden');
   if (inputDebtConcept) {
     inputDebtConcept.value = '';
     inputDebtConcept.focus();
@@ -3630,11 +3963,8 @@ function abrirFormularioMovimiento(tipo) {
   if (inputDebtAmount) inputDebtAmount.value = '';
 }
 
-async function guardarMovimientoDeudor() {
-  if (!idDeudorActivo) {
-    alert('No hay ningún deudor seleccionado.');
-    return;
-  }
+async function guardarNuevaDeuda() {
+  if (!idDeudorActivo) return;
   const deudor = deudores.find(d => d.id === idDeudorActivo);
   if (!deudor) return;
 
@@ -3650,25 +3980,20 @@ async function guardarMovimientoDeudor() {
     return;
   }
 
-  const ahora = new Date();
-  const fechaStr = ahora.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' });
-
   if (!Array.isArray(deudor.conceptos)) deudor.conceptos = [];
   deudor.conceptos.push({
-    id: 'mov-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
-    tipo: tipoMovimientoDeudaActual,
+    id: 'deuda_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+    tipo: 'deuda',
     concepto: concepto,
     monto: montoVal,
-    fecha: fechaStr,
+    pagado: false,
+    pagos: [],
+    fecha: new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' }),
     creadoEl: Date.now()
   });
 
   deudor.updatedAt = Date.now();
-
   if (debtMovementFormBox) debtMovementFormBox.classList.add('hidden');
-  if (inputDebtConcept) inputDebtConcept.value = '';
-  if (inputDebtAmount) inputDebtAmount.value = '';
-
   mostrarDetalleDeudor(deudor.id);
   await guardarEnNube();
 }
@@ -3683,6 +4008,7 @@ async function crearNuevoDeudor() {
     id: 'deudor-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
     nombre: nombre,
     conceptos: [],
+    pagosPendientes: [],
     creadoEl: Date.now(),
     updatedAt: Date.now()
   };
@@ -3698,7 +4024,7 @@ async function crearNuevoDeudor() {
 async function eliminarDeudorActivo() {
   const deudorActivo = deudores.find(d => d.id === idDeudorActivo);
   if (!deudorActivo) return;
-  if (confirm(`¿Querés eliminar al deudor "${deudorActivo.nombre}" y todo su historial de movimientos?`)) {
+  if (confirm(`¿Querés eliminar al deudor "${deudorActivo.nombre}" y todo su historial de deudas?`)) {
     deudores = deudores.filter(d => d.id !== idDeudorActivo);
     idDeudorActivo = null;
     volverAListaDeudores();
@@ -3706,50 +4032,27 @@ async function eliminarDeudorActivo() {
   }
 }
 
-// Botón volver a la lista principal de deudores
-if (btnBackToDebtorsList) {
-  btnBackToDebtorsList.addEventListener('click', volverAListaDeudores);
-}
-
-// Botones de acción dentro del deudor
-if (btnShowAddDebt) {
-  btnShowAddDebt.addEventListener('click', () => abrirFormularioMovimiento('deuda'));
-}
-
-if (btnShowAddPayment) {
-  btnShowAddPayment.addEventListener('click', () => abrirFormularioMovimiento('pago'));
-}
-
-if (btnCancelDebtMovement) {
-  btnCancelDebtMovement.addEventListener('click', () => {
-    if (debtMovementFormBox) debtMovementFormBox.classList.add('hidden');
-  });
-}
-
-if (btnSaveDebtMovement) {
-  btnSaveDebtMovement.addEventListener('click', guardarMovimientoDeudor);
-}
+if (btnBackToDebtorsList) btnBackToDebtorsList.addEventListener('click', volverAListaDeudores);
+if (btnShowAddDebt) btnShowAddDebt.addEventListener('click', abrirFormularioNuevaDeuda);
+if (btnCancelDebtMovement) btnCancelDebtMovement.addEventListener('click', () => {
+  if (debtMovementFormBox) debtMovementFormBox.classList.add('hidden');
+});
+if (btnSaveDebtMovement) btnSaveDebtMovement.addEventListener('click', guardarNuevaDeuda);
 
 if (btnCreateDebtorToggle) {
   btnCreateDebtorToggle.addEventListener('click', () => {
     if (createDebtorBox) {
       createDebtorBox.classList.toggle('hidden');
-      if (!createDebtorBox.classList.contains('hidden') && inputNewDebtorName) {
-        inputNewDebtorName.focus();
-      }
+      if (!createDebtorBox.classList.contains('hidden') && inputNewDebtorName) inputNewDebtorName.focus();
     }
   });
 }
-
 if (btnCancelCreateDebtor) {
   btnCancelCreateDebtor.addEventListener('click', () => {
     if (createDebtorBox) createDebtorBox.classList.add('hidden');
   });
 }
-
-if (btnSaveNewDebtor) {
-  btnSaveNewDebtor.addEventListener('click', crearNuevoDeudor);
-}
+if (btnSaveNewDebtor) btnSaveNewDebtor.addEventListener('click', crearNuevoDeudor);
 
 if (inputNewDebtorName) {
   inputNewDebtorName.addEventListener('keydown', (e) => {
@@ -3759,7 +4062,6 @@ if (inputNewDebtorName) {
     }
   });
 }
-
 if (inputDebtConcept) {
   inputDebtConcept.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
@@ -3768,18 +4070,587 @@ if (inputDebtConcept) {
     }
   });
 }
-
 if (inputDebtAmount) {
   inputDebtAmount.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      guardarMovimientoDeudor();
+      guardarNuevaDeuda();
+    }
+  });
+}
+if (btnDeleteActiveDebtor) btnDeleteActiveDebtor.addEventListener('click', eliminarDeudorActivo);
+
+// Compartir Estado de Cuenta
+if (btnDebtorShareLink) {
+  btnDebtorShareLink.addEventListener('click', () => {
+    if (debtorShareModal) debtorShareModal.classList.toggle('hidden');
+  });
+}
+if (btnCopyDebtorShare) {
+  btnCopyDebtorShare.addEventListener('click', () => {
+    if (!inputDebtorShareUrl) return;
+    inputDebtorShareUrl.select();
+    navigator.clipboard.writeText(inputDebtorShareUrl.value).then(() => {
+      if (debtorShareCopiedMsg) {
+        debtorShareCopiedMsg.classList.remove('hidden');
+        setTimeout(() => debtorShareCopiedMsg.classList.add('hidden'), 3000);
+      }
+    });
+  });
+}
+if (btnWhatsappDebtorShare) {
+  btnWhatsappDebtorShare.addEventListener('click', () => {
+    if (!inputDebtorShareUrl || !idDeudorActivo) return;
+    const deudor = deudores.find(d => d.id === idDeudorActivo);
+    const nombre = deudor ? deudor.nombre : 'amigo/a';
+    const msg = `Hola ${nombre}, te comparto tu estado de cuenta actualizado para que puedas revisar tus saldos e informarme tus pagos:\n${inputDebtorShareUrl.value}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+  });
+}
+
+// ------------------------------------------
+// DEUDAS: "YO DEBO" (Deudas Propias con Cuotas y Recordatorio a las 09:00 hs)
+// ------------------------------------------
+const btnOpenAddMyDebt = document.getElementById('btn-open-add-my-debt');
+const boxAddMyDebt = document.getElementById('box-add-my-debt');
+const inputMyDebtConcept = document.getElementById('input-my-debt-concept');
+const inputMyDebtCreditor = document.getElementById('input-my-debt-creditor');
+const inputMyDebtTotal = document.getElementById('input-my-debt-total');
+const inputMyDebtInstallments = document.getElementById('input-my-debt-installments');
+const myDebtInstallmentPreview = document.getElementById('my-debt-installment-preview');
+const inputMyDebtDueDate = document.getElementById('input-my-debt-due-date');
+const myDebtReminderSelector = document.getElementById('my-debt-reminder-selector');
+const btnCancelAddMyDebt = document.getElementById('btn-cancel-add-my-debt');
+const btnSaveMyDebt = document.getElementById('btn-save-my-debt');
+
+const myDebtsTotalAmount = document.getElementById('my-debts-total-amount');
+const myDebtsCountSub = document.getElementById('my-debts-count-sub');
+const myDebtsListContainer = document.getElementById('my-debts-list-container');
+const noMyDebtsPlaceholder = document.getElementById('no-my-debts-placeholder');
+
+function actualizarPreviewCuotaYoDebo() {
+  const total = parseFloat(inputMyDebtTotal && inputMyDebtTotal.value ? inputMyDebtTotal.value : '0') || 0;
+  const cuotas = parseInt(inputMyDebtInstallments && inputMyDebtInstallments.value ? inputMyDebtInstallments.value : '1') || 1;
+  const valorCuota = total > 0 ? (total / cuotas) : 0;
+  if (myDebtInstallmentPreview) {
+    myDebtInstallmentPreview.textContent = cuotas > 1 ? `${cuotas} de ${formatearPesos(valorCuota)}` : formatearPesos(total);
+  }
+}
+
+if (inputMyDebtTotal) inputMyDebtTotal.addEventListener('input', actualizarPreviewCuotaYoDebo);
+if (inputMyDebtInstallments) inputMyDebtInstallments.addEventListener('change', actualizarPreviewCuotaYoDebo);
+
+if (myDebtReminderSelector) {
+  myDebtReminderSelector.querySelectorAll('.prio-option').forEach(btn => {
+    btn.addEventListener('click', () => {
+      myDebtReminderSelector.querySelectorAll('.prio-option').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      recordatorioYoDeboActivo = btn.getAttribute('data-reminder') || '1d';
+    });
+  });
+}
+
+if (btnOpenAddMyDebt) {
+  btnOpenAddMyDebt.addEventListener('click', () => {
+    if (boxAddMyDebt) {
+      boxAddMyDebt.classList.toggle('hidden');
+      if (!boxAddMyDebt.classList.contains('hidden')) {
+        if (inputMyDebtConcept) inputMyDebtConcept.focus();
+        if (inputMyDebtDueDate && !inputMyDebtDueDate.value) {
+          const hoy = new Date();
+          hoy.setDate(hoy.getDate() + 30);
+          inputMyDebtDueDate.value = hoy.toISOString().split('T')[0];
+        }
+        actualizarPreviewCuotaYoDebo();
+      }
     }
   });
 }
 
-if (btnDeleteActiveDebtor) {
-  btnDeleteActiveDebtor.addEventListener('click', eliminarDeudorActivo);
+if (btnCancelAddMyDebt) {
+  btnCancelAddMyDebt.addEventListener('click', () => {
+    if (boxAddMyDebt) boxAddMyDebt.classList.add('hidden');
+  });
+}
+
+async function guardarDeudaPropia() {
+  const concepto = inputMyDebtConcept ? inputMyDebtConcept.value.trim() : '';
+  const acreedor = inputMyDebtCreditor ? inputMyDebtCreditor.value.trim() : '';
+  const total = parseFloat(inputMyDebtTotal && inputMyDebtTotal.value ? inputMyDebtTotal.value : '0') || 0;
+  const cuotas = parseInt(inputMyDebtInstallments && inputMyDebtInstallments.value ? inputMyDebtInstallments.value : '1') || 1;
+  const fechaVenc = inputMyDebtDueDate ? inputMyDebtDueDate.value : '';
+
+  if (!concepto) {
+    if (inputMyDebtConcept) inputMyDebtConcept.focus();
+    return;
+  }
+  if (!acreedor) {
+    if (inputMyDebtCreditor) inputMyDebtCreditor.focus();
+    return;
+  }
+  if (total <= 0) {
+    if (inputMyDebtTotal) inputMyDebtTotal.focus();
+    return;
+  }
+
+  const nueva = {
+    id: 'yodebo_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+    concepto: concepto,
+    acreedor: acreedor,
+    montoTotal: total,
+    cuotasTotal: cuotas,
+    cuotasPagadas: 0,
+    montoPagado: 0,
+    fechaVencimiento: fechaVenc,
+    hora: '09:00',
+    recordatorio: recordatorioYoDeboActivo || '1d',
+    pagos: [],
+    pagado: false,
+    creadoEl: Date.now()
+  };
+
+  if (!Array.isArray(yoDebo)) yoDebo = [];
+  yoDebo.unshift(nueva);
+
+  // Programar alarma recordatorio con base a las 09:00 hs
+  programarRecordatorioYoDebo(nueva);
+
+  if (boxAddMyDebt) boxAddMyDebt.classList.add('hidden');
+  if (inputMyDebtConcept) inputMyDebtConcept.value = '';
+  if (inputMyDebtCreditor) inputMyDebtCreditor.value = '';
+  if (inputMyDebtTotal) inputMyDebtTotal.value = '';
+
+  renderizarYoDebo();
+  await guardarEnNube();
+}
+
+if (btnSaveMyDebt) btnSaveMyDebt.addEventListener('click', guardarDeudaPropia);
+
+function programarRecordatorioYoDebo(deuda) {
+  if (!deuda.fechaVencimiento || deuda.recordatorio === 'none') return;
+  try {
+    const [y, m, d] = deuda.fechaVencimiento.split('-').map(Number);
+    if (!y || !m || !d) return;
+    const baseMs = new Date(y, m - 1, d, 9, 0, 0, 0).getTime();
+    let restaMs = 24 * 3600 * 1000;
+    if (deuda.recordatorio === '2d') restaMs = 2 * 24 * 3600 * 1000;
+    if (deuda.recordatorio === '12h') restaMs = 12 * 3600 * 1000;
+    if (deuda.recordatorio === '6h') restaMs = 6 * 3600 * 1000;
+    if (deuda.recordatorio === '3h') restaMs = 3 * 3600 * 1000;
+
+    const horaDisparo = baseMs - restaMs;
+    if (horaDisparo > Date.now()) {
+      if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({
+          tipo: 'PROGRAMAR_ALARMA',
+          tiempoMs: horaDisparo,
+          titulo: `⏰ Recordatorio de pago: ${deuda.concepto}`,
+          cuerpo: `Vence el ${d}/${m} a las 09:00 hs. Tenés que pagarle a ${deuda.acreedor} (${formatearPesos(deuda.montoTotal - deuda.montoPagado)})`
+        });
+      }
+    }
+  } catch (err) {}
+}
+
+function renderizarYoDebo() {
+  if (!Array.isArray(yoDebo)) yoDebo = [];
+
+  let sumaTotalDebo = 0;
+  let cantPendientes = 0;
+
+  yoDebo.forEach(d => {
+    const pendiente = Math.max(0, (Number(d.montoTotal) || 0) - (Number(d.montoPagado) || 0));
+    sumaTotalDebo += pendiente;
+    if (pendiente > 0) cantPendientes++;
+  });
+
+  if (myDebtsTotalAmount) myDebtsTotalAmount.textContent = formatearPesos(sumaTotalDebo);
+  if (myDebtsCountSub) {
+    myDebtsCountSub.textContent = cantPendientes === 1
+      ? '1 deuda pendiente a pagar'
+      : `${cantPendientes} deudas pendientes a pagar`;
+  }
+
+  if (yoDebo.length === 0) {
+    if (noMyDebtsPlaceholder) noMyDebtsPlaceholder.classList.remove('hidden');
+    if (myDebtsListContainer) myDebtsListContainer.innerHTML = '';
+    return;
+  }
+
+  if (noMyDebtsPlaceholder) noMyDebtsPlaceholder.classList.add('hidden');
+
+  if (myDebtsListContainer) {
+    myDebtsListContainer.innerHTML = '';
+    yoDebo.forEach(d => {
+      const total = Number(d.montoTotal) || 0;
+      const pagado = Number(d.montoPagado) || 0;
+      const pendiente = Math.max(0, total - pagado);
+      const estaAlDia = d.pagado || (pendiente === 0 && total > 0);
+
+      const card = document.createElement('div');
+      card.className = `my-debt-card ${estaAlDia ? 'paid' : ''}`;
+
+      const cuotasTotal = Number(d.cuotasTotal) || 1;
+      const cuotasPagadas = Number(d.cuotasPagadas) || 0;
+      const valorCuota = total / cuotasTotal;
+
+      let cuotasInfo = cuotasTotal > 1
+        ? `Cuotas: <strong>${cuotasPagadas} de ${cuotasTotal}</strong> pagadas (${formatearPesos(valorCuota)}/cuota)`
+        : `Pago único total`;
+
+      let fechaHtml = '';
+      if (d.fechaVencimiento) {
+        const [y, m, dia] = d.fechaVencimiento.split('-');
+        fechaHtml = `<span>Vencimiento: <strong>${dia}/${m}/${y} a las 09:00 hs</strong></span>`;
+      }
+
+      let reminderLabel = 'Sin recordatorio';
+      if (d.recordatorio === '2d') reminderLabel = '2 días antes';
+      if (d.recordatorio === '1d') reminderLabel = '1 día antes';
+      if (d.recordatorio === '12h') reminderLabel = '12 hs antes';
+      if (d.recordatorio === '6h') reminderLabel = '6 hs antes';
+      if (d.recordatorio === '3h') reminderLabel = '3 hs antes';
+
+      const badgeAlarm = d.recordatorio && d.recordatorio !== 'none'
+        ? `<span class="my-debt-badge-alarm">⏰ Alarma: ${reminderLabel} a las 09:00</span>`
+        : '';
+
+      card.innerHTML = `
+        <div class="my-debt-header">
+          <div>
+            <div class="my-debt-title">${escaparHTML(d.concepto)}</div>
+            <div class="my-debt-creditor">Acreedor: <strong>${escaparHTML(d.acreedor)}</strong></div>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-size: 0.85rem; color: #fca5a5;">Total deuda:</div>
+            <div style="font-size: 1.15rem; font-weight: 800; color: #fecaca;">${formatearPesos(total)}</div>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 14px; flex-wrap: wrap; font-size: 0.9rem; color: #cbd5e1;">
+          <div>${cuotasInfo}</div>
+          <div>Pagado: <strong>${formatearPesos(pagado)}</strong></div>
+          <div>Resta: <strong style="color: ${estaAlDia ? '#86efac' : '#f87171'}; font-weight: 800;">${formatearPesos(pendiente)}</strong></div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 0.85rem; color: #94a3b8;">
+          ${fechaHtml}
+          ${badgeAlarm}
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.06); margin-top: 4px;">
+          <div>
+            ${!estaAlDia ? `
+              <button type="button" class="btn-pay-concept btn-pay-my-debt" data-id="${d.id}">
+                💵 Pagar cuota (${formatearPesos(cuotasTotal > 1 ? valorCuota : pendiente)})
+              </button>
+            ` : `
+              <span style="color: #86efac; font-weight: 700; font-size: 0.88rem;">🎉 Pagado al 100%</span>
+            `}
+          </div>
+          <button type="button" class="btn-del-item-icon btn-del-my-debt" data-id="${d.id}" title="Eliminar esta deuda">
+            🗑️
+          </button>
+        </div>
+      `;
+
+      const btnPay = card.querySelector('.btn-pay-my-debt');
+      if (btnPay) {
+        btnPay.onclick = async () => {
+          const cuotaMonto = cuotasTotal > 1 ? valorCuota : pendiente;
+          const respuesta = prompt(`¿Cuánto abonás para "${d.concepto}"?`, cuotaMonto);
+          if (!respuesta) return;
+          const val = parseFloat(respuesta) || 0;
+          if (val <= 0) return;
+
+          d.montoPagado = (Number(d.montoPagado) || 0) + val;
+          if (cuotasTotal > 1 && d.cuotasPagadas < cuotasTotal) {
+            d.cuotasPagadas = (Number(d.cuotasPagadas) || 0) + 1;
+          }
+          if (d.montoPagado >= d.montoTotal) {
+            d.pagado = true;
+          }
+          renderizarYoDebo();
+          await guardarEnNube();
+        };
+      }
+
+      const btnDel = card.querySelector('.btn-del-my-debt');
+      if (btnDel) {
+        btnDel.onclick = async () => {
+          if (confirm(`¿Querés eliminar la deuda "${d.concepto}" de ${formatearPesos(total)}?`)) {
+            yoDebo = yoDebo.filter(x => x.id !== d.id);
+            renderizarYoDebo();
+            await guardarEnNube();
+          }
+        };
+      }
+
+      myDebtsListContainer.appendChild(card);
+    });
+  }
+}
+
+// ------------------------------------------
+// ESTADO DE CUENTA PÚBLICO (PARA EL DEUDOR)
+// ------------------------------------------
+const viewPublicStatement = document.getElementById('view-public-statement');
+const statementCreditorSub = document.getElementById('statement-creditor-sub');
+const statementDebtorName = document.getElementById('statement-debtor-name');
+const statementTotalAmount = document.getElementById('statement-total-amount');
+const statementDateBadge = document.getElementById('statement-date-badge');
+const btnStatementOpenPay = document.getElementById('btn-statement-open-pay');
+const statementPayFormBox = document.getElementById('statement-pay-form-box');
+const selectStatementConcept = document.getElementById('select-statement-concept');
+const inputStatementAmount = document.getElementById('input-statement-amount');
+const inputStatementNote = document.getElementById('input-statement-note');
+const btnCancelStatementPay = document.getElementById('btn-cancel-statement-pay');
+const btnSendStatementPay = document.getElementById('btn-send-statement-pay');
+const statementPaySuccessMsg = document.getElementById('statement-pay-success-msg');
+const statementConceptsList = document.getElementById('statement-concepts-list');
+const statementPendingListWrap = document.getElementById('statement-pending-list-wrap');
+const statementPendingList = document.getElementById('statement-pending-list');
+const statementLinkAgendaBanner = document.getElementById('statement-link-agenda-banner');
+const btnStatementLinkToMyDebts = document.getElementById('btn-statement-link-to-my-debts');
+const statementLinkedSuccessMsg = document.getElementById('statement-linked-success-msg');
+
+let estadoCuentaDataActiva = null;
+
+async function inicializarEstadoCuentaPublico() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const estadoCuentaId = urlParams.get('estado_cuenta');
+  const ownerId = urlParams.get('owner') || 'alejandro';
+
+  if (!estadoCuentaId) return false;
+
+  // Ocultar todas las demás vistas principales
+  [viewHome, viewTasks, viewAgenda, viewWallet, viewExtras, viewExternal].forEach(v => {
+    if (v) v.classList.add('hidden');
+  });
+  if (viewPublicStatement) viewPublicStatement.classList.remove('hidden');
+  if (btnHome) btnHome.classList.add('hidden');
+
+  if (statementDateBadge) {
+    statementDateBadge.textContent = new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  }
+
+  try {
+    const res = await fetch('/api/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        accion: 'obtener_estado_cuenta',
+        propietarioId: ownerId,
+        deudorId: estadoCuentaId
+      })
+    });
+    const data = await res.json();
+    if (!res.ok || !data.ok) {
+      alert(data.error || 'No se encontró el estado de cuenta.');
+      return true;
+    }
+
+    estadoCuentaDataActiva = data;
+    renderizarVistaPublicaEstadoCuenta(data, ownerId);
+  } catch (err) {
+    console.error(err);
+  }
+
+  return true;
+}
+
+function renderizarVistaPublicaEstadoCuenta(data, ownerId) {
+  const { deudor, acreedorNombre } = data;
+  if (statementCreditorSub) statementCreditorSub.textContent = `Detalle de tu saldo y conceptos con ${acreedorNombre || 'Alejandro'}`;
+  if (statementDebtorName) statementDebtorName.textContent = `👤 Deudor: ${deudor.nombre}`;
+
+  // Calcular saldo total
+  let totalDeuda = 0;
+  let totalPagado = 0;
+  (deudor.conceptos || []).forEach(c => {
+    const monto = Number(c.monto) || 0;
+    if (!c.tipo || c.tipo === 'deuda') {
+      totalDeuda += monto;
+      const sumP = (c.pagos || []).reduce((a, x) => a + (Number(x.monto) || 0), 0);
+      totalPagado += sumP;
+      if (c.pagado && sumP === 0) totalPagado += monto;
+    } else if (c.tipo === 'pago') {
+      totalPagado += monto;
+    }
+  });
+
+  const saldoPendiente = Math.max(0, totalDeuda - totalPagado);
+  if (statementTotalAmount) statementTotalAmount.textContent = formatearPesos(saldoPendiente);
+
+  // Selector de conceptos para imputar el pago
+  if (selectStatementConcept) {
+    selectStatementConcept.innerHTML = '';
+    const optGeneral = document.createElement('option');
+    optGeneral.value = '';
+    optGeneral.textContent = `Abono general / a distribuir (${formatearPesos(saldoPendiente)} pendiente)`;
+    selectStatementConcept.appendChild(optGeneral);
+
+    (deudor.conceptos || []).filter(c => !c.tipo || c.tipo === 'deuda').forEach(c => {
+      const sumP = (c.pagos || []).reduce((a, x) => a + (Number(x.monto) || 0), 0);
+      const rest = Math.max(0, (Number(c.monto) || 0) - sumP);
+      const opt = document.createElement('option');
+      opt.value = c.id;
+      opt.textContent = `${c.concepto} - Resta pagar: ${formatearPesos(rest)}`;
+      selectStatementConcept.appendChild(opt);
+    });
+  }
+
+  // Si el visitante tiene usuario activo en la app, ofrecer vincular a "Yo debo"
+  if (statementLinkAgendaBanner) {
+    if (usuarioActivo && usuarioActivo.id !== ownerId) {
+      statementLinkAgendaBanner.classList.remove('hidden');
+      if (btnStatementLinkToMyDebts) {
+        btnStatementLinkToMyDebts.onclick = async () => {
+          const yaExiste = (yoDebo || []).some(x => x.concepto.includes(deudor.nombre) || x.acreedor.includes(acreedorNombre));
+          if (yaExiste && !confirm('Ya tenés una deuda registrada con este acreedor. ¿Deseás agregarla igualmente?')) return;
+
+          const nuevaPropia = {
+            id: 'yodebo_' + Date.now(),
+            concepto: `Deuda con ${acreedorNombre}`,
+            acreedor: acreedorNombre,
+            montoTotal: saldoPendiente,
+            cuotasTotal: 1,
+            cuotasPagadas: 0,
+            montoPagado: 0,
+            fechaVencimiento: new Date().toISOString().split('T')[0],
+            hora: '09:00',
+            recordatorio: '1d',
+            pagos: [],
+            creadoEl: Date.now()
+          };
+
+          if (!Array.isArray(yoDebo)) yoDebo = [];
+          yoDebo.unshift(nuevaPropia);
+          programarRecordatorioYoDebo(nuevaPropia);
+          await guardarEnNube();
+
+          if (statementLinkedSuccessMsg) statementLinkedSuccessMsg.classList.remove('hidden');
+        };
+      }
+    } else {
+      statementLinkAgendaBanner.classList.add('hidden');
+    }
+  }
+
+  // Lista de deudas individuales
+  if (statementConceptsList) {
+    statementConceptsList.innerHTML = '';
+    (deudor.conceptos || []).forEach(c => {
+      if (c.tipo === 'pago') return;
+      const total = Number(c.monto) || 0;
+      const sumP = (c.pagos || []).reduce((a, x) => a + (Number(x.monto) || 0), 0);
+      const rest = Math.max(0, total - sumP);
+      const pagada = c.pagado || (rest === 0 && total > 0);
+
+      const div = document.createElement('div');
+      div.className = `debt-concept-card ${pagada ? 'paid' : ''}`;
+      div.innerHTML = `
+        <div class="debt-concept-header">
+          <div>
+            <div class="debt-concept-title">${escaparHTML(c.concepto)}</div>
+            <div style="margin-top:4px;">
+              ${pagada ? `<span class="debt-status-tag paid">✓ Pagada al 100%</span>` : `<span class="debt-status-tag pending">🔴 Saldo: ${formatearPesos(rest)}</span>`}
+            </div>
+          </div>
+          <div style="font-weight: 800; color: #fbbf24; font-size: 1.1rem;">${formatearPesos(total)}</div>
+        </div>
+        <div style="font-size: 0.85rem; color: #94a3b8; display:flex; gap:12px;">
+          <span>Abonado: <strong>${formatearPesos(sumP)}</strong></span>
+          <span>Resta: <strong style="color: ${pagada ? '#86efac' : '#f87171'};">${formatearPesos(rest)}</strong></span>
+        </div>
+      `;
+      statementConceptsList.appendChild(div);
+    });
+  }
+
+  // Pagos pendientes de aprobación
+  if (statementPendingListWrap && statementPendingList) {
+    const pends = (deudor.pagosPendientes || []).filter(p => p.estado === 'pendiente');
+    if (pends.length > 0) {
+      statementPendingListWrap.classList.remove('hidden');
+      statementPendingList.innerHTML = pends.map(p => `
+        <div style="background: rgba(37,99,235,0.15); border: 1px solid #3b82f6; border-radius: 10px; padding: 10px 14px; font-size: 0.9rem;">
+          <div style="color: #93c5fd; font-weight: 700;">💵 ${formatearPesos(p.monto)} — ${escaparHTML(p.conceptoNombre || 'Abono')}</div>
+          <div style="color: #cbd5e1; font-size: 0.8rem;">Enviado para revisión del acreedor • ${p.nota ? `"${escaparHTML(p.nota)}"` : ''}</div>
+        </div>
+      `).join('');
+    } else {
+      statementPendingListWrap.classList.add('hidden');
+    }
+  }
+}
+
+if (btnStatementOpenPay) {
+  btnStatementOpenPay.addEventListener('click', () => {
+    if (statementPayFormBox) {
+      statementPayFormBox.classList.toggle('hidden');
+      if (!statementPayFormBox.classList.contains('hidden') && inputStatementAmount) inputStatementAmount.focus();
+    }
+  });
+}
+
+if (btnCancelStatementPay) {
+  btnCancelStatementPay.addEventListener('click', () => {
+    if (statementPayFormBox) statementPayFormBox.classList.add('hidden');
+  });
+}
+
+if (btnSendStatementPay) {
+  btnSendStatementPay.addEventListener('click', async () => {
+    if (!estadoCuentaDataActiva) return;
+    const monto = parseFloat(inputStatementAmount && inputStatementAmount.value ? inputStatementAmount.value : '0') || 0;
+    if (monto <= 0) {
+      if (inputStatementAmount) inputStatementAmount.focus();
+      return;
+    }
+    const conceptoId = selectStatementConcept ? selectStatementConcept.value : '';
+    const nota = inputStatementNote ? inputStatementNote.value.trim() : '';
+
+    btnSendStatementPay.disabled = true;
+    btnSendStatementPay.textContent = 'Enviando...';
+
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const res = await fetch('/api/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          accion: 'informar_pago_deudor',
+          propietarioId: urlParams.get('owner') || 'alejandro',
+          deudorId: estadoCuentaDataActiva.deudor.id,
+          conceptoId: conceptoId || null,
+          monto: monto,
+          nota: nota
+        })
+      });
+      const resData = await res.json();
+      if (!res.ok || !resData.ok) {
+        alert(resData.error || 'No se pudo registrar el pago informado.');
+        return;
+      }
+
+      if (statementPaySuccessMsg) statementPaySuccessMsg.classList.remove('hidden');
+      if (inputStatementAmount) inputStatementAmount.value = '';
+      if (inputStatementNote) inputStatementNote.value = '';
+      setTimeout(() => {
+        if (statementPayFormBox) statementPayFormBox.classList.add('hidden');
+        if (statementPaySuccessMsg) statementPaySuccessMsg.classList.add('hidden');
+      }, 3000);
+
+      // Recargar datos
+      await inicializarEstadoCuentaPublico();
+    } catch (e) {
+      alert('Error de conexión al enviar el pago.');
+    } finally {
+      btnSendStatementPay.disabled = false;
+      btnSendStatementPay.textContent = 'Enviar pago para aprobación';
+    }
+  });
 }
 
 // ==========================================
@@ -4943,7 +5814,14 @@ if (btnAnotherWorkout) btnAnotherWorkout.addEventListener('click', () => generar
 // ==========================================
 mostrarFechaHoy();
 
-if (ES_MODO_EXTERNO) {
+const esEstadoCuenta = window.location.search.includes('estado_cuenta');
+
+if (esEstadoCuenta) {
+  viewUsers.classList.add('hidden');
+  viewHome.classList.add('hidden');
+  if (syncStatusEl) syncStatusEl.classList.add('hidden');
+  inicializarEstadoCuentaPublico();
+} else if (ES_MODO_EXTERNO) {
   viewUsers.classList.add('hidden');
   viewHome.classList.add('hidden');
   if (syncStatusEl) syncStatusEl.classList.add('hidden');
