@@ -26,8 +26,8 @@ const urlParams = new URLSearchParams(window.location.search);
 const ES_MODO_EXTERNO = urlParams.get('modo') === 'externo';
 const USUARIO_EXTERNO_DESTINO = urlParams.get('para') || 'alejandro';
 
-const API_SYNC_URL = 'https://agenda-personal-aleok.vercel.app/api/sync';
-const API_CHAT_URL = 'https://agenda-personal-aleok.vercel.app/api/chat';
+const API_SYNC_URL = window.location.origin.includes('localhost') ? 'https://agenda-personal-aleok.vercel.app/api/sync' : '/api/sync';
+const API_CHAT_URL = window.location.origin.includes('localhost') ? 'https://agenda-personal-aleok.vercel.app/api/chat' : '/api/chat';
 
 function obtenerFechaISO(dateObj) {
   const y = dateObj.getFullYear();
@@ -41,9 +41,10 @@ const HOY_ISO = obtenerFechaISO(hoyDate);
 
 // Estado global de usuarios y sesión activa con respaldo inmediato
 let listaUsuariosPublica = [
-  { id: 'alejandro', nombre: 'Alejandro', esAdmin: true, tienePassword: true },
-  { id: 'nico-7999', nombre: 'Nico', esAdmin: false, tienePassword: true },
-  { id: 'romi-7301', nombre: 'ROMI', esAdmin: false, tienePassword: true }
+  { id: 'alejandro', nombre: 'Alejandro', esAdmin: true, avatar: '👑', tienePassword: true },
+  { id: 'nico-7999', nombre: 'Nico', esAdmin: false, avatar: '🦁', tienePassword: true },
+  { id: 'romi-7301', nombre: 'ROMI', esAdmin: false, avatar: '🌸', tienePassword: true },
+  { id: 'ariel-0414', nombre: 'Ariel', esAdmin: false, avatar: '⚡', tienePassword: true }
 ];
 
 try {
@@ -371,7 +372,7 @@ async function cargarListaDeUsuarios() {
   actualizarEstadoSync('☁️ Conectando...', 'amarillo');
 
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 6000);
+  const timer = setTimeout(() => controller.abort(), 12000);
 
   try {
     const res = await fetch(API_SYNC_URL + '?accion=lista_usuarios&t=' + Date.now(), {
@@ -415,7 +416,13 @@ function renderizarGrillaUsuarios() {
     card.type = 'button';
     card.className = `big-card ${u.esAdmin ? 'card-primary' : 'card-agenda'}`;
 
-    const icono = u.esAdmin ? '👑' : (u.avatar || '👤');
+    const defaultAvatars = {
+      'alejandro': '👑',
+      'nico-7999': '🦁',
+      'romi-7301': '🌸',
+      'ariel-0414': '⚡'
+    };
+    const icono = u.avatar || defaultAvatars[u.id] || (u.esAdmin ? '👑' : '👤');
     const sub = u.esAdmin ? 'Administrador de la aplicación' : 'Agenda personal privada';
     const estadoBadge = !u.tienePassword
       ? 'Configurar contraseña por 1ª vez'
@@ -3373,15 +3380,6 @@ if (btnDeleteActiveList) {
   btnDeleteActiveList.addEventListener('click', eliminarListaPresupuestoActiva);
 }
 
-// ==========================================
-// MÓDULO: CONTROL DE DEUDAS (DENTRO DE EXTRAS)
-// ==========================================
-const debtsMainView = document.getElementById('debts-main-view');
-const debtorDetailView = document.getElementById('debtor-detail-view');
-const btnBackToDebtorsList = document.getElementById('btn-back-to-debtors-list');
-
-const btnCreateDebtorToggle = document.getElementById('btn-create-debtor-toggle');
-const createDebtorBox = document.getElementById('create-debtor-box');
 // ==========================================
 // MÓDULO 3: ECONOMÍA PERSONAL (BILLETERA + DEUDAS)
 // ==========================================
