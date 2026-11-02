@@ -99,11 +99,17 @@ export default async function handler(req, res) {
   }
 
   function resumenPublicoUsuarios(usuariosMap) {
+    const defaultAvatars = {
+      'alejandro': '👑',
+      'nico-7999': '🦁',
+      'romi-7301': '🌸',
+      'ariel-0414': '⚡'
+    };
     return Object.values(usuariosMap).map(u => ({
       id: u.id,
       nombre: u.nombre,
       esAdmin: Boolean(u.esAdmin),
-      avatar: u.esAdmin ? '👑' : (u.avatar || '👤'),
+      avatar: u.avatar || defaultAvatars[u.id] || (u.esAdmin ? '👑' : '👤'),
       tienePassword: Boolean(u.password)
     }));
   }
@@ -217,7 +223,6 @@ export default async function handler(req, res) {
         entrenamiento: u.entrenamiento || null,
         listasPresupuestos: u.listasPresupuestos || [],
         deudores: u.deudores || [],
-        yoDebo: u.yoDebo || [],
         yoDebo: u.yoDebo || [],
         superCompartidoCon: u.superCompartidoCon || [],
         yaConfiguroCasa: Boolean(u.yaConfiguroCasa),
