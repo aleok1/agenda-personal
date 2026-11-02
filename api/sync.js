@@ -529,19 +529,34 @@ export default async function handler(req, res) {
       if (accion === 'crear_usuario') {
         const nombre = String(body.nombre || '').trim();
         const pass = String(body.password || '').trim();
+        const dniLimpio = String(body.dni || '').replace(/\D/g, '').trim();
+
         if (!nombre || !pass) {
           return res.status(400).json({ error: 'Completá el nombre y la contraseña' });
         }
+
+        if (dniLimpio) {
+          if (dniLimpio.length < 5) {
+            return res.status(400).json({ error: 'El DNI debe tener al menos 5 números' });
+          }
+          const dup = Object.values(db.usuarios).find(otro => String(otro.dni || '').replace(/\D/g, '') === dniLimpio);
+          if (dup) {
+            return res.status(400).json({ error: `El DNI ya está registrado por ${dup.nombre}` });
+          }
+        }
+
         const idLimpio = nombre.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '') + '-' + Date.now().toString().slice(-4);
         const avatarInicial = (body.avatar && body.avatar !== '👑') ? String(body.avatar) : '👤';
 
         db.usuarios[idLimpio] = {
           id: idLimpio,
           nombre: nombre,
+          dni: dniLimpio || null,
           esAdmin: false,
           avatar: avatarInicial,
           password: pass,
           tareas: [],
+          tareasCompartidas: [],
           recordatorios: [],
           movimientos: [],
           supermercado: [],
@@ -551,18 +566,75 @@ export default async function handler(req, res) {
           borrados: []
         };
 
+        // Si se registra desde el link de estado de cuenta de un deudor
+        if (body.vincularEstadoCuenta) {
+          const propId = body.vincularEstadoCuenta.propietarioId || 'alejandro';
+          const deudorId = body.vincularEstadoCuenta.deudorId;
+          const uAcreedor = db.usuarios[propId];
+          if (uAcreedor && Array.isArray(uAcreedor.deudores)) {
+            const deudor = uAcreedor.deudores.find(d => d.id === deudorId);
+            if (deudor) {
+              deudor.usuarioId = idLimpio;
+              if (dniLimpio) deudor.dni = dniLimpio;
+              (deudor.conceptos || []).forEach(c => {
+                if (!c.tipo || c.tipo === 'deuda') {
+                  const sumP = (c.pagos || []).reduce((a, x) => a + (Number(x.monto) || 0), 0);
+                  const saldoResta = Math.max(0, (Number(c.monto) || 0) - sumP);
+                  if (saldoResta > 0 && !c.pagado) {
+                    const cuotasTot = Number(c.cuotasTotal) || 1;
+                    const valCuota = Number(c.valorCuota) || Math.round(((Number(c.monto) || 0) / cuotasTot) * 100) / 100;
+                    db.usuarios[idLimpio].yoDebo.push({
+                      id: 'yodebo_' + c.id,
+                      vinculadoAcreedorId: uAcreedor.id,
+                      vinculadoDeudorId: deudor.id,
+                      vinculadoConceptoId: c.id,
+                      concepto: c.concepto,
+                      acreedor: uAcreedor.nombre,
+                      montoTotal: Number(c.monto) || 0,
+                      cuotasTotal: cuotasTot,
+                      valorCuota: valCuota,
+                      cuotasPagadas: 0,
+                      montoPagado: sumP,
+                      saldoPendiente: saldoResta,
+                      fechaVencimiento: new Date().toISOString().split('T')[0],
+                      hora: '09:00',
+                      recordatorio: '1d',
+                      pagos: c.pagos || [],
+                      pagosPendientes: []
+                    });
+                  }
+                }
+              });
+
+              if (Array.isArray(uAcreedor.pushSubscriptions) && uAcreedor.pushSubscriptions.length > 0) {
+                const payload = {
+                  title: `📲 ${nombre} se unió a la app`,
+                  body: `Tu deudor ${deudor.nombre} se registró con DNI. Ahora sus deudas están vinculadas directamente a su cuenta.`,
+                  tag: 'deudor-unido-' + Date.now(),
+                  url: '/'
+                };
+                for (const sub of uAcreedor.pushSubscriptions) {
+                  try { sendWebPushNotification(sub, payload); } catch (e) {}
+                }
+              }
+            }
+          }
+        }
+
         await guardarBaseDeDatos(db, sha, `Crear nuevo usuario: ${nombre}`);
         const nuevoU = db.usuarios[idLimpio];
         return res.status(200).json({
           ok: true,
-          usuario: { id: nuevoU.id, nombre: nuevoU.nombre, esAdmin: false, avatar: nuevoU.avatar },
+          usuario: { id: nuevoU.id, nombre: nuevoU.nombre, dni: nuevoU.dni || null, esAdmin: false, avatar: nuevoU.avatar },
+          dni: nuevoU.dni || null,
           tareas: [],
+          tareasCompartidas: [],
           recordatorios: [],
           movimientos: [],
           supermercado: [],
           superCompartidoCon: [],
           deudores: [],
-          yoDebo: [],
+          yoDebo: nuevoU.yoDebo || [],
           borrados: [],
           usuarios: resumenPublicoUsuarios(db.usuarios)
         });
@@ -733,6 +805,276 @@ export default async function handler(req, res) {
         }
 
         return res.status(200).json({ ok: true, pago: nuevoPago });
+      }
+
+      if (accion === 'crear_deudor_con_dni') {
+        const u = db.usuarios[body.usuarioId];
+        if (!u) return res.status(404).json({ error: 'Usuario no encontrado' });
+        const nombre = String(body.nombre || '').trim();
+        if (!nombre) return res.status(400).json({ error: 'Ingresá el nombre del deudor' });
+        const dniLimpio = String(body.dni || '').replace(/\D/g, '').trim();
+
+        if (!Array.isArray(u.deudores)) u.deudores = [];
+
+        // Buscar si coincide con algún usuario de la aplicación
+        let usuarioVinculado = null;
+        if (dniLimpio) {
+          usuarioVinculado = Object.values(db.usuarios).find(otro => otro.id !== u.id && String(otro.dni || '').replace(/\D/g, '') === dniLimpio);
+        }
+
+        const nuevoDeudor = {
+          id: 'deudor_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+          nombre: nombre,
+          dni: dniLimpio || null,
+          usuarioId: usuarioVinculado ? usuarioVinculado.id : null,
+          conceptos: [],
+          pagosPendientes: [],
+          creadoEl: Date.now(),
+          updatedAt: Date.now()
+        };
+
+        u.deudores.push(nuevoDeudor);
+        await guardarBaseDeDatos(db, sha, `Crear deudor ${nombre} en ${u.nombre}`);
+
+        return res.status(200).json({
+          ok: true,
+          deudor: nuevoDeudor,
+          deudores: u.deudores,
+          usuarioVinculado: usuarioVinculado ? { id: usuarioVinculado.id, nombre: usuarioVinculado.nombre, dni: usuarioVinculado.dni } : null
+        });
+      }
+
+      if (accion === 'agregar_concepto_deudor') {
+        const u = db.usuarios[body.usuarioId];
+        if (!u) return res.status(404).json({ error: 'Usuario no encontrado' });
+        if (!Array.isArray(u.deudores)) u.deudores = [];
+        const deudor = u.deudores.find(d => d.id === body.deudorId);
+        if (!deudor) return res.status(404).json({ error: 'Deudor no encontrado' });
+
+        const conceptoTexto = String(body.concepto || '').trim();
+        const monto = Number(body.monto) || 0;
+        const cuotasTotal = Math.max(1, parseInt(body.cuotasTotal, 10) || 1);
+        if (!conceptoTexto || monto <= 0) {
+          return res.status(400).json({ error: 'Completá concepto y monto válido' });
+        }
+
+        if (!Array.isArray(deudor.conceptos)) deudor.conceptos = [];
+
+        const nuevoConcepto = {
+          id: 'conc_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+          tipo: 'deuda',
+          concepto: conceptoTexto,
+          monto: monto,
+          cuotasTotal: cuotasTotal,
+          valorCuota: Math.round((monto / cuotasTotal) * 100) / 100,
+          pagado: false,
+          pagos: [],
+          fecha: new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' }),
+          creadoEl: Date.now()
+        };
+
+        deudor.conceptos.push(nuevoConcepto);
+        deudor.updatedAt = Date.now();
+
+        // Si el deudor está vinculado a un usuario de la app, agregarlo a su "Yo debo"
+        if (deudor.usuarioId && db.usuarios[deudor.usuarioId]) {
+          const uSocio = db.usuarios[deudor.usuarioId];
+          if (!Array.isArray(uSocio.yoDebo)) uSocio.yoDebo = [];
+          
+          const deudaYoDebo = {
+            id: 'yodebo_' + nuevoConcepto.id,
+            vinculadoAcreedorId: u.id,
+            vinculadoDeudorId: deudor.id,
+            vinculadoConceptoId: nuevoConcepto.id,
+            concepto: nuevoConcepto.concepto,
+            acreedor: u.nombre,
+            montoTotal: nuevoConcepto.monto,
+            cuotasTotal: nuevoConcepto.cuotasTotal,
+            valorCuota: nuevoConcepto.valorCuota,
+            cuotasPagadas: 0,
+            montoPagado: 0,
+            saldoPendiente: nuevoConcepto.monto,
+            fechaVencimiento: body.fechaVencimiento || new Date().toISOString().split('T')[0],
+            hora: '09:00',
+            recordatorio: '1d',
+            pagos: [],
+            pagosPendientes: []
+          };
+          uSocio.yoDebo.unshift(deudaYoDebo);
+
+          if (Array.isArray(uSocio.pushSubscriptions) && uSocio.pushSubscriptions.length > 0) {
+            const payload = {
+              title: `💸 ${u.nombre} te cargó una deuda`,
+              body: `"${nuevoConcepto.concepto}" por $${nuevoConcepto.monto.toLocaleString('es-AR')} (${nuevoConcepto.cuotasTotal} cuota/s). Entrá a "Yo debo" para verla.`,
+              tag: 'deuda-nueva-' + nuevoConcepto.id,
+              url: '/'
+            };
+            for (const s of uSocio.pushSubscriptions) {
+              try { await sendWebPushNotification(s, payload); } catch (e) {}
+            }
+          }
+        }
+
+        await guardarBaseDeDatos(db, sha, `Nueva deuda en deudor ${deudor.nombre}: ${nuevoConcepto.concepto}`);
+        return res.status(200).json({ ok: true, deudor, deudores: u.deudores, concepto: nuevoConcepto });
+      }
+
+      if (accion === 'informar_pago_deudor_app') {
+        const uDebtor = db.usuarios[body.usuarioId];
+        if (!uDebtor) return res.status(404).json({ error: 'Usuario deudor no encontrado' });
+        if (!Array.isArray(uDebtor.yoDebo)) uDebtor.yoDebo = [];
+
+        const itemYoDebo = uDebtor.yoDebo.find(x => x.id === body.yoDeboId);
+        if (!itemYoDebo) return res.status(404).json({ error: 'Deuda no encontrada en tu cuenta' });
+
+        const monto = Number(body.monto) || 0;
+        if (monto <= 0) return res.status(400).json({ error: 'Ingresá un monto mayor a 0' });
+
+        const tipoPago = body.tipoPago === 'cuota' ? 'cuota' : 'parcial';
+        const nota = String(body.nota || '').trim();
+
+        if (!Array.isArray(itemYoDebo.pagosPendientes)) itemYoDebo.pagosPendientes = [];
+
+        const nuevoPago = {
+          id: 'pago_app_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+          yoDeboId: itemYoDebo.id,
+          vinculadoAcreedorId: itemYoDebo.vinculadoAcreedorId,
+          vinculadoDeudorId: itemYoDebo.vinculadoDeudorId,
+          vinculadoConceptoId: itemYoDebo.vinculadoConceptoId,
+          conceptoNombre: itemYoDebo.concepto,
+          monto: monto,
+          tipoPago: tipoPago,
+          nota: nota,
+          fechaHora: Date.now(),
+          estado: 'pendiente'
+        };
+
+        itemYoDebo.pagosPendientes.unshift(nuevoPago);
+
+        // Si está vinculado a un acreedor en la app, registrarlo en el deudor del acreedor
+        if (itemYoDebo.vinculadoAcreedorId && db.usuarios[itemYoDebo.vinculadoAcreedorId]) {
+          const uAcreedor = db.usuarios[itemYoDebo.vinculadoAcreedorId];
+          const deudorEnAcreedor = (uAcreedor.deudores || []).find(d => d.id === itemYoDebo.vinculadoDeudorId);
+          if (deudorEnAcreedor) {
+            if (!Array.isArray(deudorEnAcreedor.pagosPendientes)) deudorEnAcreedor.pagosPendientes = [];
+            deudorEnAcreedor.pagosPendientes.unshift({
+              id: nuevoPago.id,
+              deudorId: deudorEnAcreedor.id,
+              deudorUsuarioId: uDebtor.id,
+              deudorNombre: uDebtor.nombre,
+              conceptoId: itemYoDebo.vinculadoConceptoId,
+              conceptoNombre: itemYoDebo.concepto,
+              monto: monto,
+              tipoPago: tipoPago,
+              nota: nota,
+              fechaHora: nuevoPago.fechaHora,
+              estado: 'pendiente'
+            });
+
+            if (Array.isArray(uAcreedor.pushSubscriptions) && uAcreedor.pushSubscriptions.length > 0) {
+              const payload = {
+                title: `💵 Pago informado por ${uDebtor.nombre}`,
+                body: `${uDebtor.nombre} te informó un pago de $${monto.toLocaleString('es-AR')} por "${itemYoDebo.concepto}" (${tipoPago === 'cuota' ? 'cuota completa' : 'pago parcial'}). Tocá para aceptar o rechazar.`,
+                tag: 'pago-' + nuevoPago.id,
+                url: '/'
+              };
+              for (const s of uAcreedor.pushSubscriptions) {
+                try { await sendWebPushNotification(s, payload); } catch (e) {}
+              }
+            }
+          }
+        }
+
+        await guardarBaseDeDatos(db, sha, `Pago informado por ${uDebtor.nombre} para ${itemYoDebo.acreedor}`);
+        return res.status(200).json({ ok: true, pago: nuevoPago, yoDebo: uDebtor.yoDebo });
+      }
+
+      if (accion === 'aprobar_pago_deudor') {
+        const u = db.usuarios[body.usuarioId];
+        if (!u) return res.status(404).json({ error: 'Usuario acreedor no encontrado' });
+        const deudor = (u.deudores || []).find(d => d.id === body.deudorId);
+        if (!deudor) return res.status(404).json({ error: 'Deudor no encontrado' });
+
+        if (!Array.isArray(deudor.pagosPendientes)) deudor.pagosPendientes = [];
+        const pago = deudor.pagosPendientes.find(p => p.id === body.pagoId);
+        if (!pago) return res.status(404).json({ error: 'Pago pendiente no encontrado' });
+
+        const aceptar = Boolean(body.aceptar);
+        pago.estado = aceptar ? 'aceptado' : 'rechazado';
+        pago.fechaResolucion = Date.now();
+
+        let conceptoAfectado = null;
+        if (aceptar) {
+          if (!Array.isArray(deudor.conceptos)) deudor.conceptos = [];
+          conceptoAfectado = deudor.conceptos.find(c => c.id === pago.conceptoId);
+          if (!conceptoAfectado && deudor.conceptos.length > 0) {
+            conceptoAfectado = deudor.conceptos[0];
+          }
+
+          const nuevoAbono = {
+            id: 'abono_' + Date.now(),
+            monto: pago.monto,
+            nota: pago.nota ? `Pago informado (${pago.tipoPago || 'pago'}): ${pago.nota}` : `Pago informado (${pago.tipoPago || 'pago'})`,
+            fecha: new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' }),
+            creadoEl: Date.now()
+          };
+
+          if (conceptoAfectado) {
+            if (!Array.isArray(conceptoAfectado.pagos)) conceptoAfectado.pagos = [];
+            conceptoAfectado.pagos.push(nuevoAbono);
+            const sumP = conceptoAfectado.pagos.reduce((a, x) => a + (Number(x.monto) || 0), 0);
+            if (sumP >= (Number(conceptoAfectado.monto) || 0)) {
+              conceptoAfectado.pagado = true;
+            }
+          }
+        }
+
+        // Si el deudor es usuario de la app, impactar en su "Yo debo" y enviarle Push
+        if (deudor.usuarioId && db.usuarios[deudor.usuarioId]) {
+          const uDebtor = db.usuarios[deudor.usuarioId];
+          if (Array.isArray(uDebtor.yoDebo)) {
+            const itemDebtor = uDebtor.yoDebo.find(x => x.vinculadoConceptoId === pago.conceptoId || (x.pagosPendientes && x.pagosPendientes.some(pp => pp.id === pago.id)));
+            if (itemDebtor) {
+              if (Array.isArray(itemDebtor.pagosPendientes)) {
+                const pendInDebtor = itemDebtor.pagosPendientes.find(pp => pp.id === pago.id);
+                if (pendInDebtor) pendInDebtor.estado = aceptar ? 'aceptado' : 'rechazado';
+              }
+
+              if (aceptar) {
+                if (!Array.isArray(itemDebtor.pagos)) itemDebtor.pagos = [];
+                itemDebtor.pagos.push({
+                  id: 'pago_conf_' + Date.now(),
+                  monto: pago.monto,
+                  fecha: new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' }),
+                  nota: pago.nota || 'Aprobado por acreedor'
+                });
+                const totalPag = itemDebtor.pagos.reduce((a, x) => a + (Number(x.monto) || 0), 0);
+                itemDebtor.montoPagado = totalPag;
+                itemDebtor.saldoPendiente = Math.max(0, (Number(itemDebtor.montoTotal) || 0) - totalPag);
+                if (itemDebtor.valorCuota && itemDebtor.valorCuota > 0) {
+                  itemDebtor.cuotasPagadas = Math.min(itemDebtor.cuotasTotal, Math.floor(totalPag / itemDebtor.valorCuota));
+                }
+              }
+            }
+          }
+
+          if (Array.isArray(uDebtor.pushSubscriptions) && uDebtor.pushSubscriptions.length > 0) {
+            const payload = {
+              title: aceptar ? `✅ ${u.nombre} aceptó tu pago` : `❌ ${u.nombre} rechazó tu pago`,
+              body: aceptar
+                ? `Se descontaron $${pago.monto.toLocaleString('es-AR')} de tu deuda "${pago.conceptoNombre || 'Deuda'}".`
+                : `Tu pago de $${pago.monto.toLocaleString('es-AR')} por "${pago.conceptoNombre || 'Deuda'}" fue rechazado. No se descontó saldo.`,
+              tag: 'resol-pago-' + pago.id,
+              url: '/'
+            };
+            for (const s of uDebtor.pushSubscriptions) {
+              try { await sendWebPushNotification(s, payload); } catch (e) {}
+            }
+          }
+        }
+
+        await guardarBaseDeDatos(db, sha, `${aceptar ? 'Aprobado' : 'Rechazado'} pago de ${deudor.nombre}: $${pago.monto}`);
+        return res.status(200).json({ ok: true, deudor, deudores: u.deudores, pago });
       }
 
       if (accion === 'agregar_externa' && body.nuevaTarea) {
