@@ -68,6 +68,7 @@ export default async function handler(req, res) {
     }
 
     // Asegurar campos de supermercado, heladera y casa en todos los usuarios
+    if (!Array.isArray(raw.tareasCompartidas)) raw.tareasCompartidas = [];
     Object.values(raw.usuarios).forEach(u => {
       if (!Array.isArray(u.supermercado)) u.supermercado = [];
       if (!Array.isArray(u.heladera)) u.heladera = [];
@@ -76,6 +77,7 @@ export default async function handler(req, res) {
       if (!Array.isArray(u.yoDebo)) u.yoDebo = [];
       if (!Array.isArray(u.superCompartidoCon)) u.superCompartidoCon = [];
       if (typeof u.yaConfiguroCasa !== 'boolean') u.yaConfiguroCasa = false;
+      if (u.dni === undefined) u.dni = null;
     });
 
     return { sha, db: raw };
@@ -213,8 +215,10 @@ export default async function handler(req, res) {
       }
 
       return res.status(200).json({
+        dni: u.dni || null,
         avatar: u.esAdmin ? '👑' : (u.avatar || '👤'),
         tareas: u.tareas || [],
+        tareasCompartidas: (db.tareasCompartidas || []).filter(t => t.creadorId === u.id || t.socioId === u.id),
         avisosTareas: u.avisosTareas || [],
         recordatorios: u.recordatorios || [],
         movimientos: u.movimientos || [],
@@ -237,6 +241,229 @@ export default async function handler(req, res) {
       const { sha, db } = await leerBaseDeDatos();
       const accion = body.accion || 'sincronizar_usuario';
 
+      if (accion === 'guardar_dni') {
+        const u = db.usuarios[body.usuarioId];
+        if (!u) return res.status(404).json({ error: 'Usuario no encontrado' });
+        if (u.password && u.password !== String(body.password || '')) {
+          return res.status(401).json({ error: 'Sesión no válida' });
+        }
+        const dniLimpio = String(body.dni || '').replace(/\D/g, '').trim();
+        if (!dniLimpio || dniLimpio.length < 5) {
+          return res.status(400).json({ error: 'Ingresá un número de DNI válido (mínimo 5 números)' });
+        }
+        const duplicado = Object.values(db.usuarios).find(
+          otro => otro.id !== u.id && String(otro.dni || '').replace(/\D/g, '') === dniLimpio
+        );
+        if (duplicado) {
+          return res.status(400).json({ error: `El DNI ya está registrado por ${duplicado.nombre}` });
+        }
+        u.dni = dniLimpio;
+        await guardarBaseDeDatos(db, sha, `Guardar DNI para ${u.nombre}`);
+        return res.status(200).json({ ok: true, dni: dniLimpio });
+      }
+
+      if (accion === 'ingresar_con_dni') {
+        const inputDni = String(body.dni || '').trim();
+        const dniSoloNumeros = inputDni.replace(/\D/g, '');
+        const pass = String(body.password || '').trim();
+
+        if (!inputDni || !pass) {
+          return res.status(400).json({ error: 'Completá tu DNI y tu contraseña' });
+        }
+
+        // Buscar por DNI o temporalmente por nombre/id para quienes aún no registraron DNI
+        const u = Object.values(db.usuarios).find(x => {
+          if (dniSoloNumeros && x.dni && String(x.dni).replace(/\D/g, '') === dniSoloNumeros) {
+            return true;
+          }
+          if (String(x.nombre || '').toLowerCase() === inputDni.toLowerCase()) {
+            return true;
+          }
+          if (x.id.toLowerCase() === inputDni.toLowerCase()) {
+            return true;
+          }
+          return false;
+        });
+
+        if (!u) {
+          return res.status(404).json({ error: 'No se encontró ningún usuario con ese DNI o nombre' });
+        }
+
+        if (u.password && u.password !== pass) {
+          return res.status(401).json({ error: 'Contraseña incorrecta' });
+        }
+
+        return res.status(200).json({
+          ok: true,
+          usuario: {
+            id: u.id,
+            nombre: u.nombre,
+            dni: u.dni || null,
+            esAdmin: Boolean(u.esAdmin),
+            avatar: u.esAdmin ? '👑' : (u.avatar || '👤')
+          },
+          dni: u.dni || null,
+          tareas: u.tareas || [],
+          tareasCompartidas: (db.tareasCompartidas || []).filter(t => t.creadorId === u.id || t.socioId === u.id),
+          avisosTareas: u.avisosTareas || [],
+          recordatorios: u.recordatorios || [],
+          movimientos: u.movimientos || [],
+          supermercado: u.supermercado || [],
+          heladera: u.heladera || [],
+          entrenamiento: u.entrenamiento || null,
+          listasPresupuestos: u.listasPresupuestos || [],
+          deudores: u.deudores || [],
+          yoDebo: u.yoDebo || [],
+          superCompartidoCon: u.superCompartidoCon || [],
+          yaConfiguroCasa: Boolean(u.yaConfiguroCasa),
+          tiempoBloqueoMin: u.tiempoBloqueoMin || 60,
+          borrados: u.borrados || [],
+          usuarios: resumenPublicoUsuarios(db.usuarios)
+        });
+      }
+
+      if (accion === 'crear_tarea_compartida') {
+        const u = db.usuarios[body.usuarioId];
+        if (!u) return res.status(404).json({ error: 'Usuario no encontrado' });
+        if (u.password && u.password !== String(body.password || '')) {
+          return res.status(401).json({ error: 'Sesión no válida' });
+        }
+        const socio = db.usuarios[body.socioId];
+        if (!socio) return res.status(404).json({ error: 'Usuario socio no encontrado' });
+
+        if (!Array.isArray(db.tareasCompartidas)) db.tareasCompartidas = [];
+
+        const nueva = {
+          id: 'tc-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+          texto: String(body.texto || '').trim(),
+          prioridad: body.prioridad || 'simple',
+          creadorId: u.id,
+          creadorNombre: u.nombre,
+          socioId: socio.id,
+          socioNombre: socio.nombre,
+          estado: 'pendiente_invitacion',
+          realizadaPorCreador: false,
+          realizadaPorSocio: false,
+          creadoEl: Date.now(),
+          actualizadoEl: Date.now()
+        };
+
+        db.tareasCompartidas.push(nueva);
+
+        if (Array.isArray(socio.pushSubscriptions) && socio.pushSubscriptions.length > 0) {
+          const payload = {
+            title: `👥 Invitación de tarea compartida de ${u.nombre}`,
+            body: `Te invitó a hacer: "${nueva.texto}". Entrá a la app para aceptarla.`,
+            tag: 'tc-' + nueva.id,
+            url: '/'
+          };
+          for (const s of socio.pushSubscriptions) {
+            try { await sendWebPushNotification(s, payload); } catch (e) {}
+          }
+        }
+
+        await guardarBaseDeDatos(db, sha, `Tarea compartida entre ${u.nombre} y ${socio.nombre}`);
+        return res.status(200).json({
+          ok: true,
+          tarea: nueva,
+          tareasCompartidas: db.tareasCompartidas.filter(t => t.creadorId === u.id || t.socioId === u.id)
+        });
+      }
+
+      if (accion === 'responder_tarea_compartida') {
+        const u = db.usuarios[body.usuarioId];
+        if (!u) return res.status(404).json({ error: 'Usuario no encontrado' });
+        if (!Array.isArray(db.tareasCompartidas)) db.tareasCompartidas = [];
+
+        const tc = db.tareasCompartidas.find(t => t.id === body.tareaId);
+        if (!tc) return res.status(404).json({ error: 'Tarea compartida no encontrada' });
+
+        const aceptar = Boolean(body.aceptar);
+        tc.estado = aceptar ? 'activa' : 'rechazada';
+        tc.actualizadoEl = Date.now();
+
+        const creador = db.usuarios[tc.creadorId];
+        if (creador && Array.isArray(creador.pushSubscriptions)) {
+          const payload = {
+            title: aceptar ? `✅ ${u.nombre} aceptó tu tarea compartida` : `❌ ${u.nombre} rechazó la tarea compartida`,
+            body: `"${tc.texto}"`,
+            tag: 'tc-resp-' + tc.id,
+            url: '/'
+          };
+          for (const s of creador.pushSubscriptions) {
+            try { await sendWebPushNotification(s, payload); } catch (e) {}
+          }
+        }
+
+        await guardarBaseDeDatos(db, sha, `${u.nombre} ${aceptar ? 'aceptó' : 'rechazó'} tarea compartida`);
+        return res.status(200).json({
+          ok: true,
+          tarea: tc,
+          tareasCompartidas: db.tareasCompartidas.filter(t => t.creadorId === u.id || t.socioId === u.id)
+        });
+      }
+
+      if (accion === 'marcar_tarea_compartida') {
+        const u = db.usuarios[body.usuarioId];
+        if (!u) return res.status(404).json({ error: 'Usuario no encontrado' });
+        if (!Array.isArray(db.tareasCompartidas)) db.tareasCompartidas = [];
+
+        const tc = db.tareasCompartidas.find(t => t.id === body.tareaId);
+        if (!tc) return res.status(404).json({ error: 'Tarea compartida no encontrada' });
+
+        const realizada = Boolean(body.realizada);
+        if (tc.creadorId === u.id) {
+          tc.realizadaPorCreador = realizada;
+        } else if (tc.socioId === u.id) {
+          tc.realizadaPorSocio = realizada;
+        }
+
+        if (tc.realizadaPorCreador && tc.realizadaPorSocio) {
+          tc.estado = 'completada';
+          tc.completadaEl = Date.now();
+        } else {
+          tc.estado = 'activa';
+        }
+        tc.actualizadoEl = Date.now();
+
+        const otroId = tc.creadorId === u.id ? tc.socioId : tc.creadorId;
+        const otro = db.usuarios[otroId];
+        if (otro && realizada && Array.isArray(otro.pushSubscriptions)) {
+          const textoPush = tc.estado === 'completada'
+            ? `🎉 ¡Tarea compartida completada! Ambos marcaron "${tc.texto}"`
+            : `☑️ ${u.nombre} marcó como realizada: "${tc.texto}". ¡Marcála vos para completarla!`;
+          const payload = {
+            title: `👥 Tarea compartida: ${u.nombre}`,
+            body: textoPush,
+            tag: 'tc-mark-' + tc.id,
+            url: '/'
+          };
+          for (const s of otro.pushSubscriptions) {
+            try { await sendWebPushNotification(s, payload); } catch (e) {}
+          }
+        }
+
+        await guardarBaseDeDatos(db, sha, `Actualizar estado de tarea compartida por ${u.nombre}`);
+        return res.status(200).json({
+          ok: true,
+          tarea: tc,
+          tareasCompartidas: db.tareasCompartidas.filter(t => t.creadorId === u.id || t.socioId === u.id)
+        });
+      }
+
+      if (accion === 'eliminar_tarea_compartida') {
+        const u = db.usuarios[body.usuarioId];
+        if (!u) return res.status(404).json({ error: 'Usuario no encontrado' });
+        if (!Array.isArray(db.tareasCompartidas)) db.tareasCompartidas = [];
+
+        db.tareasCompartidas = db.tareasCompartidas.filter(t => t.id !== body.tareaId || (t.creadorId !== u.id && t.socioId !== u.id));
+        await guardarBaseDeDatos(db, sha, `Eliminar tarea compartida`);
+        return res.status(200).json({
+          ok: true,
+          tareasCompartidas: db.tareasCompartidas.filter(t => t.creadorId === u.id || t.socioId === u.id)
+        });
+      }
+
       if (accion === 'configurar_password') {
         const u = db.usuarios[body.usuarioId];
         if (!u) return res.status(404).json({ error: 'Usuario no encontrado' });
@@ -249,7 +476,9 @@ export default async function handler(req, res) {
         return res.status(200).json({
           ok: true,
           usuario: { id: u.id, nombre: u.nombre, esAdmin: Boolean(u.esAdmin), avatar: u.esAdmin ? '👑' : (u.avatar || '👤') },
+          dni: u.dni || null,
           tareas: u.tareas || [],
+          tareasCompartidas: (db.tareasCompartidas || []).filter(t => t.creadorId === u.id || t.socioId === u.id),
           avisosTareas: u.avisosTareas || [],
           recordatorios: u.recordatorios || [],
           movimientos: u.movimientos || [],
@@ -258,7 +487,6 @@ export default async function handler(req, res) {
           entrenamiento: u.entrenamiento || null,
           listasPresupuestos: u.listasPresupuestos || [],
           deudores: u.deudores || [],
-        yoDebo: u.yoDebo || [],
           yoDebo: u.yoDebo || [],
           superCompartidoCon: u.superCompartidoCon || [],
           yaConfiguroCasa: Boolean(u.yaConfiguroCasa),
@@ -278,7 +506,9 @@ export default async function handler(req, res) {
         return res.status(200).json({
           ok: true,
           usuario: { id: u.id, nombre: u.nombre, esAdmin: Boolean(u.esAdmin), avatar: u.esAdmin ? '👑' : (u.avatar || '👤') },
+          dni: u.dni || null,
           tareas: u.tareas || [],
+          tareasCompartidas: (db.tareasCompartidas || []).filter(t => t.creadorId === u.id || t.socioId === u.id),
           avisosTareas: u.avisosTareas || [],
           recordatorios: u.recordatorios || [],
           movimientos: u.movimientos || [],
@@ -287,7 +517,6 @@ export default async function handler(req, res) {
           entrenamiento: u.entrenamiento || null,
           listasPresupuestos: u.listasPresupuestos || [],
           deudores: u.deudores || [],
-        yoDebo: u.yoDebo || [],
           yoDebo: u.yoDebo || [],
           superCompartidoCon: u.superCompartidoCon || [],
           yaConfiguroCasa: Boolean(u.yaConfiguroCasa),
@@ -600,8 +829,10 @@ export default async function handler(req, res) {
       await guardarBaseDeDatos(db, sha, `Sincronizar agenda de ${u.nombre}`);
 
       return res.status(200).json({
+        dni: u.dni || null,
         avatar: u.esAdmin ? '👑' : (u.avatar || '👤'),
         tareas: u.tareas,
+        tareasCompartidas: (db.tareasCompartidas || []).filter(t => t.creadorId === u.id || t.socioId === u.id),
         avisosTareas: u.avisosTareas || [],
         recordatorios: u.recordatorios,
         movimientos: u.movimientos,
