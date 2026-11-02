@@ -8,7 +8,7 @@
   <link rel="icon" type="image/svg+xml" href="logo.svg">
   <link rel="apple-touch-icon" href="logo.svg">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="styles.css?v=20261101_05">
+  <link rel="stylesheet" href="styles.css?v=20261102_01">
 </head>
 <body>
   <header class="app-header">
@@ -298,17 +298,17 @@
         </button>
 
         <button id="btn-open-wallet" class="big-card card-wallet">
-          <div class="card-icon">💰</div>
-          <div class="card-title">3. Billetera</div>
-          <div class="card-desc">Sueldo, ingresos y gastos corrientes con saldo disponible en efectivo y virtual</div>
-          <div class="card-badge badge-wallet" id="home-wallet-counter">Efectivo $0 | Virtual $0</div>
+          <div class="card-icon">💼</div>
+          <div class="card-title">3. Economía</div>
+          <div class="card-desc">Billetera y Deudas: dinero disponible, deudores que me deben y mis deudas a pagar</div>
+          <div class="card-badge badge-wallet" id="home-wallet-counter">Billetera y Deudas</div>
         </button>
 
         <button id="btn-open-extras" class="big-card card-extras">
           <div class="card-icon">🧰</div>
           <div class="card-title">4. Extras y Ajustes</div>
-          <div class="card-desc">Supermercado, Gemini IA, Heladera, Entrenamiento y Configuración</div>
-          <div class="card-badge badge-extras" id="home-extras-counter">5 opciones disponibles</div>
+          <div class="card-desc">Supermercado, Gemini IA, Heladera, Entrenamiento, Listas y Configuración</div>
+          <div class="card-badge badge-extras" id="home-extras-counter">6 opciones disponibles</div>
         </button>
       </div>
     </section>
@@ -453,15 +453,27 @@
       </div>
     </section>
 
-    <!-- MÓDULO 3: BILLETERA -->
+    <!-- MÓDULO 3: ECONOMÍA PERSONAL (BILLETERA + DEUDAS) -->
     <section id="view-wallet" class="view hidden">
-      <div class="tasks-top-bar">
+      <div class="tasks-top-bar" style="margin-bottom: 12px;">
         <div>
-          <h2>Billetera Personal</h2>
-          <p class="subtitle-text">Control de dinero disponible en efectivo y billetera virtual</p>
+          <h2>💼 Economía Personal</h2>
+          <p class="subtitle-text">Control de Billetera (efectivo y virtual) y Deudas (me deben y yo debo)</p>
         </div>
       </div>
 
+      <!-- PESTAÑAS PRINCIPALES: 1. BILLETERA | 2. DEUDAS -->
+      <div class="economy-main-tabs" id="economy-main-tabs">
+        <button type="button" id="tab-econ-wallet" class="econ-tab-btn active">
+          👛 1. Billetera
+        </button>
+        <button type="button" id="tab-econ-debts" class="econ-tab-btn">
+          💸 2. Deudas
+        </button>
+      </div>
+
+      <!-- SUB-VISTA 1: BILLETERA PERSONAL -->
+      <div id="subview-econ-wallet">
       <div class="wallet-balances-grid">
         <div class="balance-card balance-efectivo">
           <div class="balance-label">💵 Dinero Disponible en Efectivo</div>
@@ -532,6 +544,285 @@
         </div>
       </div>
       <div id="wallet-movements-list" class="tasks-list"></div>
+      </div>
+
+      <!-- SUB-VISTA 2: DEUDAS (ME DEBEN Y YO DEBO) -->
+      <div id="subview-econ-debts" class="hidden">
+        <!-- SELECTOR DE SUBPESTAÑAS: ME DEBEN vs YO DEBO -->
+        <div class="debts-subtabs-bar" id="debts-subtabs-bar">
+          <button type="button" id="subtab-debts-owed-to-me" class="debt-subtab-btn active">
+            📥 Me deben
+          </button>
+          <button type="button" id="subtab-debts-i-owe" class="debt-subtab-btn">
+            📤 Yo debo
+          </button>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- SUB-SECCIÓN A: "ME DEBEN"                      -->
+        <!-- ============================================== -->
+        <div id="debts-owed-to-me-section">
+          <!-- VISTA PRINCIPAL: LISTA DE DEUDORES CON TOTAL GENERAL -->
+          <div id="debts-main-view">
+            <div class="tasks-top-bar" style="margin-bottom: 14px;">
+              <div>
+                <h3 style="font-size: 1.25rem; margin-bottom: 2px; color: #f59e0b;">📥 Personas que me deben dinero</h3>
+                <p class="subtitle-text">Administrá a tus deudores, compartiles su estado de cuenta y aprobá sus pagos</p>
+              </div>
+              <button type="button" id="btn-create-debtor-toggle" class="btn-add-plus">
+                <span class="plus-symbol">+</span> Nuevo deudor
+              </button>
+            </div>
+
+            <!-- FORMULARIO CREAR NUEVO DEUDOR -->
+            <div id="create-debtor-box" class="task-form-box hidden" style="max-width: 520px; margin: 0 auto 20px auto;">
+              <h3>➕ Registrar persona que te debe</h3>
+              <p class="subtitle-text" style="margin-bottom: 14px;">Ingresá el nombre o apodo de la persona:</p>
+              <div class="form-group" style="margin-bottom: 14px;">
+                <label for="input-new-debtor-name">Nombre de la persona</label>
+                <input type="text" id="input-new-debtor-name" placeholder="Ej: Juan Pérez, Roberto taller..." autocomplete="off">
+              </div>
+              <div class="form-actions">
+                <button type="button" id="btn-cancel-create-debtor" class="btn-secondary">Cancelar</button>
+                <button type="button" id="btn-save-new-debtor" class="btn-primary">Guardar deudor (Enter)</button>
+              </div>
+            </div>
+
+            <!-- BANNER DE TOTAL GENERAL QUE ME DEBEN -->
+            <div class="global-debt-banner" id="global-debt-banner">
+              <div class="global-debt-info">
+                <span class="global-debt-label">💰 Total general que me deben:</span>
+                <span class="global-debt-amount" id="global-debt-amount">$ 0</span>
+              </div>
+              <div class="global-debt-sub" id="global-debt-sub">
+                0 deudores con saldo pendiente
+              </div>
+            </div>
+
+            <!-- LISTA DE BOTONES/TARJETAS DE CADA DEUDOR -->
+            <div class="debtors-cards-grid" id="debtors-cards-grid"></div>
+
+            <!-- PLACEHOLDER CUANDO NO HAY DEUDORES -->
+            <div id="no-debtors-placeholder" class="empty-state hidden" style="padding: 40px 20px;">
+              <div style="font-size: 3rem; margin-bottom: 10px;">💸</div>
+              <h3 style="color: #cbd5e1; margin-bottom: 8px;">No tenés deudores registrados</h3>
+              <p class="subtitle-text">Tocá el botón <strong>+ Nuevo deudor</strong> arriba para anotar a quien te debe plata.</p>
+            </div>
+          </div>
+
+          <!-- VISTA DE DETALLE DEL DEUDOR (AL ENTRAR A ESE DEUDOR) -->
+          <div id="debtor-detail-view" class="hidden">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 14px;">
+              <button type="button" id="btn-back-to-debtors-list" class="btn-back" style="width: fit-content; margin-bottom: 0;">
+                ← Volver a lista de deudores
+              </button>
+              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button type="button" id="btn-debtor-share-link" class="btn-secondary" style="border-color: #38bdf8; color: #7dd3fc; display: flex; align-items: center; gap: 6px;">
+                  🔗 Link Estado de Cuenta
+                </button>
+                <button type="button" id="btn-delete-active-debtor" class="btn-delete-list-icon" title="Eliminar este deudor y todo su historial">
+                  🗑️ Eliminar deudor
+                </button>
+              </div>
+            </div>
+
+            <!-- MODAL / CAJA PARA COMPARTIR ESTADO DE CUENTA -->
+            <div id="debtor-share-modal" class="task-form-box hidden" style="margin-bottom: 16px; border-color: #38bdf8; background: rgba(15, 23, 42, 0.95);">
+              <h3 style="color: #38bdf8; margin-bottom: 6px;">🔗 Link de Estado de Cuenta para tu deudor</h3>
+              <p class="subtitle-text" style="margin-bottom: 12px;">Con este link, tu deudor verá su estado de cuenta en tiempo real y podrá informarte pagos directamente desde su celular:</p>
+              <div class="share-url-row" style="margin-bottom: 10px;">
+                <input type="text" id="input-debtor-share-url" readonly>
+                <button type="button" id="btn-copy-debtor-share" class="btn-primary">Copiar link</button>
+                <button type="button" id="btn-whatsapp-debtor-share" class="btn-whatsapp">WhatsApp</button>
+              </div>
+              <div id="debtor-share-copied-msg" class="share-copied-msg hidden">✓ ¡Link copiado al portapapeles!</div>
+            </div>
+
+            <!-- BANNER DE TOTAL DEUDA DEL DEUDOR -->
+            <div class="budget-total-banner" style="background: linear-gradient(135deg, rgba(120, 53, 15, 0.45), rgba(15, 23, 42, 0.85)); border-color: rgba(245, 158, 11, 0.55);">
+              <div class="budget-total-left">
+                <span class="budget-total-label" id="active-debtor-name-label" style="color: #fde68a; font-size: 1.15rem;">👤 Deudor: -</span>
+                <div style="display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;">
+                  <span style="font-size: 1.15rem; color: #fbbf24; font-weight: 700;">Total deuda =</span>
+                  <span class="budget-total-val" id="active-debtor-total-display" style="color: #fef08a;">$ 0</span>
+                </div>
+                <div id="active-debtor-breakdown" style="font-size: 0.85rem; color: #cbd5e1; margin-top: 4px;">
+                  Cargado: $ 0 • Pagado: $ 0
+                </div>
+              </div>
+              <div class="budget-total-right">
+                <span id="active-debtor-items-count" class="budget-items-tag" style="background: rgba(245, 158, 11, 0.2); border-color: #f59e0b; color: #fde68a;">0 deudas</span>
+                <button type="button" id="btn-show-add-debt" class="btn-debt-action-debt" style="margin-top: 6px;">
+                  <span>➕</span> Cargar nueva deuda
+                </button>
+              </div>
+            </div>
+
+            <!-- SECCIÓN DE PAGOS INFORMADOS PENDIENTES DE ACEPTAR / RECHAZAR -->
+            <div id="debtor-pending-payments-box" class="task-form-box hidden" style="margin-top: 16px; border-color: #3b82f6; background: rgba(30, 58, 138, 0.25);">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <h4 style="color: #60a5fa; margin: 0; font-size: 1.05rem;">🔔 Pagos informados por el deudor (Pendientes de aprobación)</h4>
+                <span id="pending-payments-count-badge" class="priority-pill pill-simple" style="background: #2563eb; color: #fff;">0</span>
+              </div>
+              <p class="subtitle-text" style="margin-bottom: 12px;">El deudor notificó que realizó estos pagos. Aceptalos para descontarlos o recházalos si no impactaron:</p>
+              <div id="debtor-pending-payments-list" style="display: flex; flex-direction: column; gap: 10px;"></div>
+            </div>
+
+            <!-- FORMULARIO DESPLEGABLE: CARGAR NUEVA DEUDA AL DEUDOR -->
+            <div id="debt-movement-form-box" class="task-form-box hidden" style="margin-top: 16px; border: 1.5px solid #f59e0b; background: rgba(15, 23, 42, 0.95);">
+              <h3 id="debt-movement-form-title">➕ Cargar nueva deuda a este deudor</h3>
+              <p class="subtitle-text" id="debt-movement-form-sub" style="margin-bottom: 14px;">Ingresá el concepto y el monto total:</p>
+              
+              <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 14px;">
+                <div class="form-group flex-2" style="margin-bottom: 0;">
+                  <label for="input-debt-concept" id="label-debt-concept">Concepto o motivo</label>
+                  <input type="text" id="input-debt-concept" placeholder="Ej: Materiales corralón, Préstamo nafta, Repuesto..." autocomplete="off">
+                </div>
+                <div class="form-group flex-1" style="margin-bottom: 0;">
+                  <label for="input-debt-amount">Monto total ($)</label>
+                  <input type="number" id="input-debt-amount" placeholder="0" min="0" step="any" inputmode="decimal">
+                </div>
+              </div>
+
+              <div class="form-actions">
+                <button type="button" id="btn-cancel-debt-movement" class="btn-secondary">Cancelar</button>
+                <button type="button" id="btn-save-debt-movement" class="btn-primary">Guardar deuda (Enter)</button>
+              </div>
+            </div>
+
+            <!-- MODAL / FORMULARIO PARA CARGAR PAGO DIRECTO A UNA DEUDA ESPECÍFICA -->
+            <div id="concept-payment-modal-box" class="task-form-box hidden" style="margin-top: 16px; border: 1.5px solid #22c55e; background: rgba(15, 23, 42, 0.95);">
+              <h3 style="color: #4ade80;">💵 Registrar pago / cuota sobre deuda</h3>
+              <p class="subtitle-text" id="concept-payment-modal-sub" style="margin-bottom: 14px;">Abonar a la deuda seleccionada:</p>
+              <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 14px;">
+                <div class="form-group flex-2" style="margin-bottom: 0;">
+                  <label>Deuda a la que se imputa el pago</label>
+                  <input type="text" id="input-concept-payment-name" readonly style="background: rgba(255,255,255,0.05); color: #cbd5e1;">
+                </div>
+                <div class="form-group flex-1" style="margin-bottom: 0;">
+                  <label for="input-concept-payment-amount">Monto abonado ($)</label>
+                  <input type="number" id="input-concept-payment-amount" placeholder="0" min="0" step="any" inputmode="decimal">
+                </div>
+              </div>
+              <div class="form-group" style="margin-bottom: 14px;">
+                <label for="input-concept-payment-note">Detalle / Cuota / Nota (opcional)</label>
+                <input type="text" id="input-concept-payment-note" placeholder="Ej: Cuota 1 de 3, Transferencia, Pago en mano..." autocomplete="off">
+              </div>
+              <div class="form-actions">
+                <button type="button" id="btn-cancel-concept-payment" class="btn-secondary">Cancelar</button>
+                <button type="button" id="btn-save-concept-payment" class="btn-primary">Registrar pago (Enter)</button>
+              </div>
+            </div>
+
+            <!-- LISTA DE DEUDAS INDIVIDUALES DEL DEUDOR (CON SU BOTÓN DE CARGAR PAGO) -->
+            <div style="margin-top: 20px;">
+              <h4 style="color: #cbd5e1; font-size: 1.05rem; margin-bottom: 12px;">📋 Deudas individuales de este deudor:</h4>
+              <div id="debtor-concepts-list" style="display: flex; flex-direction: column; gap: 12px;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- SUB-SECCIÓN B: "YO DEBO"                      -->
+        <!-- ============================================== -->
+        <div id="debts-i-owe-section" class="hidden">
+          <div class="tasks-top-bar" style="margin-bottom: 14px;">
+            <div>
+              <h3 style="font-size: 1.25rem; margin-bottom: 2px; color: #ef4444;">📤 Deudas que yo debo pagar</h3>
+              <p class="subtitle-text">Llevá el control de tus deudas, cuotas y recibí alarmas antes del vencimiento (fijo a las 09:00 hs)</p>
+            </div>
+            <button type="button" id="btn-open-add-my-debt" class="btn-add-plus">
+              <span class="plus-symbol">+</span> Cargar deuda a pagar
+            </button>
+          </div>
+
+          <!-- BANNER DE TOTAL QUE YO DEBO -->
+          <div class="global-debt-banner" style="background: linear-gradient(135deg, rgba(153, 27, 27, 0.45), rgba(15, 23, 42, 0.85)); border-color: rgba(239, 68, 68, 0.55);">
+            <div class="global-debt-info">
+              <span class="global-debt-label" style="color: #fca5a5;">💰 Total general que yo debo:</span>
+              <span class="global-debt-amount" id="my-debts-total-amount" style="color: #fecaca;">$ 0</span>
+            </div>
+            <div class="global-debt-sub" id="my-debts-count-sub" style="color: #fca5a5;">
+              0 deudas a pagar
+            </div>
+          </div>
+
+          <!-- FORMULARIO PARA REGISTRAR DEUDA PROPIA -->
+          <div id="box-add-my-debt" class="task-form-box hidden" style="margin-bottom: 20px; border-color: #ef4444;">
+            <h3 style="color: #f87171;">➕ Cargar deuda que debo pagar</h3>
+            <p class="subtitle-text" style="margin-bottom: 14px;">Completá los datos del pago y programá tu alarma recordatorio:</p>
+            
+            <div class="form-row" style="margin-bottom: 12px;">
+              <div class="form-group flex-2">
+                <label for="input-my-debt-concept">Concepto o detalle</label>
+                <input type="text" id="input-my-debt-concept" placeholder="Ej: Tarjeta Visa, Préstamo banco, Alquiler..." autocomplete="off">
+              </div>
+              <div class="form-group flex-1">
+                <label for="input-my-debt-creditor">¿A quién le debés? (Acreedor)</label>
+                <input type="text" id="input-my-debt-creditor" placeholder="Ej: Banco Galicia, Pedro, Dueño..." autocomplete="off">
+              </div>
+            </div>
+
+            <div class="form-row" style="margin-bottom: 12px;">
+              <div class="form-group flex-1">
+                <label for="input-my-debt-total">Monto total ($)</label>
+                <input type="number" id="input-my-debt-total" placeholder="0" min="0" step="any" inputmode="decimal">
+              </div>
+              <div class="form-group flex-1">
+                <label for="input-my-debt-installments">Cantidad de cuotas</label>
+                <select id="input-my-debt-installments" class="select-input">
+                  <option value="1">1 pago (total)</option>
+                  <option value="2">2 cuotas</option>
+                  <option value="3">3 cuotas</option>
+                  <option value="4">4 cuotas</option>
+                  <option value="5">5 cuotas</option>
+                  <option value="6">6 cuotas</option>
+                  <option value="9">9 cuotas</option>
+                  <option value="12">12 cuotas</option>
+                  <option value="18">18 cuotas</option>
+                  <option value="24">24 cuotas</option>
+                </select>
+              </div>
+              <div class="form-group flex-1 form-preview-group">
+                <label>Valor estimado por cuota</label>
+                <div class="item-subtotal-badge" id="my-debt-installment-preview">$ 0</div>
+              </div>
+            </div>
+
+            <div class="form-row" style="margin-bottom: 14px;">
+              <div class="form-group flex-1">
+                <label for="input-my-debt-due-date">Fecha de vencimiento (hora fijada a las 09:00 hs)</label>
+                <input type="date" id="input-my-debt-due-date" class="select-input">
+              </div>
+              <div class="form-group flex-2">
+                <label>Avisarme antes del vencimiento (9:00 hs)</label>
+                <div class="priority-selector" id="my-debt-reminder-selector">
+                  <button type="button" class="prio-option prio-amarillo" data-reminder="2d">2 días antes</button>
+                  <button type="button" class="prio-option prio-amarillo active" data-reminder="1d">1 día antes</button>
+                  <button type="button" class="prio-option prio-amarillo" data-reminder="12h">12 hs antes</button>
+                  <button type="button" class="prio-option prio-amarillo" data-reminder="6h">6 hs antes</button>
+                  <button type="button" class="prio-option prio-amarillo" data-reminder="3h">3 hs antes</button>
+                  <button type="button" class="prio-option prio-gris" data-reminder="none">Sin aviso</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button type="button" id="btn-cancel-add-my-debt" class="btn-secondary">Cancelar</button>
+              <button type="button" id="btn-save-my-debt" class="btn-primary">Guardar deuda a pagar</button>
+            </div>
+          </div>
+
+          <!-- LISTA DE DEUDAS PROPIAS CARGADAS -->
+          <div id="my-debts-list-container" style="display: flex; flex-direction: column; gap: 14px;"></div>
+
+          <div id="no-my-debts-placeholder" class="empty-state hidden" style="padding: 40px 20px;">
+            <div style="font-size: 3rem; margin-bottom: 10px;">🎉</div>
+            <h3 style="color: #cbd5e1; margin-bottom: 8px;">¡No tenés deudas a pagar registradas!</h3>
+            <p class="subtitle-text">Si tenés alguna cuenta, tarjeta o préstamo que pagar, tocale a <strong>+ Cargar deuda a pagar</strong>.</p>
+          </div>
+        </div>
+      </div>
     </section>
 
     <!-- MÓDULO 4: EXTRAS Y HERRAMIENTAS -->
@@ -580,16 +871,9 @@
             <div class="card-badge" id="extra-lists-counter" style="border-color: #38bdf8; color: #7dd3fc;">Ver listas</div>
           </button>
 
-          <button type="button" id="card-extra-debts" class="big-card card-primary" style="background: linear-gradient(135deg, rgba(120, 53, 15, 0.9), rgba(15, 23, 42, 0.9)); border-color: #f59e0b;">
-            <div class="card-icon">💸</div>
-            <div class="card-title">6. Deudas</div>
-            <div class="card-desc">Control de dinero que te deben por persona, conceptos individuales y suma total de todas las deudas.</div>
-            <div class="card-badge" id="extra-debts-counter" style="border-color: #f59e0b; color: #fcd34d;">0 deudores</div>
-          </button>
-
           <button type="button" id="card-extra-settings" class="big-card" style="background: linear-gradient(135deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.9)); border: 1.5px solid #64748b;">
             <div class="card-icon">⚙️</div>
-            <div class="card-title">7. Configuración</div>
+            <div class="card-title">6. Configuración</div>
             <div class="card-desc">Tiempo de bloqueo de sesión, huella digital, notificaciones, compartir y administración.</div>
             <div class="card-badge" style="border-color: #94a3b8; color: #cbd5e1;">Ajustes</div>
           </button>
@@ -1011,130 +1295,6 @@
           <p class="subtitle-text">Tocá el botón <strong>+ Nueva lista</strong> arriba para armar tu primer presupuesto de compras.</p>
         </div>
       </div>
-
-      <!-- SUB-SECCIÓN 6: CONTROL DE DEUDAS (NUEVO) -->
-      <div id="subview-debts" class="hidden">
-        <!-- VISTA PRINCIPAL: LISTA DE DEUDORES CON TOTAL GENERAL -->
-        <div id="debts-main-view">
-          <div class="tasks-top-bar">
-            <div>
-              <h2>💸 Control de Deudas</h2>
-              <p class="subtitle-text">Administrá quién te debe dinero, sus pagos y cuotas</p>
-            </div>
-            <button type="button" id="btn-create-debtor-toggle" class="btn-add-plus">
-              <span class="plus-symbol">+</span> Nuevo deudor
-            </button>
-          </div>
-
-          <!-- FORMULARIO CREAR NUEVO DEUDOR -->
-          <div id="create-debtor-box" class="task-form-box hidden" style="max-width: 520px; margin: 0 auto 20px auto;">
-            <h3>➕ Registrar persona que te debe</h3>
-            <p class="subtitle-text" style="margin-bottom: 14px;">Ingresá el nombre o apodo de la persona para empezar a cargarle sus deudas:</p>
-            <div class="form-group" style="margin-bottom: 14px;">
-              <label for="input-new-debtor-name">Nombre de la persona</label>
-              <input type="text" id="input-new-debtor-name" placeholder="Ej: Juan Pérez, Roberto taller..." autocomplete="off">
-            </div>
-            <div class="form-actions">
-              <button type="button" id="btn-cancel-create-debtor" class="btn-secondary">Cancelar</button>
-              <button type="button" id="btn-save-new-debtor" class="btn-primary">Guardar deudor (Enter)</button>
-            </div>
-          </div>
-
-          <!-- BANNER DE TOTAL GENERAL DE TODAS LAS DEUDAS ("POR FUERA DE ESE DEUDOR") -->
-          <div class="global-debt-banner" id="global-debt-banner">
-            <div class="global-debt-info">
-              <span class="global-debt-label">💰 Total general que me deben (todas las deudas):</span>
-              <span class="global-debt-amount" id="global-debt-amount">$ 0</span>
-            </div>
-            <div class="global-debt-sub" id="global-debt-sub">
-              0 deudores con saldo pendiente
-            </div>
-          </div>
-
-          <!-- LISTA DE BOTONES DE DEUDORES -->
-          <div class="debtors-cards-grid" id="debtors-cards-grid">
-            <!-- Botones dinámicos de cada deudor -->
-          </div>
-
-          <!-- PLACEHOLDER CUANDO NO HAY DEUDORES -->
-          <div id="no-debtors-placeholder" class="empty-state hidden" style="padding: 40px 20px;">
-            <div style="font-size: 3rem; margin-bottom: 10px;">💸</div>
-            <h3 style="color: #cbd5e1; margin-bottom: 8px;">No tenés deudores registrados</h3>
-            <p class="subtitle-text">Tocá el botón <strong>+ Nuevo deudor</strong> arriba para anotar a quien te debe plata.</p>
-          </div>
-        </div>
-
-        <!-- VISTA DE DETALLE DEL DEUDOR (AL ENTRAR A ESE DEUDOR) -->
-        <div id="debtor-detail-view" class="hidden">
-          <button type="button" id="btn-back-to-debtors-list" class="btn-back" style="width: fit-content; margin-bottom: 14px;">
-            ← Volver a todos los deudores
-          </button>
-
-          <!-- APARTADO LLAMADO "TOTAL DEUDA" PARA EL DEUDOR SELECCIONADO -->
-          <div class="budget-total-banner" style="background: linear-gradient(135deg, rgba(120, 53, 15, 0.45), rgba(15, 23, 42, 0.85)); border-color: rgba(245, 158, 11, 0.55);">
-            <div class="budget-total-left">
-              <span class="budget-total-label" id="active-debtor-name-label" style="color: #fde68a; font-size: 1.1rem;">👤 Deudor: -</span>
-              <div style="display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;">
-                <span style="font-size: 1.15rem; color: #fbbf24; font-weight: 700;">Total deuda =</span>
-                <span class="budget-total-val" id="active-debtor-total-display" style="color: #fef08a;">$ 0</span>
-              </div>
-              <div id="active-debtor-breakdown" style="font-size: 0.85rem; color: #cbd5e1; margin-top: 4px;">
-                Cargado: $ 0 • Pagado: $ 0
-              </div>
-            </div>
-            <div class="budget-total-right">
-              <span id="active-debtor-items-count" class="budget-items-tag" style="background: rgba(245, 158, 11, 0.2); border-color: #f59e0b; color: #fde68a;">0 movimientos</span>
-              <button type="button" id="btn-delete-active-debtor" class="btn-delete-list-icon" title="Eliminar este deudor y todo su historial">🗑️ Eliminar deudor</button>
-            </div>
-          </div>
-
-          <!-- LOS DOS BOTONES SOLICITADOS: CARGAR DEUDA Y CARGAR PAGO -->
-          <div class="debt-action-buttons-row">
-            <button type="button" id="btn-show-add-debt" class="btn-debt-action-debt">
-              <span>➕</span> Cargar deuda
-            </button>
-            <button type="button" id="btn-show-add-payment" class="btn-debt-action-payment">
-              <span>💵</span> Cargar pago / cuota
-            </button>
-          </div>
-
-          <!-- FORMULARIO DESPLEGABLE PARA CARGAR DEUDA O PAGO -->
-          <div id="debt-movement-form-box" class="task-form-box hidden" style="margin-top: 16px; border: 1.5px solid #f59e0b; background: rgba(15, 23, 42, 0.95);">
-            <h3 id="debt-movement-form-title">➕ Cargar nueva deuda</h3>
-            <p class="subtitle-text" id="debt-movement-form-sub" style="margin-bottom: 14px;">Ingresá el concepto y monto:</p>
-            
-            <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 14px;">
-              <div class="form-group flex-2" style="margin-bottom: 0;">
-                <label for="input-debt-concept" id="label-debt-concept">Concepto o motivo</label>
-                <input type="text" id="input-debt-concept" placeholder="Ej: Repuesto moto, Préstamo nafta, Cuota 1..." autocomplete="off">
-              </div>
-              <div class="form-group flex-1" style="margin-bottom: 0;">
-                <label for="input-debt-amount">Monto ($)</label>
-                <input type="number" id="input-debt-amount" placeholder="0" min="0" step="any" inputmode="decimal">
-              </div>
-            </div>
-
-            <div class="form-actions">
-              <button type="button" id="btn-cancel-debt-movement" class="btn-secondary">Cancelar</button>
-              <button type="button" id="btn-save-debt-movement" class="btn-primary">Guardar movimiento (Enter)</button>
-            </div>
-          </div>
-
-          <!-- TABLA / HISTORIAL DE MOVIMIENTOS DEL DEUDOR -->
-          <div class="budget-table-card" style="margin-top: 16px;">
-            <div class="debt-table-header" style="grid-template-columns: 110px 1fr 130px 105px 50px;">
-              <div>Tipo</div>
-              <div>Concepto / Detalle</div>
-              <div style="text-align: right;">Monto</div>
-              <div style="text-align: center;" class="debt-col-date-header">Fecha</div>
-              <div style="text-align: center;">Acción</div>
-            </div>
-            <div id="debtor-concepts-rows" class="budget-table-body">
-              <!-- Filas dinámicas del historial -->
-            </div>
-          </div>
-        </div>
-      </div>
     </section>
 
     <!-- PANTALLA PÚBLICA PARA PERSONAS EXTERNAS (?modo=externo) -->
@@ -1181,8 +1341,88 @@
         </div>
       </div>
     </section>
+
+    <!-- PANTALLA PÚBLICA DE ESTADO DE CUENTA (LINK PARA EL DEUDOR) -->
+    <section id="view-public-statement" class="view hidden">
+      <div class="task-form-box" style="max-width: 680px; margin: 10px auto;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 12px; flex-wrap: wrap;">
+          <div>
+            <h2 style="font-size: 1.45rem; margin-bottom: 4px; color: #f59e0b;">📄 Estado de Cuenta</h2>
+            <p class="subtitle-text" id="statement-creditor-sub">Detalle de deuda con Alejandro</p>
+          </div>
+          <span class="priority-pill pill-simple" id="statement-date-badge">Hoy</span>
+        </div>
+
+        <!-- BANNER DE SALDO TOTAL PENDIENTE -->
+        <div class="budget-total-banner" style="margin-bottom: 18px; background: linear-gradient(135deg, rgba(120, 53, 15, 0.45), rgba(15, 23, 42, 0.85)); border-color: #f59e0b;">
+          <div class="budget-total-left">
+            <span class="budget-total-label" id="statement-debtor-name" style="font-size: 1.15rem; color: #fde68a;">👤 Deudor: -</span>
+            <div style="display: flex; align-items: baseline; gap: 8px;">
+              <span style="font-size: 1.1rem; color: #fbbf24; font-weight: 700;">Saldo pendiente =</span>
+              <span class="budget-total-val" id="statement-total-amount" style="color: #fef08a;">$ 0</span>
+            </div>
+          </div>
+          <div class="budget-total-right">
+            <button type="button" id="btn-statement-open-pay" class="btn-primary" style="padding: 10px 18px; font-weight: 800; background: #22c55e; border-color: #16a34a;">
+              💵 Informar un pago
+            </button>
+          </div>
+        </div>
+
+        <!-- BANNER PARA USUARIOS DE LA APP AGENDA -->
+        <div id="statement-link-agenda-banner" class="task-form-box hidden" style="margin-bottom: 18px; background: rgba(59, 130, 246, 0.15); border-color: #3b82f6;">
+          <h4 style="color: #60a5fa; margin-bottom: 4px;">💡 ¿Sos usuario de Agenda Familiar?</h4>
+          <p class="subtitle-text" style="margin-bottom: 10px;">Podés vincular esta deuda a tu propia sección <strong>"Yo debo"</strong> para tener recordatorios automáticos de pago a las 09:00 hs.</p>
+          <button type="button" id="btn-statement-link-to-my-debts" class="btn-primary" style="width: 100%;">
+            🔗 Vincular a mi sección "Yo debo"
+          </button>
+          <div id="statement-linked-success-msg" class="share-copied-msg hidden" style="margin-top: 10px; background: rgba(59, 130, 246, 0.2); color: #93c5fd; border-color: #3b82f6;">
+            ✓ ¡Deuda vinculada a tu sección "Yo debo" con éxito!
+          </div>
+        </div>
+
+        <!-- FORMULARIO PARA INFORMAR UN PAGO -->
+        <div id="statement-pay-form-box" class="task-form-box hidden" style="margin-bottom: 18px; border-color: #22c55e; background: rgba(15, 23, 42, 0.95);">
+          <h3 style="color: #4ade80;">💵 Informar un pago realizado</h3>
+          <p class="subtitle-text" style="margin-bottom: 14px;">Elegí de qué deuda descontar el dinero, el monto abonado y una nota/comprobante:</p>
+
+          <div class="form-group" style="margin-bottom: 12px;">
+            <label for="select-statement-concept">¿De cuál de tus deudas descontar?</label>
+            <select id="select-statement-concept" class="select-input"></select>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 12px;">
+            <label for="input-statement-amount">Monto abonado ($)</label>
+            <input type="number" id="input-statement-amount" placeholder="0" min="1" step="any" inputmode="decimal">
+          </div>
+
+          <div class="form-group" style="margin-bottom: 14px;">
+            <label for="input-statement-note">Comprobante o detalle (ej: Transferencia, Efectivo en mano)</label>
+            <input type="text" id="input-statement-note" placeholder="Escribí un detalle o número de comprobante..." autocomplete="off">
+          </div>
+
+          <div class="form-actions">
+            <button type="button" id="btn-cancel-statement-pay" class="btn-secondary">Cancelar</button>
+            <button type="button" id="btn-send-statement-pay" class="btn-primary" style="background: #22c55e; border-color: #16a34a;">Enviar pago para aprobación</button>
+          </div>
+          <div id="statement-pay-success-msg" class="share-copied-msg hidden" style="margin-top: 10px; background: rgba(34, 197, 94, 0.2); color: #86efac; border-color: #22c55e;">
+            ✓ ¡Pago informado con éxito! El acreedor lo revisará y aceptará.
+          </div>
+        </div>
+
+        <!-- LISTADO DE DEUDAS Y PAGOS -->
+        <h4 style="color: #cbd5e1; margin-bottom: 10px;">📋 Detalle de tus deudas:</h4>
+        <div id="statement-concepts-list" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px;"></div>
+
+        <!-- PAGOS PENDIENTES DE REVISIÓN -->
+        <div id="statement-pending-list-wrap" class="hidden">
+          <h4 style="color: #60a5fa; margin-bottom: 10px;">⏳ Pagos informados pendientes de aceptación:</h4>
+          <div id="statement-pending-list" style="display: flex; flex-direction: column; gap: 8px;"></div>
+        </div>
+      </div>
+    </section>
   </main>
 
-  <script src="app.js?v=20261101_05"></script>
+  <script src="app.js?v=20261102_01"></script>
 </body>
 </html>
