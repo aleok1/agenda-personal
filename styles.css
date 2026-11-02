@@ -2918,3 +2918,22 @@ body {
   gap: 12px;
   flex-wrap: wrap;
 }
+
+.pending-payment-alert-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(37, 99, 235, 0.18);
+  border: 1px solid #3b82f6;
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: #93c5fd;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-top: 8px;
+}
+
+.my-debt-card.has-pending-payment {
+  border-color: #3b82f6;
+}
+
