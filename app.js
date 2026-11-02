@@ -75,6 +75,8 @@ let idListaPresupuestoActiva = null;
 let deudores = [];
 let idDeudorActivo = null;
 let yoDebo = [];
+let tareasCompartidas = [];
+let prioridadTareaCompartida = 'simple';
 let subtabEconomiaActiva = 'wallet';
 let subtabDeudaActiva = 'me-deben';
 let idConceptoParaPagar = null;
@@ -186,6 +188,48 @@ const btnCloseAdminUsers = document.getElementById('btn-close-admin-users');
 const adminUsersList = document.getElementById('admin-users-list');
 
 // Botones principales de la agenda
+const btnOpenTasksAgendaMenu = document.getElementById('btn-open-tasks-agenda-menu');
+const viewTasksAgendaMenu = document.getElementById('view-tasks-agenda-menu');
+const btnBackFromTasksAgendaMenu = document.getElementById('btn-back-from-tasks-agenda-menu');
+const btnSubTasks = document.getElementById('btn-sub-tasks');
+const btnSubAgenda = document.getElementById('btn-sub-agenda');
+const btnSubSharedTasks = document.getElementById('btn-sub-shared-tasks');
+const btnBackToTasksMenu = document.getElementById('btn-back-to-tasks-menu');
+const btnBackToAgendaMenu = document.getElementById('btn-back-to-agenda-menu');
+const homeTasksAgendaCounter = document.getElementById('home-tasks-agenda-counter');
+const menuTasksCounter = document.getElementById('menu-tasks-counter');
+const menuAgendaCounter = document.getElementById('menu-agenda-counter');
+const menuSharedTasksCounter = document.getElementById('menu-shared-tasks-counter');
+
+// Tareas Compartidas
+const viewSharedTasks = document.getElementById('view-shared-tasks');
+const btnBackSharedToMenu = document.getElementById('btn-back-shared-to-menu');
+const btnNewSharedTask = document.getElementById('btn-new-shared-task');
+const sharedTasksInvitationsBox = document.getElementById('shared-tasks-invitations-box');
+const sharedInvitationsList = document.getElementById('shared-invitations-list');
+const formNewSharedTaskBox = document.getElementById('form-new-shared-task-box');
+const selectSharedPartner = document.getElementById('select-shared-partner');
+const inputSharedTaskText = document.getElementById('input-shared-task-text');
+const sharedTaskPrioritySelector = document.getElementById('shared-task-priority-selector');
+const btnCancelSharedTask = document.getElementById('btn-cancel-shared-task');
+const btnSaveSharedTask = document.getElementById('btn-save-shared-task');
+const sharedTasksList = document.getElementById('shared-tasks-list');
+
+// Ingreso con DNI y Registro de DNI
+const dniLoginBox = document.getElementById('dni-login-box');
+const inputLoginDni = document.getElementById('input-login-dni');
+const inputLoginDniPass = document.getElementById('input-login-dni-pass');
+const btnToggleDniPass = document.getElementById('btn-toggle-dni-pass');
+const dniLoginError = document.getElementById('dni-login-error');
+const btnSubmitDniLogin = document.getElementById('btn-submit-dni-login');
+const modalRegisterDni = document.getElementById('modal-register-dni');
+const inputUserDni = document.getElementById('input-user-dni');
+const registerDniError = document.getElementById('register-dni-error');
+const btnSaveUserDni = document.getElementById('btn-save-user-dni');
+const btnLogoutDevice = document.getElementById('btn-logout-device');
+
+configurarBotonOjito(btnToggleDniPass, inputLoginDniPass);
+
 const btnOpenTasks = document.getElementById('btn-open-tasks');
 const btnOpenAgenda = document.getElementById('btn-open-agenda');
 const btnOpenWallet = document.getElementById('btn-open-wallet');
@@ -384,8 +428,25 @@ window.addEventListener('click', () => {
 // PANTALLA 0: SELECCIÓN DE USUARIO, LOGIN Y CREACIÓN DE NUEVOS USUARIOS
 // =========================================================================
 async function cargarListaDeUsuarios() {
-  // 1. Renderizado INMEDIATO: pinta la grilla al instante con la lista local para evitar demoras
-  renderizarGrillaUsuarios();
+  const recordadoId = localStorage.getItem('agenda_usuario_recordado');
+
+  if (recordadoId) {
+    if (dniLoginBox) dniLoginBox.classList.add('hidden');
+    if (usersGrid) usersGrid.classList.add('hidden');
+    let u = listaUsuariosPublica.find(x => x.id === recordadoId);
+    if (!u) {
+      u = { id: recordadoId, nombre: 'Usuario', tienePassword: true };
+    }
+    seleccionarUsuarioParaEntrar(u);
+  } else {
+    if (loginPasswordBox) loginPasswordBox.classList.add('hidden');
+    if (usersGrid) usersGrid.classList.add('hidden');
+    if (dniLoginBox) {
+      dniLoginBox.classList.remove('hidden');
+      if (inputLoginDni) inputLoginDni.focus();
+    }
+  }
+
   actualizarEstadoSync('☁️ Conectando...', 'amarillo');
 
   const controller = new AbortController();
@@ -404,7 +465,6 @@ async function cargarListaDeUsuarios() {
         try {
           localStorage.setItem('agenda_usuarios_cache', JSON.stringify(data.usuarios));
         } catch (e) {}
-        renderizarGrillaUsuarios();
       }
       window.__LAST_SYNC_ERROR = null;
       actualizarEstadoSync('☁️ En línea', 'verde');
@@ -467,6 +527,8 @@ function renderizarGrillaUsuarios() {
 try { renderizarGrillaUsuarios(); } catch (e) {}
 
 async function seleccionarUsuarioParaEntrar(u) {
+  if (dniLoginBox) dniLoginBox.classList.add('hidden');
+  if (usersGrid) usersGrid.classList.add('hidden');
   createUserBox.classList.add('hidden');
   loginErrorMsg.classList.add('hidden');
   usuarioSeleccionadoParaLogin = u;
@@ -503,10 +565,10 @@ async function seleccionarUsuarioParaEntrar(u) {
     loginBoxSubtitle.textContent = 'Como es tu primera vez entrando, elegí tu contraseña privada. La app te recordará durante 1 hora de uso.';
     labelLoginPassword.textContent = 'Elegí tu contraseña';
   } else {
-    loginBoxTitle.textContent = `🔒 Ingresar como ${u.nombre}`;
+    loginBoxTitle.textContent = `🔒 Desbloquear agenda de ${u.nombre}`;
     loginBoxSubtitle.textContent = tieneHuella
-      ? 'Tocá el botón para usar tu huella o escribí tu contraseña privada:'
-      : 'Ingresá tu contraseña privada para abrir tu agenda.';
+      ? 'Tocá el botón para usar tu huella o ingresá tu contraseña privada:'
+      : 'Ingresá tu contraseña privada para abrir tu agenda personal.';
     labelLoginPassword.textContent = 'Tu contraseña';
   }
 
@@ -518,6 +580,14 @@ async function seleccionarUsuarioParaEntrar(u) {
 btnCancelLogin.addEventListener('click', () => {
   loginPasswordBox.classList.add('hidden');
   usuarioSeleccionadoParaLogin = null;
+  localStorage.removeItem('agenda_usuario_recordado');
+  if (dniLoginBox) {
+    dniLoginBox.classList.remove('hidden');
+    if (inputLoginDni) {
+      inputLoginDni.value = '';
+      inputLoginDni.focus();
+    }
+  }
 });
 
 btnConfirmLogin.addEventListener('click', () => {
@@ -569,9 +639,11 @@ async function intentarIngresoConPassword(u, pass, eraAutomatico) {
     }
 
     // Login exitoso
+    localStorage.setItem('agenda_usuario_recordado', u.id);
     usuarioActivo = {
       id: u.id,
       nombre: u.nombre,
+      dni: data.dni || data.usuario?.dni || u.dni || null,
       esAdmin: Boolean(u.esAdmin),
       avatar: u.esAdmin ? '👑' : (data.usuario?.avatar || u.avatar || '👤'),
       password: pass,
@@ -585,6 +657,7 @@ async function intentarIngresoConPassword(u, pass, eraAutomatico) {
     }
 
     tareas = Array.isArray(data.tareas) ? data.tareas : [];
+    tareasCompartidas = Array.isArray(data.tareasCompartidas) ? data.tareasCompartidas : [];
     avisosTareas = Array.isArray(data.avisosTareas) ? data.avisosTareas : [];
     recordatorios = Array.isArray(data.recordatorios) ? data.recordatorios : [];
     movimientos = Array.isArray(data.movimientos) ? data.movimientos : [];
@@ -1298,13 +1371,17 @@ function enviarRecordatoriosAlServiceWorker() {
 function entrarAMenuDeUsuarioActivo() {
   registrarPasoHistorial('home');
   viewUsers.classList.add('hidden');
+  if (viewTasksAgendaMenu) viewTasksAgendaMenu.classList.add('hidden');
   viewTasks.classList.add('hidden');
   viewAgenda.classList.add('hidden');
+  if (viewSharedTasks) viewSharedTasks.classList.add('hidden');
   viewWallet.classList.add('hidden');
   if (viewAssistant) viewAssistant.classList.add('hidden');
   if (viewExtras) viewExtras.classList.add('hidden');
   viewHome.classList.remove('hidden');
 
+  btnSwitchUser.textContent = '🔒 Bloquear';
+  btnSwitchUser.title = 'Bloquear mi agenda (requiere huella o contraseña para volver)';
   btnSwitchUser.classList.remove('hidden');
   btnHome.classList.add('hidden');
   const iconoUsuario = usuarioActivo.esAdmin ? '👑' : (usuarioActivo.avatar || '👤');
@@ -1328,7 +1405,9 @@ function entrarAMenuDeUsuarioActivo() {
 
   limpiarTareasVencidas();
   actualizarContadoresYAlertas();
+  actualizarContadoresTareasAgendaMenu();
   renderizarTareas();
+  renderizarTareasCompartidas();
   renderizarCalendario();
   renderizarRecordatoriosDelDia();
   renderizarBilletera();
@@ -1339,19 +1418,36 @@ function entrarAMenuDeUsuarioActivo() {
   verificarNotificacionesPendientes(true);
   enviarRecordatoriosAlServiceWorker();
   iniciarBienvenidaChat();
+
+  // Notificación emergente por única vez: pedir DNI si aún no lo tiene registrado
+  if (modalRegisterDni) {
+    if (!usuarioActivo.dni) {
+      modalRegisterDni.classList.remove('hidden');
+      if (inputUserDni) {
+        inputUserDni.value = '';
+        inputUserDni.focus();
+      }
+      if (registerDniError) registerDniError.classList.add('hidden');
+    } else {
+      modalRegisterDni.classList.add('hidden');
+    }
+  }
 }
 
-function volverAPantallaUsuarios() {
+function volverAPantallaUsuarios(forzarDni) {
   registrarPasoHistorial('users');
   usuarioActivo = null;
   viewHome.classList.add('hidden');
+  if (viewTasksAgendaMenu) viewTasksAgendaMenu.classList.add('hidden');
   viewTasks.classList.add('hidden');
   viewAgenda.classList.add('hidden');
+  if (viewSharedTasks) viewSharedTasks.classList.add('hidden');
   viewWallet.classList.add('hidden');
   if (viewAssistant) viewAssistant.classList.add('hidden');
   if (viewExtras) viewExtras.classList.add('hidden');
   const hp = document.getElementById('housemates-prompt-box');
   if (hp) hp.classList.add('hidden');
+  if (modalRegisterDni) modalRegisterDni.classList.add('hidden');
   todayAlertBanner.classList.add('hidden');
   askUserTaskBox.classList.add('hidden');
   adminUsersBox.classList.add('hidden');
@@ -1371,10 +1467,15 @@ function volverAPantallaUsuarios() {
   if (btnShareLink) btnShareLink.classList.add('hidden');
 
   viewUsers.classList.remove('hidden');
+
+  if (forzarDni) {
+    localStorage.removeItem('agenda_usuario_recordado');
+  }
+
   cargarListaDeUsuarios();
 }
 
-btnSwitchUser.addEventListener('click', volverAPantallaUsuarios);
+btnSwitchUser.addEventListener('click', () => volverAPantallaUsuarios(false));
 
 // =========================================================================
 // PEDIR TAREA A OTRO USUARIO DE LA APP (DISPONIBLE PARA TODOS LOS USUARIOS)
@@ -1747,10 +1848,14 @@ async function sincronizarDesdeNube() {
     }
     superCompartidoCon = Array.isArray(cloud.superCompartidoCon) ? cloud.superCompartidoCon : superCompartidoCon;
     if (typeof cloud.yaConfiguroCasa === 'boolean') yaConfiguroCasa = cloud.yaConfiguroCasa;
+    if (Array.isArray(cloud.tareasCompartidas)) tareasCompartidas = cloud.tareasCompartidas;
+    if (cloud.dni) usuarioActivo.dni = cloud.dni;
 
     const seLimpiaronVencidas = limpiarTareasVencidas();
     actualizarContadoresYAlertas();
+    actualizarContadoresTareasAgendaMenu();
     renderizarTareas();
+    renderizarTareasCompartidas();
     renderizarCalendario();
     renderizarRecordatoriosDelDia();
     renderizarBilletera();
@@ -1831,14 +1936,25 @@ function actualizarContadoresYAlertas() {
   if (ES_MODO_EXTERNO || !usuarioActivo) return;
 
   const tareasPendientes = tareas.filter(t => !t.realizada).length;
-  homeTasksCounter.textContent = tareasPendientes === 1 ? '1 pendiente' : `${tareasPendientes} pendientes`;
+  if (homeTasksCounter) {
+    homeTasksCounter.textContent = tareasPendientes === 1 ? '1 pendiente' : `${tareasPendientes} pendientes`;
+  }
 
   const recordatoriosDeHoyPendientes = recordatorios
     .filter(r => r.fecha === HOY_ISO && !r.realizada)
     .sort((a, b) => (a.hora || '99:99').localeCompare(b.hora || '99:99'));
 
   const cantHoy = recordatoriosDeHoyPendientes.length;
-  homeAgendaCounter.textContent = cantHoy === 1 ? '1 actividad para hoy' : `${cantHoy} actividades para hoy`;
+  if (homeAgendaCounter) {
+    homeAgendaCounter.textContent = cantHoy === 1 ? '1 actividad para hoy' : `${cantHoy} actividades para hoy`;
+  }
+
+  if (homeTasksAgendaCounter) {
+    const compActivas = tareasCompartidas.filter(t => t.estado === 'activa' || (t.creadorId === usuarioActivo.id && t.estado === 'pendiente_invitacion')).length;
+    homeTasksAgendaCounter.textContent = `${tareasPendientes} tareas · ${compActivas} en equipo`;
+  }
+
+  actualizarContadoresTareasAgendaMenu();
 
   const saldos = calcularSaldosBilletera();
   if (homeWalletCounter) {
@@ -1890,12 +2006,42 @@ function actualizarContadoresYAlertas() {
   }
 }
 
+function actualizarContadoresTareasAgendaMenu() {
+  if (!usuarioActivo) return;
+  const pendientes = (tareas || []).filter(t => !t.realizada).length;
+  const recordatoriosHoy = (recordatorios || []).filter(r => r.fecha === HOY_ISO && !r.realizada).length;
+  const compActivas = (tareasCompartidas || []).filter(t => t.estado === 'activa').length;
+  const invitacionesPendientes = (tareasCompartidas || []).filter(t => t.socioId === usuarioActivo.id && t.estado === 'pendiente_invitacion').length;
+
+  if (menuTasksCounter) {
+    menuTasksCounter.textContent = pendientes === 1 ? '1 tarea pendiente' : `${pendientes} tareas pendientes`;
+  }
+  if (menuAgendaCounter) {
+    menuAgendaCounter.textContent = recordatoriosHoy === 1 ? '1 actividad para hoy' : `${recordatoriosHoy} actividades para hoy`;
+  }
+  if (menuSharedTasksCounter) {
+    if (invitacionesPendientes > 0) {
+      menuSharedTasksCounter.textContent = `📨 ${invitacionesPendientes} invitación${invitacionesPendientes > 1 ? 'es' : ''} · ${compActivas} activa${compActivas !== 1 ? 's' : ''}`;
+      menuSharedTasksCounter.style.color = '#60a5fa';
+    } else {
+      menuSharedTasksCounter.textContent = compActivas === 1 ? '1 tarea en equipo' : `${compActivas} tareas en equipo`;
+      menuSharedTasksCounter.style.color = '';
+    }
+  }
+  if (homeTasksAgendaCounter) {
+    const totalEq = compActivas + invitacionesPendientes;
+    homeTasksAgendaCounter.textContent = `${pendientes} tareas · ${totalEq} en equipo`;
+  }
+}
+
 // Navegación interna del usuario
 function irAInicio() {
   if (!usuarioActivo) { volverAPantallaUsuarios(); return; }
   registrarPasoHistorial('home');
+  if (viewTasksAgendaMenu) viewTasksAgendaMenu.classList.add('hidden');
   viewTasks.classList.add('hidden');
   viewAgenda.classList.add('hidden');
+  if (viewSharedTasks) viewSharedTasks.classList.add('hidden');
   viewWallet.classList.add('hidden');
   if (viewAssistant) viewAssistant.classList.add('hidden');
   if (viewExtras) viewExtras.classList.add('hidden');
@@ -1904,10 +2050,27 @@ function irAInicio() {
   actualizarContadoresYAlertas();
 }
 
+function irAMenuTareasAgenda() {
+  if (!usuarioActivo) { volverAPantallaUsuarios(); return; }
+  registrarPasoHistorial('tasks-agenda-menu');
+  viewHome.classList.add('hidden');
+  viewTasks.classList.add('hidden');
+  viewAgenda.classList.add('hidden');
+  if (viewSharedTasks) viewSharedTasks.classList.add('hidden');
+  viewWallet.classList.add('hidden');
+  if (viewAssistant) viewAssistant.classList.add('hidden');
+  if (viewExtras) viewExtras.classList.add('hidden');
+  if (viewTasksAgendaMenu) viewTasksAgendaMenu.classList.remove('hidden');
+  btnHome.classList.remove('hidden');
+  actualizarContadoresTareasAgendaMenu();
+}
+
 function irATareas() {
   registrarPasoHistorial('tasks');
   viewHome.classList.add('hidden');
+  if (viewTasksAgendaMenu) viewTasksAgendaMenu.classList.add('hidden');
   viewAgenda.classList.add('hidden');
+  if (viewSharedTasks) viewSharedTasks.classList.add('hidden');
   viewWallet.classList.add('hidden');
   if (viewAssistant) viewAssistant.classList.add('hidden');
   if (viewExtras) viewExtras.classList.add('hidden');
@@ -1926,7 +2089,9 @@ function irAAgenda(fechaISO) {
     mesActualVista = m - 1;
   }
   viewHome.classList.add('hidden');
+  if (viewTasksAgendaMenu) viewTasksAgendaMenu.classList.add('hidden');
   viewTasks.classList.add('hidden');
+  if (viewSharedTasks) viewSharedTasks.classList.add('hidden');
   viewWallet.classList.add('hidden');
   if (viewAssistant) viewAssistant.classList.add('hidden');
   if (viewExtras) viewExtras.classList.add('hidden');
@@ -1936,11 +2101,27 @@ function irAAgenda(fechaISO) {
   renderizarRecordatoriosDelDia();
 }
 
+function irATareasCompartidas() {
+  registrarPasoHistorial('shared-tasks');
+  viewHome.classList.add('hidden');
+  if (viewTasksAgendaMenu) viewTasksAgendaMenu.classList.add('hidden');
+  viewTasks.classList.add('hidden');
+  viewAgenda.classList.add('hidden');
+  viewWallet.classList.add('hidden');
+  if (viewAssistant) viewAssistant.classList.add('hidden');
+  if (viewExtras) viewExtras.classList.add('hidden');
+  if (viewSharedTasks) viewSharedTasks.classList.remove('hidden');
+  btnHome.classList.remove('hidden');
+  renderizarTareasCompartidas();
+}
+
 function irABilletera(subtabDeseada) {
   registrarPasoHistorial('wallet');
   viewHome.classList.add('hidden');
+  if (viewTasksAgendaMenu) viewTasksAgendaMenu.classList.add('hidden');
   viewTasks.classList.add('hidden');
   viewAgenda.classList.add('hidden');
+  if (viewSharedTasks) viewSharedTasks.classList.add('hidden');
   if (viewAssistant) viewAssistant.classList.add('hidden');
   if (viewExtras) viewExtras.classList.add('hidden');
   viewWallet.classList.remove('hidden');
@@ -1955,11 +2136,13 @@ function irABilletera(subtabDeseada) {
 function irAAsistente() {
   registrarPasoHistorial('assistant');
   viewHome.classList.add('hidden');
+  if (viewTasksAgendaMenu) viewTasksAgendaMenu.classList.add('hidden');
   viewTasks.classList.add('hidden');
   viewAgenda.classList.add('hidden');
+  if (viewSharedTasks) viewSharedTasks.classList.add('hidden');
   viewWallet.classList.add('hidden');
   if (viewExtras) viewExtras.classList.add('hidden');
-  viewAssistant.classList.remove('hidden');
+  if (viewAssistant) viewAssistant.classList.remove('hidden');
   btnHome.classList.remove('hidden');
   const inp = document.getElementById('input-chat-msg');
   if (inp) inp.focus();
@@ -1968,8 +2151,10 @@ function irAAsistente() {
 function irAExtras() {
   registrarPasoHistorial('extras');
   viewHome.classList.add('hidden');
+  if (viewTasksAgendaMenu) viewTasksAgendaMenu.classList.add('hidden');
   viewTasks.classList.add('hidden');
   viewAgenda.classList.add('hidden');
+  if (viewSharedTasks) viewSharedTasks.classList.add('hidden');
   viewWallet.classList.add('hidden');
   if (viewAssistant) viewAssistant.classList.add('hidden');
   viewExtras.classList.remove('hidden');
@@ -2008,10 +2193,21 @@ window.addEventListener('popstate', () => {
       return;
     }
 
-    // 3. Si está adentro de alguno de los módulos, volver al menú de inicio del usuario
+    // Si está adentro de Tareas, Agenda o Tareas Compartidas, volver al menú de Tareas y Agenda
+    const enSubModuloTareas =
+      (viewTasks && !viewTasks.classList.contains('hidden')) ||
+      (viewAgenda && !viewAgenda.classList.contains('hidden')) ||
+      (viewSharedTasks && !viewSharedTasks.classList.contains('hidden'));
+
+    if (enSubModuloTareas && usuarioActivo) {
+      irAMenuTareasAgenda();
+      history.pushState({ vista: 'tasks-agenda-menu' }, '');
+      return;
+    }
+
+    // 3. Si está adentro de alguno de los otros módulos o en el menú de tareas, volver al menú de inicio del usuario
     const enSubModulo =
-      !viewTasks.classList.contains('hidden') ||
-      !viewAgenda.classList.contains('hidden') ||
+      (viewTasksAgendaMenu && !viewTasksAgendaMenu.classList.contains('hidden')) ||
       !viewWallet.classList.contains('hidden') ||
       (viewAssistant && !viewAssistant.classList.contains('hidden')) ||
       (viewExtras && !viewExtras.classList.contains('hidden'));
@@ -2022,14 +2218,14 @@ window.addEventListener('popstate', () => {
       return;
     }
 
-    // 3. Si está en el menú de los 5 botones del usuario, volver a la pantalla de selección de usuarios
+    // 4. Si está en el menú de inicio del usuario, bloquear
     if (!viewHome.classList.contains('hidden')) {
-      volverAPantallaUsuarios();
+      volverAPantallaUsuarios(false);
       history.pushState({ vista: 'users' }, '');
       return;
     }
 
-    // 4. Si está en la pantalla de usuarios con el recuadro de contraseña o nuevo usuario abierto, cerrarlo
+    // 5. Si está en la pantalla de usuarios con el recuadro de contraseña o nuevo usuario abierto, cerrarlo
     if (!loginPasswordBox.classList.contains('hidden') || !createUserBox.classList.contains('hidden')) {
       loginPasswordBox.classList.add('hidden');
       createUserBox.classList.add('hidden');
@@ -2042,8 +2238,17 @@ window.addEventListener('popstate', () => {
 });
 
 btnHome.addEventListener('click', irAInicio);
-btnOpenTasks.addEventListener('click', irATareas);
-btnOpenAgenda.addEventListener('click', () => irAAgenda());
+if (btnOpenTasksAgendaMenu) btnOpenTasksAgendaMenu.addEventListener('click', irAMenuTareasAgenda);
+if (btnBackFromTasksAgendaMenu) btnBackFromTasksAgendaMenu.addEventListener('click', irAInicio);
+if (btnSubTasks) btnSubTasks.addEventListener('click', irATareas);
+if (btnSubAgenda) btnSubAgenda.addEventListener('click', () => irAAgenda());
+if (btnSubSharedTasks) btnSubSharedTasks.addEventListener('click', irATareasCompartidas);
+if (btnBackToTasksMenu) btnBackToTasksMenu.addEventListener('click', irAMenuTareasAgenda);
+if (btnBackToAgendaMenu) btnBackToAgendaMenu.addEventListener('click', irAMenuTareasAgenda);
+if (btnBackSharedToMenu) btnBackSharedToMenu.addEventListener('click', irAMenuTareasAgenda);
+
+if (btnOpenTasks) btnOpenTasks.addEventListener('click', irATareas);
+if (btnOpenAgenda) btnOpenAgenda.addEventListener('click', () => irAAgenda());
 btnOpenWallet.addEventListener('click', irABilletera);
 if (btnOpenAssistant) btnOpenAssistant.addEventListener('click', irAAsistente);
 if (btnOpenExtras) btnOpenExtras.addEventListener('click', irAExtras);
@@ -5826,6 +6031,576 @@ function generarRutinaEntrenamiento(esOtraVariante) {
 
 if (btnGenerateWorkout) btnGenerateWorkout.addEventListener('click', () => generarRutinaEntrenamiento(false));
 if (btnAnotherWorkout) btnAnotherWorkout.addEventListener('click', () => generarRutinaEntrenamiento(true));
+
+// ==========================================
+// TAREAS COMPARTIDAS (EN EQUIPO)
+// ==========================================
+function renderizarTareasCompartidas() {
+  if (!usuarioActivo || !viewSharedTasks) return;
+
+  if (selectSharedPartner) {
+    const otros = (listaUsuariosPublica || []).filter(u => u.id !== usuarioActivo.id);
+    const anterior = selectSharedPartner.value;
+    selectSharedPartner.innerHTML = '';
+    if (otros.length === 0) {
+      const opt = document.createElement('option');
+      opt.value = '';
+      opt.textContent = 'No hay otros usuarios registrados';
+      selectSharedPartner.appendChild(opt);
+    } else {
+      otros.forEach(u => {
+        const opt = document.createElement('option');
+        opt.value = u.id;
+        opt.textContent = `${u.avatar || '👤'} ${u.nombre}`;
+        selectSharedPartner.appendChild(opt);
+      });
+      if (anterior && otros.some(u => u.id === anterior)) {
+        selectSharedPartner.value = anterior;
+      }
+    }
+  }
+
+  // 1. Invitaciones pendientes hacia el usuario activo
+  const invitaciones = (tareasCompartidas || []).filter(
+    t => t.socioId === usuarioActivo.id && t.estado === 'pendiente_invitacion'
+  );
+
+  if (sharedTasksInvitationsBox && sharedInvitationsList) {
+    if (invitaciones.length > 0) {
+      sharedTasksInvitationsBox.classList.remove('hidden');
+      sharedInvitationsList.innerHTML = '';
+      invitaciones.forEach(inv => {
+        const card = document.createElement('div');
+        card.className = 'shared-invitation-card';
+        card.innerHTML = `
+          <div>
+            <div style="font-size:0.85rem; color:#93c5fd; margin-bottom:4px;">
+              <b>${escaparHTML(inv.creadorNombre || 'Un usuario')}</b> te invitó a realizar juntos:
+            </div>
+            <div style="font-size:1.05rem; font-weight:700; color:#fff;">
+              ${escaparHTML(inv.texto)}
+            </div>
+            <div style="margin-top:6px;">
+              <span class="priority-pill pill-${inv.prioridad || 'simple'}">
+                ${ETIQUETA_PRIORIDAD[inv.prioridad || 'simple']}
+              </span>
+            </div>
+          </div>
+          <div style="display:flex; gap:8px; margin-top:10px;">
+            <button type="button" class="btn-primary btn-accept-shared" data-id="${inv.id}" style="background:#22c55e; border-color:#16a34a; padding:6px 14px; font-size:0.88rem;">
+              ✓ Aceptar
+            </button>
+            <button type="button" class="btn-secondary btn-reject-shared" data-id="${inv.id}" style="padding:6px 14px; font-size:0.88rem; color:#fca5a5; border-color:#ef4444;">
+              ✕ Rechazar
+            </button>
+          </div>
+        `;
+        card.querySelector('.btn-accept-shared').addEventListener('click', () => {
+          responderInvitacionTareaCompartida(inv.id, true);
+        });
+        card.querySelector('.btn-reject-shared').addEventListener('click', () => {
+          responderInvitacionTareaCompartida(inv.id, false);
+        });
+        sharedInvitationsList.appendChild(card);
+      });
+    } else {
+      sharedTasksInvitationsBox.classList.add('hidden');
+    }
+  }
+
+  // 2. Lista de tareas compartidas activas o invitaciones pendientes enviadas por mí
+  if (!sharedTasksList) return;
+  sharedTasksList.innerHTML = '';
+
+  const activas = (tareasCompartidas || []).filter(t => {
+    if (t.estado === 'activa') return true;
+    if (t.creadorId === usuarioActivo.id && t.estado === 'pendiente_invitacion') return true;
+    return false;
+  });
+
+  if (activas.length === 0) {
+    sharedTasksList.innerHTML = `
+      <div class="empty-state">
+        No tenés tareas compartidas activas en este momento.<br>
+        Tocá el botón <b>+ Nueva tarea compartida</b> para invitar a otro usuario a realizar una tarea en equipo.
+      </div>
+    `;
+    return;
+  }
+
+  activas.forEach(tc => {
+    const soyCreador = tc.creadorId === usuarioActivo.id;
+    const nombreSocio = soyCreador ? (tc.socioNombre || 'Socio') : (tc.creadorNombre || 'Creador');
+    const miMarca = soyCreador ? Boolean(tc.realizadaPorCreador) : Boolean(tc.realizadaPorSocio);
+    const marcaSocio = soyCreador ? Boolean(tc.realizadaPorSocio) : Boolean(tc.creadorNombre ? tc.realizadaPorCreador : false);
+    const esPendienteInvitacion = tc.estado === 'pendiente_invitacion';
+
+    const card = document.createElement('div');
+    card.className = `shared-task-card prio-${tc.prioridad || 'simple'} ${miMarca && marcaSocio ? 'completada' : ''}`;
+
+    const estadoSocioHtml = esPendienteInvitacion
+      ? `<span class="partner-status-pill partner-status-pending" style="background:rgba(234, 179, 8, 0.2); color:#fde047;">⏳ Esperando que ${escaparHTML(nombreSocio)} acepte la invitación</span>`
+      : (marcaSocio
+          ? `<span class="partner-status-pill partner-status-done">✅ ${escaparHTML(nombreSocio)} ya la tildó como realizada</span>`
+          : `<span class="partner-status-pill partner-status-pending">⏳ Falta que ${escaparHTML(nombreSocio)} la tilde</span>`);
+
+    card.innerHTML = `
+      <div class="shared-task-header">
+        <span class="partner-tag">👥 Con: <b>${escaparHTML(nombreSocio)}</b></span>
+        <span class="priority-pill pill-${tc.prioridad || 'simple'}">${ETIQUETA_PRIORIDAD[tc.prioridad || 'simple']}</span>
+      </div>
+
+      <div class="shared-task-text ${miMarca ? 'realizada-por-mi' : ''}">
+        ${escaparHTML(tc.texto)}
+      </div>
+
+      <div class="shared-task-progress-box">
+        <label class="shared-check-label ${esPendienteInvitacion ? 'disabled' : ''}">
+          <input type="checkbox" class="chk-shared-done" ${miMarca ? 'checked' : ''} ${esPendienteInvitacion ? 'disabled' : ''}>
+          <span>${miMarca ? '✓ Ya la marcaste como realizada' : 'Tildar cuando vos la realices'}</span>
+        </label>
+        <div style="margin-top:6px;">
+          ${estadoSocioHtml}
+        </div>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">
+        <span style="font-size:0.75rem; color:#94a3b8;">
+          ${esPendienteInvitacion ? 'Invitación enviada' : (miMarca && marcaSocio ? '🎉 Ambos la completaron' : 'Ambos deben tildarla para que desaparezca')}
+        </span>
+        <button type="button" class="btn-delete btn-delete-shared" style="padding:4px 8px; font-size:0.8rem;" title="Eliminar tarea compartida">
+          🗑️ Eliminar
+        </button>
+      </div>
+    `;
+
+    const chk = card.querySelector('.chk-shared-done');
+    if (chk) {
+      chk.addEventListener('change', () => {
+        marcarTareaCompartida(tc.id, chk.checked);
+      });
+    }
+
+    const btnDel = card.querySelector('.btn-delete-shared');
+    if (btnDel) {
+      btnDel.addEventListener('click', () => {
+        eliminarTareaCompartida(tc.id);
+      });
+    }
+
+    sharedTasksList.appendChild(card);
+  });
+}
+
+async function crearNuevaTareaCompartida() {
+  if (!usuarioActivo) return;
+  const partnerId = selectSharedPartner ? selectSharedPartner.value : '';
+  const texto = inputSharedTaskText ? inputSharedTaskText.value.trim() : '';
+
+  if (!partnerId) {
+    alert('Seleccioná con qué usuario vas a compartir esta tarea.');
+    if (selectSharedPartner) selectSharedPartner.focus();
+    return;
+  }
+  if (!texto) {
+    alert('Ingresá el texto de la tarea a realizar.');
+    if (inputSharedTaskText) inputSharedTaskText.focus();
+    return;
+  }
+
+  const partnerObj = listaUsuariosPublica.find(u => u.id === partnerId);
+  const socioNombre = partnerObj ? partnerObj.nombre : 'Usuario';
+
+  if (btnSaveSharedTask) {
+    btnSaveSharedTask.disabled = true;
+    btnSaveSharedTask.textContent = 'Enviando...';
+  }
+
+  try {
+    const res = await fetch(API_SYNC_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        accion: 'crear_tarea_compartida',
+        usuarioId: usuarioActivo.id,
+        socioId: partnerId,
+        socioNombre: socioNombre,
+        texto: texto,
+        prioridad: prioridadTareaCompartida
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      alert(data.error || 'No se pudo crear la tarea compartida');
+      return;
+    }
+
+    if (Array.isArray(data.tareasCompartidas)) {
+      tareasCompartidas = data.tareasCompartidas;
+    } else if (data.tarea) {
+      tareasCompartidas.unshift(data.tarea);
+    }
+
+    if (inputSharedTaskText) inputSharedTaskText.value = '';
+    if (formNewSharedTaskBox) formNewSharedTaskBox.classList.add('hidden');
+
+    renderizarTareasCompartidas();
+    actualizarContadoresTareasAgendaMenu();
+    actualizarContadoresYAlertas();
+    alert(`¡Invitación enviada a ${socioNombre}! Le llegará una notificación para aceptarla.`);
+  } catch (e) {
+    alert('Error al enviar la tarea compartida: ' + (e.message || String(e)));
+  } finally {
+    if (btnSaveSharedTask) {
+      btnSaveSharedTask.disabled = false;
+      btnSaveSharedTask.textContent = 'Enviar invitación (Enter)';
+    }
+  }
+}
+
+async function responderInvitacionTareaCompartida(tareaId, aceptar) {
+  if (!usuarioActivo) return;
+  try {
+    actualizarEstadoSync('☁️ Guardando...', 'amarillo');
+    const res = await fetch(API_SYNC_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        accion: 'responder_tarea_compartida',
+        usuarioId: usuarioActivo.id,
+        tareaId: tareaId,
+        aceptar: Boolean(aceptar)
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      alert(data.error || 'No se pudo responder a la invitación');
+      return;
+    }
+    if (Array.isArray(data.tareasCompartidas)) {
+      tareasCompartidas = data.tareasCompartidas;
+    } else {
+      const idx = tareasCompartidas.findIndex(t => t.id === tareaId);
+      if (idx !== -1) {
+        if (aceptar) tareasCompartidas[idx].estado = 'activa';
+        else tareasCompartidas.splice(idx, 1);
+      }
+    }
+    actualizarEstadoSync('☁️ En línea', 'verde');
+    renderizarTareasCompartidas();
+    actualizarContadoresTareasAgendaMenu();
+    actualizarContadoresYAlertas();
+  } catch (e) {
+    actualizarEstadoSync('☁️ Error', 'amarillo');
+    alert('Error al responder: ' + (e.message || String(e)));
+  }
+}
+
+async function marcarTareaCompartida(tareaId, realizada) {
+  if (!usuarioActivo) return;
+  const tc = tareasCompartidas.find(t => t.id === tareaId);
+  if (tc) {
+    if (tc.creadorId === usuarioActivo.id) tc.realizadaPorCreador = Boolean(realizada);
+    else tc.realizadaPorSocio = Boolean(realizada);
+    renderizarTareasCompartidas();
+  }
+
+  try {
+    actualizarEstadoSync('☁️ Guardando...', 'amarillo');
+    const res = await fetch(API_SYNC_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        accion: 'marcar_tarea_compartida',
+        usuarioId: usuarioActivo.id,
+        tareaId: tareaId,
+        realizada: Boolean(realizada)
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      alert(data.error || 'No se pudo actualizar la tarea');
+      return;
+    }
+    if (Array.isArray(data.tareasCompartidas)) {
+      tareasCompartidas = data.tareasCompartidas;
+    }
+    actualizarEstadoSync('☁️ En línea', 'verde');
+    renderizarTareasCompartidas();
+    actualizarContadoresTareasAgendaMenu();
+    actualizarContadoresYAlertas();
+  } catch (e) {
+    actualizarEstadoSync('☁️ Error', 'amarillo');
+  }
+}
+
+async function eliminarTareaCompartida(tareaId) {
+  if (!usuarioActivo) return;
+  if (!confirm('¿Seguro que querés eliminar esta tarea compartida? Desaparecerá para ambos usuarios.')) return;
+  try {
+    actualizarEstadoSync('☁️ Eliminando...', 'amarillo');
+    const res = await fetch(API_SYNC_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        accion: 'eliminar_tarea_compartida',
+        usuarioId: usuarioActivo.id,
+        tareaId: tareaId
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      alert(data.error || 'No se pudo eliminar la tarea');
+      return;
+    }
+    if (Array.isArray(data.tareasCompartidas)) {
+      tareasCompartidas = data.tareasCompartidas;
+    } else {
+      tareasCompartidas = tareasCompartidas.filter(t => t.id !== tareaId);
+    }
+    actualizarEstadoSync('☁️ En línea', 'verde');
+    renderizarTareasCompartidas();
+    actualizarContadoresTareasAgendaMenu();
+    actualizarContadoresYAlertas();
+  } catch (e) {
+    actualizarEstadoSync('☁️ Error', 'amarillo');
+    alert('Error al eliminar: ' + (e.message || String(e)));
+  }
+}
+
+if (btnNewSharedTask && formNewSharedTaskBox) {
+  btnNewSharedTask.addEventListener('click', () => {
+    formNewSharedTaskBox.classList.toggle('hidden');
+    if (!formNewSharedTaskBox.classList.contains('hidden') && inputSharedTaskText) {
+      inputSharedTaskText.focus();
+    }
+  });
+}
+
+if (btnCancelSharedTask && formNewSharedTaskBox) {
+  btnCancelSharedTask.addEventListener('click', () => {
+    formNewSharedTaskBox.classList.add('hidden');
+  });
+}
+
+if (btnSaveSharedTask) {
+  btnSaveSharedTask.addEventListener('click', crearNuevaTareaCompartida);
+}
+
+if (inputSharedTaskText) {
+  inputSharedTaskText.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      crearNuevaTareaCompartida();
+    }
+  });
+}
+
+if (sharedTaskPrioritySelector) {
+  sharedTaskPrioritySelector.querySelectorAll('.prio-option').forEach(btn => {
+    btn.addEventListener('click', () => {
+      sharedTaskPrioritySelector.querySelectorAll('.prio-option').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      prioridadTareaCompartida = btn.dataset.priority || 'simple';
+    });
+  });
+}
+
+// ==========================================
+// INGRESO Y REGISTRO CON DNI
+// ==========================================
+async function iniciarSesionConDni() {
+  const dni = inputLoginDni ? inputLoginDni.value.trim() : '';
+  const pass = inputLoginDniPass ? inputLoginDniPass.value : '';
+
+  if (dniLoginError) dniLoginError.classList.add('hidden');
+
+  if (!dni) {
+    if (dniLoginError) {
+      dniLoginError.textContent = 'Por favor ingresá tu número de DNI o usuario';
+      dniLoginError.classList.remove('hidden');
+    }
+    if (inputLoginDni) inputLoginDni.focus();
+    return;
+  }
+  if (!pass) {
+    if (dniLoginError) {
+      dniLoginError.textContent = 'Por favor ingresá tu contraseña';
+      dniLoginError.classList.remove('hidden');
+    }
+    if (inputLoginDniPass) inputLoginDniPass.focus();
+    return;
+  }
+
+  if (btnSubmitDniLogin) {
+    btnSubmitDniLogin.disabled = true;
+    btnSubmitDniLogin.textContent = 'Ingresando...';
+  }
+
+  try {
+    const res = await fetch(API_SYNC_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        accion: 'ingresar_con_dni',
+        dni: dni,
+        password: pass
+      })
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      if (dniLoginError) {
+        dniLoginError.textContent = data.error || 'DNI o contraseña incorrectos';
+        dniLoginError.classList.remove('hidden');
+      }
+      return;
+    }
+
+    const u = data.usuario;
+    localStorage.setItem('agenda_usuario_recordado', u.id);
+    usuarioActivo = {
+      id: u.id,
+      nombre: u.nombre,
+      dni: data.dni || u.dni || null,
+      esAdmin: Boolean(u.esAdmin),
+      avatar: u.esAdmin ? '👑' : (u.avatar || '👤'),
+      password: pass,
+      tiempoBloqueoMin: data.tiempoBloqueoMin || Number(localStorage.getItem('agenda_bloqueo_' + u.id)) || 60
+    };
+
+    if (Array.isArray(data.usuarios)) listaUsuariosPublica = data.usuarios;
+    tareas = Array.isArray(data.tareas) ? data.tareas : [];
+    tareasCompartidas = Array.isArray(data.tareasCompartidas) ? data.tareasCompartidas : [];
+    avisosTareas = Array.isArray(data.avisosTareas) ? data.avisosTareas : [];
+    recordatorios = Array.isArray(data.recordatorios) ? data.recordatorios : [];
+    movimientos = Array.isArray(data.movimientos) ? data.movimientos : [];
+    supermercado = Array.isArray(data.supermercado) ? data.supermercado : [];
+    heladera = Array.isArray(data.heladera) ? data.heladera : [];
+    entrenamiento = data.entrenamiento || null;
+    listasPresupuestos = Array.isArray(data.listasPresupuestos) ? data.listasPresupuestos : [];
+    deudores = Array.isArray(data.deudores) ? data.deudores : [];
+    yoDebo = Array.isArray(data.yoDebo) ? data.yoDebo : [];
+    idDeudorActivo = null;
+    superCompartidoCon = Array.isArray(data.superCompartidoCon) ? data.superCompartidoCon : [];
+    yaConfiguroCasa = Boolean(data.yaConfiguroCasa);
+    borrados = Array.isArray(data.borrados) ? data.borrados : [];
+    borradosListas = Array.isArray(data.borradosListas) ? data.borradosListas : [];
+
+    registrarActividadSesion();
+    if (inputLoginDni) inputLoginDni.value = '';
+    if (inputLoginDniPass) inputLoginDniPass.value = '';
+    if (dniLoginBox) dniLoginBox.classList.add('hidden');
+
+    entrarAMenuDeUsuarioActivo();
+  } catch (e) {
+    if (dniLoginError) {
+      dniLoginError.textContent = 'Error de conexión. Intentá nuevamente.';
+      dniLoginError.classList.remove('hidden');
+    }
+  } finally {
+    if (btnSubmitDniLogin) {
+      btnSubmitDniLogin.disabled = false;
+      btnSubmitDniLogin.textContent = 'Ingresar a mi agenda';
+    }
+  }
+}
+
+async function guardarDniUsuario() {
+  if (!usuarioActivo) return;
+  const raw = inputUserDni ? inputUserDni.value.trim() : '';
+  const dniLimpio = raw.replace(/\D/g, '');
+
+  if (registerDniError) registerDniError.classList.add('hidden');
+
+  if (!dniLimpio || dniLimpio.length < 5) {
+    if (registerDniError) {
+      registerDniError.textContent = 'Ingresá un número de DNI válido (mínimo 5 dígitos)';
+      registerDniError.classList.remove('hidden');
+    }
+    if (inputUserDni) inputUserDni.focus();
+    return;
+  }
+
+  if (btnSaveUserDni) {
+    btnSaveUserDni.disabled = true;
+    btnSaveUserDni.textContent = 'Guardando...';
+  }
+
+  try {
+    const res = await fetch(API_SYNC_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        accion: 'guardar_dni',
+        usuarioId: usuarioActivo.id,
+        password: usuarioActivo.password,
+        dni: dniLimpio
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      if (registerDniError) {
+        registerDniError.textContent = data.error || 'No se pudo guardar el DNI';
+        registerDniError.classList.remove('hidden');
+      }
+      return;
+    }
+
+    usuarioActivo.dni = data.dni || dniLimpio;
+    if (modalRegisterDni) modalRegisterDni.classList.add('hidden');
+    alert('¡Tu DNI quedó registrado con éxito! Te servirá para futuros inicios de sesión.');
+  } catch (e) {
+    if (registerDniError) {
+      registerDniError.textContent = 'Error al guardar el DNI: ' + (e.message || String(e));
+      registerDniError.classList.remove('hidden');
+    }
+  } finally {
+    if (btnSaveUserDni) {
+      btnSaveUserDni.disabled = false;
+      btnSaveUserDni.textContent = '✓ Guardar mi DNI';
+    }
+  }
+}
+
+if (btnSubmitDniLogin) btnSubmitDniLogin.addEventListener('click', iniciarSesionConDni);
+
+if (inputLoginDni) {
+  inputLoginDni.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (inputLoginDniPass) inputLoginDniPass.focus();
+    }
+  });
+}
+
+if (inputLoginDniPass) {
+  inputLoginDniPass.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      iniciarSesionConDni();
+    }
+  });
+}
+
+if (btnSaveUserDni) btnSaveUserDni.addEventListener('click', guardarDniUsuario);
+
+if (inputUserDni) {
+  inputUserDni.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      guardarDniUsuario();
+    }
+  });
+}
+
+if (btnLogoutDevice) {
+  btnLogoutDevice.addEventListener('click', () => {
+    if (confirm('¿Cerrar tu sesión por completo en este dispositivo? Para volver a ingresar tendrás que poner tu DNI y tu contraseña.')) {
+      volverAPantallaUsuarios(true);
+    }
+  });
+}
 
 // ==========================================
 // INICIALIZACIÓN
