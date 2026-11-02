@@ -8,11 +8,11 @@
   <link rel="icon" type="image/svg+xml" href="logo.svg">
   <link rel="apple-touch-icon" href="logo.svg">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="styles.css?v=20261102_03">
+  <link rel="stylesheet" href="styles.css?v=20261102_04">
   <!-- ESCUDO DE DIAGNÓSTICO TEMPRANO Y CAPTURA DE ERRORES PÚBLICOS -->
   <script>
     (function() {
-      window.__APP_VERSION = '20261102_03';
+      window.__APP_VERSION = '20261102_04';
       window.__ERRORES_APP = [];
 
       function copiarTexto(texto) {
@@ -207,20 +207,47 @@
 
   <main class="container">
     <!-- ========================================================== -->
-    <!-- PANTALLA 0: SELECCIÓN DE USUARIO FAMILIAR Y CONTRASEÑA     -->
+    <!-- PANTALLA 0: INGRESO PRIVADO CON DNI Y CONTRASEÑA           -->
     <!-- ========================================================== -->
     <section id="view-users" class="view">
-      <div class="tasks-top-bar">
+      <div class="tasks-top-bar" id="view-users-top-bar">
         <div>
-          <h2>¿Quién va a usar la Agenda?</h2>
-          <p class="subtitle-text">Cada usuario tiene su propia agenda privada con contraseña</p>
+          <h2 id="view-users-heading">🔐 Ingreso a la Agenda Familiar</h2>
+          <p class="subtitle-text" id="view-users-subtitle">Ingresá tu DNI y contraseña privada para acceder a tu agenda</p>
         </div>
-        <button id="btn-new-user-toggle" class="btn-add-plus">
+        <button id="btn-new-user-toggle" class="btn-add-plus" style="display:none;">
           <span class="plus-symbol">+</span> Nuevo usuario
         </button>
       </div>
 
-      <!-- CUADRO PARA INGRESAR O CREAR CONTRASEÑA AL TOCAR UN USUARIO -->
+      <!-- INGRESO CON DNI Y CONTRASEÑA (NO MUESTRA LA LISTA DE USUARIOS) -->
+      <div id="dni-login-box" class="task-form-box" style="max-width: 480px; margin: 10px auto 24px auto; border-color: #10b981; box-shadow: 0 10px 25px rgba(0,0,0,0.4);">
+        <h3 style="display:flex; align-items:center; gap:8px; margin-bottom: 6px;">
+          <span>👤</span> Iniciar sesión
+        </h3>
+        <p class="subtitle-text" style="margin-bottom: 16px; font-size: 0.88rem;">
+          Ingresá tu número de DNI y tu contraseña privada:
+        </p>
+        <div class="form-group" style="margin-bottom: 14px;">
+          <label for="input-login-dni">Tu DNI o Usuario</label>
+          <input type="text" id="input-login-dni" placeholder="Ingresá tu DNI (o tu nombre)..." autocomplete="username">
+        </div>
+        <div class="form-group" style="margin-bottom: 14px;">
+          <label for="input-login-dni-pass">Tu Contraseña</label>
+          <div class="password-wrapper">
+            <input type="password" id="input-login-dni-pass" placeholder="Tu contraseña privada..." autocomplete="current-password">
+            <button type="button" id="btn-toggle-dni-pass" class="btn-eye" title="Mostrar u ocultar contraseña">👁️</button>
+          </div>
+        </div>
+        <div id="dni-login-error" class="login-error hidden" style="margin-bottom: 12px;"></div>
+        <div class="form-actions" style="margin-top: 14px;">
+          <button type="button" id="btn-submit-dni-login" class="btn-primary" style="width: 100%; padding: 12px; font-weight: 700; font-size: 1rem;">
+            Iniciar sesión (Enter)
+          </button>
+        </div>
+      </div>
+
+      <!-- CUADRO DE DESBLOQUEO RÁPIDO PARA EL USUARIO RECORDADO EN ESTE TELÉFONO -->
       <div id="login-password-box" class="task-form-box hidden" style="max-width: 520px; margin: 0 auto 24px auto;">
         <h3 id="login-box-title">Ingresar a la agenda</h3>
         <p id="login-box-subtitle" class="subtitle-text" style="margin-bottom: 14px;"></p>
@@ -246,8 +273,8 @@
         </div>
         <div id="login-error-msg" class="login-error hidden"></div>
         <div class="form-actions">
-          <button type="button" id="btn-cancel-login" class="btn-secondary">Cancelar</button>
-          <button type="button" id="btn-confirm-login" class="btn-primary">Entrar (Enter)</button>
+          <button type="button" id="btn-cancel-login" class="btn-secondary">Ingresar con otro DNI</button>
+          <button type="button" id="btn-confirm-login" class="btn-primary">Desbloquear (Enter)</button>
         </div>
       </div>
 
@@ -259,6 +286,10 @@
           <div class="form-group flex-grow">
             <label for="input-new-user-name">Nombre del usuario</label>
             <input type="text" id="input-new-user-name" placeholder="Ej: Julita, Mamá, Franco..." autocomplete="off">
+          </div>
+          <div class="form-group flex-grow">
+            <label for="input-new-user-dni">Número de DNI</label>
+            <input type="tel" id="input-new-user-dni" placeholder="Ej: 35123456..." autocomplete="off">
           </div>
           <div class="form-group flex-grow">
             <label for="input-new-user-pass">Crear contraseña</label>
@@ -274,33 +305,8 @@
         </div>
       </div>
 
-      <!-- GRILLA DE BOTONES DE USUARIOS (ALEJANDRO + OTROS USUARIOS) -->
-      <div id="users-grid" class="home-grid">
-        <button type="button" class="big-card card-primary" data-default-user="alejandro">
-          <div class="card-icon">👑</div>
-          <div class="card-title">Alejandro</div>
-          <div class="card-desc">Administrador de la aplicación</div>
-          <div class="card-badge">Ingresar</div>
-        </button>
-        <button type="button" class="big-card card-agenda" data-default-user="nico-7999">
-          <div class="card-icon">🦁</div>
-          <div class="card-title">Nico</div>
-          <div class="card-desc">Agenda personal privada</div>
-          <div class="card-badge badge-agenda">Ingresar</div>
-        </button>
-        <button type="button" class="big-card card-agenda" data-default-user="romi-7301">
-          <div class="card-icon">🌸</div>
-          <div class="card-title">ROMI</div>
-          <div class="card-desc">Agenda personal privada</div>
-          <div class="card-badge badge-agenda">Ingresar</div>
-        </button>
-        <button type="button" class="big-card card-agenda" data-default-user="ariel-0414">
-          <div class="card-icon">⚡</div>
-          <div class="card-title">Ariel</div>
-          <div class="card-desc">Agenda personal privada</div>
-          <div class="card-badge badge-agenda">Ingresar</div>
-        </button>
-      </div>
+      <!-- GRILLA OCULTA (SOLO SE USA INTERNAMENTE SI HICIERA FALTA) -->
+      <div id="users-grid" class="home-grid hidden" style="display:none;"></div>
     </section>
 
     <!-- ========================================================== -->
@@ -424,6 +430,28 @@
       <ul id="task-responses-list" class="today-alert-list"></ul>
     </div>
 
+    <!-- MODAL REGISTRO DE DNI POR ÚNICA VEZ -->
+    <div id="modal-register-dni" class="task-form-box hidden" style="max-width: 520px; margin: 16px auto; border-color: #3b82f6; box-shadow: 0 12px 35px rgba(0,0,0,0.7); background: #0f172a;">
+      <h3 style="color: #60a5fa; display: flex; align-items: center; gap: 8px;">
+        <span>🆔</span> Registrá tu DNI por única vez
+      </h3>
+      <p class="subtitle-text" style="margin: 10px 0 16px 0; color: #cbd5e1; line-height: 1.5; font-size: 0.92rem;">
+        Para proteger tu privacidad y la de todos, la aplicación ya no muestra la lista pública de usuarios.
+        <br><br>
+        Por favor ingresá tu <strong>DNI</strong>. Te servirá para iniciar sesión en caso de que cierres tu sesión o abras la app en otro teléfono o computadora:
+      </p>
+      <div class="form-group" style="margin-bottom: 14px;">
+        <label for="input-user-dni" style="color: #93c5fd;">Número de DNI (solo números)</label>
+        <input type="tel" id="input-user-dni" placeholder="Ej: 35123456" autocomplete="off" style="font-size: 1.15rem; letter-spacing: 1px; font-weight: 700; color: #fff;">
+      </div>
+      <div id="register-dni-error" class="login-error hidden" style="margin-bottom: 12px;"></div>
+      <div class="form-actions">
+        <button type="button" id="btn-save-user-dni" class="btn-primary" style="width: 100%; background: #2563eb; border-color: #1d4ed8; font-weight: 700; padding: 12px; font-size: 1rem;">
+          ✓ Guardar mi DNI
+        </button>
+      </div>
+    </div>
+
     <!-- AVISO AUTOMÁTICO DE ACTIVIDADES DE HOY -->
     <div id="today-alert-banner" class="today-alert hidden">
       <div class="today-alert-header">
@@ -465,32 +493,63 @@
       </div>
 
       <div class="home-grid">
-        <button id="btn-open-tasks" class="big-card card-primary">
+        <button id="btn-open-tasks-agenda-menu" class="big-card card-primary">
           <div class="card-icon">📋</div>
-          <div class="card-title">1. Lista de Tareas</div>
-          <div class="card-desc">Tareas del día a día con orden de prioridad (verde, amarillo y rojo)</div>
-          <div class="card-badge" id="home-tasks-counter">0 pendientes</div>
-        </button>
-
-        <button id="btn-open-agenda" class="big-card card-agenda">
-          <div class="card-icon">📅</div>
-          <div class="card-title">2. Agenda Mensual</div>
-          <div class="card-desc">Calendario por días para guardar recordatorios y actividades con aviso diario</div>
-          <div class="card-badge badge-agenda" id="home-agenda-counter">0 para hoy</div>
+          <div class="card-title">1. Tareas y Agenda</div>
+          <div class="card-desc">Lista de tareas del día, agenda mensual y tareas compartidas con otros</div>
+          <div class="card-badge" id="home-tasks-agenda-counter">3 opciones</div>
         </button>
 
         <button id="btn-open-wallet" class="big-card card-wallet">
           <div class="card-icon">💼</div>
-          <div class="card-title">3. Economía</div>
+          <div class="card-title">2. Economía</div>
           <div class="card-desc">Billetera y Deudas: dinero disponible, deudores que me deben y mis deudas a pagar</div>
           <div class="card-badge badge-wallet" id="home-wallet-counter">Billetera y Deudas</div>
         </button>
 
         <button id="btn-open-extras" class="big-card card-extras">
           <div class="card-icon">🧰</div>
-          <div class="card-title">4. Extras y Ajustes</div>
+          <div class="card-title">3. Extras y Ajustes</div>
           <div class="card-desc">Supermercado, Gemini IA, Heladera, Entrenamiento, Listas y Configuración</div>
           <div class="card-badge badge-extras" id="home-extras-counter">6 opciones disponibles</div>
+        </button>
+      </div>
+    </section>
+
+    <!-- ========================================================== -->
+    <!-- MÓDULO 1: MENÚ UNIFICADO DE TAREAS Y AGENDA                -->
+    <!-- ========================================================== -->
+    <section id="view-tasks-agenda-menu" class="view hidden">
+      <div class="tasks-top-bar">
+        <div>
+          <h2>📋 Tareas y Agenda del Día</h2>
+          <p class="subtitle-text">Elegí qué sección querés abrir:</p>
+        </div>
+        <button id="btn-back-from-tasks-agenda-menu" class="btn-secondary" style="display:flex;align-items:center;gap:6px;">
+          ← Volver a Mi Menú
+        </button>
+      </div>
+
+      <div class="home-grid" style="margin-top: 16px;">
+        <button id="btn-sub-tasks" class="big-card card-primary">
+          <div class="card-icon">📋</div>
+          <div class="card-title">1. Lista de Tareas</div>
+          <div class="card-desc">Tareas personales del día a día con orden de prioridad (verde, amarillo y rojo)</div>
+          <div class="card-badge" id="menu-tasks-counter">0 pendientes</div>
+        </button>
+
+        <button id="btn-sub-agenda" class="big-card card-agenda">
+          <div class="card-icon">📅</div>
+          <div class="card-title">2. Agenda Mensual</div>
+          <div class="card-desc">Calendario por días para guardar recordatorios y actividades con aviso diario</div>
+          <div class="card-badge badge-agenda" id="menu-agenda-counter">0 para hoy</div>
+        </button>
+
+        <button id="btn-sub-shared-tasks" class="big-card card-wallet" style="border-color: #3b82f6;">
+          <div class="card-icon">👥</div>
+          <div class="card-title">3. Tareas Compartidas</div>
+          <div class="card-desc">Tareas realizadas en conjunto con otro usuario. Desaparecen solo cuando ambos la tildan</div>
+          <div class="card-badge badge-wallet" id="menu-shared-tasks-counter" style="background:#2563eb;color:#fff;">0 en equipo</div>
         </button>
       </div>
     </section>
@@ -503,6 +562,9 @@
           <p class="subtitle-text">Marcá si la realizaste o eliminala de la lista</p>
         </div>
         <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button id="btn-back-to-tasks-menu" class="btn-secondary">
+            ← Menú Tareas
+          </button>
           <button id="btn-share-from-tasks" class="btn-share" title="Compartir link para que me agreguen tareas">
             🔗 Compartir
           </button>
@@ -556,7 +618,10 @@
           <h2>Agenda Mensual</h2>
           <p class="subtitle-text">Tocá cualquier día del mes para ver o guardar recordatorios</p>
         </div>
-        <button id="btn-jump-today" class="btn-secondary">Ir a Hoy</button>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button id="btn-back-to-agenda-menu" class="btn-secondary">← Menú Tareas</button>
+          <button id="btn-jump-today" class="btn-secondary">Ir a Hoy</button>
+        </div>
       </div>
 
       <div class="agenda-layout">
@@ -633,6 +698,68 @@
           <div id="day-reminders-list" class="tasks-list"></div>
         </div>
       </div>
+    </section>
+
+    <!-- ========================================================== -->
+    <!-- MÓDULO 1.3: TAREAS COMPARTIDAS ENTRE USUARIOS             -->
+    <!-- ========================================================== -->
+    <section id="view-shared-tasks" class="view hidden">
+      <div class="tasks-top-bar">
+        <div>
+          <h2>👥 Tareas Compartidas</h2>
+          <p class="subtitle-text">Tareas en equipo. Ambos usuarios deben tildarla como realizada para que se complete.</p>
+        </div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button id="btn-back-shared-to-menu" class="btn-secondary">← Menú Tareas</button>
+          <button id="btn-new-shared-task" class="btn-add-plus">
+            <span class="plus-symbol">+</span> Nueva tarea compartida
+          </button>
+        </div>
+      </div>
+
+      <!-- BANNER DE INVITACIONES PENDIENTES -->
+      <div id="shared-tasks-invitations-box" class="task-form-box hidden" style="border-color: #3b82f6; background: rgba(30, 58, 138, 0.25); margin-bottom: 20px;">
+        <h3 style="color: #60a5fa; margin-bottom: 8px;">📨 Invitaciones a tareas compartidas:</h3>
+        <p class="subtitle-text" style="margin-bottom: 14px;">Otros usuarios te invitaron a realizar estas tareas juntos. Aceptá para sumarlas a tu lista:</p>
+        <div id="shared-invitations-list" style="display:flex; flex-direction:column; gap:10px;"></div>
+      </div>
+
+      <!-- FORMULARIO NUEVA TAREA COMPARTIDA -->
+      <div id="form-new-shared-task-box" class="task-form-box hidden" style="border-color: #3b82f6;">
+        <h3>➕ Crear tarea compartida</h3>
+        <p class="subtitle-text" style="margin-bottom: 14px;">Al otro usuario le llegará una invitación para aceptarla. Ambos la verán en su lista:</p>
+        <div class="form-row">
+          <div class="form-group" style="min-width: 220px;">
+            <label for="select-shared-partner">¿Con quién hacés esta tarea?</label>
+            <select id="select-shared-partner" class="select-input"></select>
+          </div>
+          <div class="form-group flex-grow">
+            <label for="input-shared-task-text">¿Qué tarea van a realizar?</label>
+            <input type="text" id="input-shared-task-text" placeholder="Ej: Pintar rejas, comprar regalo..." autocomplete="off">
+          </div>
+          <div class="form-group">
+            <label>Prioridad</label>
+            <div class="priority-selector" id="shared-task-priority-selector">
+              <button type="button" class="prio-option prio-verde active" data-priority="simple">
+                <span class="dot dot-verde"></span> Simple
+              </button>
+              <button type="button" class="prio-option prio-amarillo" data-priority="intermedio">
+                <span class="dot dot-amarillo"></span> Intermedio
+              </button>
+              <button type="button" class="prio-option prio-rojo" data-priority="urgente">
+                <span class="dot dot-rojo"></span> Urgente
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button type="button" id="btn-cancel-shared-task" class="btn-secondary">Cancelar</button>
+          <button type="button" id="btn-save-shared-task" class="btn-primary" style="background:#2563eb; border-color:#1d4ed8;">Enviar invitación (Enter)</button>
+        </div>
+      </div>
+
+      <!-- LISTA DE TAREAS COMPARTIDAS ACTIVAS -->
+      <div id="shared-tasks-list" class="tasks-list" style="margin-top: 14px;"></div>
     </section>
 
     <!-- MÓDULO 3: ECONOMÍA PERSONAL (BILLETERA + DEUDAS) -->
@@ -1477,6 +1604,20 @@
           <p class="subtitle-text">Tocá el botón <strong>+ Nueva lista</strong> arriba para armar tu primer presupuesto de compras.</p>
         </div>
       </div>
+
+      <!-- BOTÓN DE CERRAR SESIÓN EN ESTE DISPOSITIVO -->
+      <div class="task-form-box" style="margin-top: 30px; border-color: #ef4444; background: rgba(239, 68, 68, 0.08);">
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom: 8px;">
+          <span style="font-size: 24px;">🚪</span>
+          <div>
+            <h3 style="color: #f87171; margin-bottom: 2px;">Cerrar sesión en este dispositivo</h3>
+            <p class="subtitle-text" style="color: #fca5a5; font-size: 0.88rem;">Cierra completamente tu agenda. Para volver a ingresar deberás escribir tu DNI y tu contraseña.</p>
+          </div>
+        </div>
+        <button type="button" id="btn-logout-device" class="btn-secondary" style="border-color: #ef4444; color: #f87171; font-weight: 700; width: 100%; margin-top: 10px; padding: 12px; font-size: 0.95rem;">
+          🚪 Cerrar mi sesión
+        </button>
+      </div>
     </section>
 
     <!-- PANTALLA PÚBLICA PARA PERSONAS EXTERNAS (?modo=externo) -->
@@ -1605,6 +1746,6 @@
     </section>
   </main>
 
-  <script src="app.js?v=20261102_03"></script>
+  <script src="app.js?v=20261102_04"></script>
 </body>
 </html>
