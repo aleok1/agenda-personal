@@ -129,8 +129,10 @@ const userWelcomeSubtitle = document.getElementById('user-welcome-subtitle');
 // Elementos de Usuarios y Login
 const usersGrid = document.getElementById('users-grid');
 const btnNewUserToggle = document.getElementById('btn-new-user-toggle');
+const btnOpenCreateUser = document.getElementById('btn-open-create-user');
 const createUserBox = document.getElementById('create-user-box');
 const inputNewUserName = document.getElementById('input-new-user-name');
+const inputNewUserDni = document.getElementById('input-new-user-dni');
 const inputNewUserPass = document.getElementById('input-new-user-pass');
 const btnCancelNewUser = document.getElementById('btn-cancel-new-user');
 const btnSaveNewUser = document.getElementById('btn-save-new-user');
@@ -452,21 +454,26 @@ async function cargarListaDeUsuarios() {
   const recordadoId = localStorage.getItem('agenda_usuario_recordado');
 
   if (usersGrid) usersGrid.classList.add('hidden');
+  if (loginPasswordBox) loginPasswordBox.classList.add('hidden');
+  if (createUserBox) createUserBox.classList.add('hidden');
 
-  if (recordadoId) {
-    if (dniLoginBox) dniLoginBox.classList.add('hidden');
-    let u = listaUsuariosPublica.find(x => x.id === recordadoId);
-    if (!u) {
-      u = { id: recordadoId, nombre: 'Usuario', tienePassword: true };
-    }
-    seleccionarUsuarioParaEntrar(u);
-  } else {
-    // Si no hay usuario recordado (computadora nueva, celular nuevo o cambio de usuario):
-    // Siempre muestra directamente el formulario de ingreso: Usuario/DNI + Contraseña + Nuevo Usuario
-    if (loginPasswordBox) loginPasswordBox.classList.add('hidden');
-    if (dniLoginBox) {
-      dniLoginBox.classList.remove('hidden');
-      if (inputLoginDni) inputLoginDni.focus();
+  // dniLoginBox SIEMPRE está visible en la pantalla inicial para cualquier computadora o celular
+  if (dniLoginBox) {
+    dniLoginBox.classList.remove('hidden');
+    if (recordadoId && inputLoginDni && !inputLoginDni.value) {
+      let u = listaUsuariosPublica.find(x => x.id === recordadoId);
+      if (!u) {
+        try {
+          const cache = JSON.parse(localStorage.getItem('agenda_usuarios_cache') || '[]');
+          u = cache.find(x => x.id === recordadoId);
+        } catch (e) {}
+      }
+      if (u) {
+        inputLoginDni.value = u.dni || u.nombre;
+        if (inputLoginDniPass) inputLoginDniPass.focus();
+      }
+    } else if (inputLoginDni && !inputLoginDni.value) {
+      inputLoginDni.focus();
     }
   }
 
@@ -488,6 +495,15 @@ async function cargarListaDeUsuarios() {
         try {
           localStorage.setItem('agenda_usuarios_cache', JSON.stringify(data.usuarios));
         } catch (e) {}
+
+        const recId = localStorage.getItem('agenda_usuario_recordado');
+        if (recId && inputLoginDni && !inputLoginDni.value) {
+          const uRec = listaUsuariosPublica.find(x => x.id === recId);
+          if (uRec) {
+            inputLoginDni.value = uRec.dni || uRec.nombre;
+            if (inputLoginDniPass) inputLoginDniPass.focus();
+          }
+        }
       }
       window.__LAST_SYNC_ERROR = null;
       actualizarEstadoSync('☁️ En línea', 'verde');
@@ -710,41 +726,78 @@ async function intentarIngresoConPassword(u, pass, eraAutomatico) {
 }
 
 // Crear un + Nuevo Usuario
-btnNewUserToggle.addEventListener('click', () => {
-  loginPasswordBox.classList.add('hidden');
+function abrirFormularioNuevoUsuario() {
+  if (loginPasswordBox) loginPasswordBox.classList.add('hidden');
+  if (!createUserBox) return;
   createUserBox.classList.toggle('hidden');
   if (!createUserBox.classList.contains('hidden')) {
-    inputNewUserName.value = '';
-    inputNewUserPass.value = '';
-    inputNewUserName.focus();
+    if (inputNewUserName) {
+      inputNewUserName.value = '';
+      inputNewUserName.focus();
+    }
+    if (inputNewUserDni) inputNewUserDni.value = '';
+    if (inputNewUserPass) inputNewUserPass.value = '';
+    try { createUserBox.scrollIntoView({ behavior: 'smooth' }); } catch (e) {}
   }
-});
+}
 
-btnCancelNewUser.addEventListener('click', () => {
-  createUserBox.classList.add('hidden');
-});
+if (btnNewUserToggle) btnNewUserToggle.addEventListener('click', abrirFormularioNuevoUsuario);
+if (btnOpenCreateUser) btnOpenCreateUser.addEventListener('click', abrirFormularioNuevoUsuario);
 
-inputNewUserName.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') {
-    e.preventDefault();
-    inputNewUserPass.focus();
-  }
-});
+if (btnCancelNewUser) {
+  btnCancelNewUser.addEventListener('click', () => {
+    if (createUserBox) createUserBox.classList.add('hidden');
+  });
+}
 
-inputNewUserPass.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') {
-    e.preventDefault();
-    crearNuevoUsuarioFamiliar();
-  }
-});
+if (inputNewUserName) {
+  inputNewUserName.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (inputNewUserDni) inputNewUserDni.focus();
+      else if (inputNewUserPass) inputNewUserPass.focus();
+    }
+  });
+}
 
-btnSaveNewUser.addEventListener('click', crearNuevoUsuarioFamiliar);
+if (inputNewUserDni) {
+  inputNewUserDni.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (inputNewUserPass) inputNewUserPass.focus();
+    }
+  });
+}
+
+if (inputNewUserPass) {
+  inputNewUserPass.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      crearNuevoUsuarioFamiliar();
+    }
+  });
+}
+
+if (btnSaveNewUser) btnSaveNewUser.addEventListener('click', crearNuevoUsuarioFamiliar);
 
 async function crearNuevoUsuarioFamiliar() {
-  const nombre = inputNewUserName.value.trim();
-  const pass = inputNewUserPass.value.trim();
-  if (!nombre) { inputNewUserName.focus(); return; }
-  if (!pass) { inputNewUserPass.focus(); return; }
+  const nombre = inputNewUserName ? inputNewUserName.value.trim() : '';
+  const dniLimpio = inputNewUserDni ? inputNewUserDni.value.trim().replace(/\D/g, '') : '';
+  const pass = inputNewUserPass ? inputNewUserPass.value.trim() : '';
+
+  if (!nombre) {
+    if (inputNewUserName) inputNewUserName.focus();
+    return;
+  }
+  if (dniLimpio && dniLimpio.length < 5) {
+    alert('El DNI debe tener al menos 5 números');
+    if (inputNewUserDni) inputNewUserDni.focus();
+    return;
+  }
+  if (!pass) {
+    if (inputNewUserPass) inputNewUserPass.focus();
+    return;
+  }
 
   btnSaveNewUser.disabled = true;
   btnSaveNewUser.textContent = 'Creando...';
@@ -756,6 +809,7 @@ async function crearNuevoUsuarioFamiliar() {
       body: JSON.stringify({
         accion: 'crear_usuario',
         nombre: nombre,
+        dni: dniLimpio,
         password: pass
       })
     });
@@ -766,10 +820,13 @@ async function crearNuevoUsuarioFamiliar() {
       usuarioActivo = {
         id: data.usuario.id,
         nombre: data.usuario.nombre,
+        dni: data.usuario.dni || dniLimpio || null,
         esAdmin: false,
         avatar: data.usuario.avatar || '👤',
         password: pass
       };
+      localStorage.setItem('agenda_usuario_recordado', usuarioActivo.id);
+      localStorage.setItem('agenda_dni_configurado', 'true');
       tareas = [];
       avisosTareas = [];
       recordatorios = [];
@@ -1499,6 +1556,12 @@ function volverAPantallaUsuarios(forzarDni) {
 
   if (forzarDni) {
     localStorage.removeItem('agenda_usuario_recordado');
+    if (inputLoginDni) inputLoginDni.value = '';
+    if (inputLoginDniPass) inputLoginDniPass.value = '';
+  }
+
+  if (dniLoginBox) {
+    dniLoginBox.classList.remove('hidden');
   }
 
   cargarListaDeUsuarios();
@@ -7641,7 +7704,7 @@ async function iniciarSesionConDni() {
   } finally {
     if (btnSubmitDniLogin) {
       btnSubmitDniLogin.disabled = false;
-      btnSubmitDniLogin.textContent = 'Ingresar a mi agenda';
+      btnSubmitDniLogin.textContent = 'Iniciar sesión (Enter)';
     }
   }
 }
