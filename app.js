@@ -450,31 +450,23 @@ window.addEventListener('click', () => {
 // =========================================================================
 async function cargarListaDeUsuarios() {
   const recordadoId = localStorage.getItem('agenda_usuario_recordado');
-  const dniConfigurado = localStorage.getItem('agenda_dni_configurado') === 'true';
+
+  if (usersGrid) usersGrid.classList.add('hidden');
 
   if (recordadoId) {
     if (dniLoginBox) dniLoginBox.classList.add('hidden');
-    if (usersGrid) usersGrid.classList.add('hidden');
     let u = listaUsuariosPublica.find(x => x.id === recordadoId);
     if (!u) {
       u = { id: recordadoId, nombre: 'Usuario', tienePassword: true };
     }
     seleccionarUsuarioParaEntrar(u);
-  } else if (dniConfigurado) {
-    // Si ya configuró DNI en este dispositivo: muestra SOLO el ingreso por DNI (ocultando para siempre la lista de usuarios)
+  } else {
+    // Si no hay usuario recordado (computadora nueva, celular nuevo o cambio de usuario):
+    // Siempre muestra directamente el formulario de ingreso: Usuario/DNI + Contraseña + Nuevo Usuario
     if (loginPasswordBox) loginPasswordBox.classList.add('hidden');
-    if (usersGrid) usersGrid.classList.add('hidden');
     if (dniLoginBox) {
       dniLoginBox.classList.remove('hidden');
       if (inputLoginDni) inputLoginDni.focus();
-    }
-  } else {
-    // Si NUNCA configuró DNI en este dispositivo: muestra la lista por única vez para entrar
-    if (loginPasswordBox) loginPasswordBox.classList.add('hidden');
-    if (dniLoginBox) dniLoginBox.classList.add('hidden');
-    if (usersGrid) {
-      usersGrid.classList.remove('hidden');
-      renderizarGrillaUsuarios();
     }
   }
 
@@ -1512,7 +1504,7 @@ function volverAPantallaUsuarios(forzarDni) {
   cargarListaDeUsuarios();
 }
 
-btnSwitchUser.addEventListener('click', () => volverAPantallaUsuarios(false));
+btnSwitchUser.addEventListener('click', () => volverAPantallaUsuarios(true));
 
 // =========================================================================
 // PEDIR TAREA A OTRO USUARIO DE LA APP (DISPONIBLE PARA TODOS LOS USUARIOS)
