@@ -8,11 +8,11 @@
   <link rel="icon" type="image/svg+xml" href="logo.svg">
   <link rel="apple-touch-icon" href="logo.svg">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="styles.css?v=20261102_06">
+  <link rel="stylesheet" href="styles.css?v=20261102_07">
   <!-- ESCUDO DE DIAGNÓSTICO TEMPRANO Y CAPTURA DE ERRORES PÚBLICOS -->
   <script>
     (function() {
-      window.__APP_VERSION = '20261102_05';
+      window.__APP_VERSION = '20261102_07';
       window.__ERRORES_APP = [];
 
       function copiarTexto(texto) {
@@ -535,7 +535,7 @@
           <div class="card-icon">💼</div>
           <div class="card-title">2. Economía</div>
           <div class="card-desc">Billetera y Deudas: dinero disponible, deudores que me deben y mis deudas a pagar</div>
-          <div class="card-badge badge-wallet" id="home-wallet-counter">Billetera y Deudas</div>
+          <div class="card-badge badge-wallet" id="home-wallet-counter">2 opciones</div>
         </button>
 
         <button id="btn-open-extras" class="big-card card-extras">
@@ -793,27 +793,49 @@
       <div id="shared-tasks-list" class="tasks-list" style="margin-top: 14px;"></div>
     </section>
 
-    <!-- MÓDULO 3: ECONOMÍA PERSONAL (BILLETERA + DEUDAS) -->
-    <section id="view-wallet" class="view hidden">
-      <div class="tasks-top-bar" style="margin-bottom: 12px;">
+    <!-- ========================================================== -->
+    <!-- MÓDULO 2: MENÚ UNIFICADO DE ECONOMÍA PERSONAL              -->
+    <!-- ========================================================== -->
+    <section id="view-economy-menu" class="view hidden">
+      <div class="tasks-top-bar">
         <div>
           <h2>💼 Economía Personal</h2>
-          <p class="subtitle-text">Control de Billetera (efectivo y virtual) y Deudas (me deben y yo debo)</p>
+          <p class="subtitle-text">Elegí qué sección querés abrir:</p>
         </div>
-      </div>
-
-      <!-- PESTAÑAS PRINCIPALES: 1. BILLETERA | 2. DEUDAS -->
-      <div class="economy-main-tabs" id="economy-main-tabs">
-        <button type="button" id="tab-econ-wallet" class="econ-tab-btn active">
-          👛 1. Billetera
-        </button>
-        <button type="button" id="tab-econ-debts" class="econ-tab-btn">
-          💸 2. Deudas
+        <button id="btn-back-from-economy-menu" class="btn-secondary" style="display:flex;align-items:center;gap:6px;">
+          ← Volver a Mi Menú
         </button>
       </div>
 
-      <!-- SUB-VISTA 1: BILLETERA PERSONAL -->
-      <div id="subview-econ-wallet">
+      <div class="home-grid" style="margin-top: 16px;">
+        <button id="btn-sub-wallet" class="big-card card-wallet">
+          <div class="card-icon">👛</div>
+          <div class="card-title">1. Billetera</div>
+          <div class="card-desc">Control de dinero en efectivo y virtual, sueldo, ingresos corrientes y gastos</div>
+          <div class="card-badge badge-wallet" id="menu-wallet-counter">Billetera</div>
+        </button>
+
+        <button id="btn-sub-debts" class="big-card card-primary" style="border-color: #f59e0b;">
+          <div class="card-icon">💸</div>
+          <div class="card-title">2. Deudas</div>
+          <div class="card-desc">Personas que me deben dinero (acreedor) y deudas propias a pagar con cuotas (yo debo)</div>
+          <div class="card-badge" id="menu-debts-counter" style="background:#f59e0b;color:#1e293b;">Deudas</div>
+        </button>
+      </div>
+    </section>
+
+    <!-- MÓDULO 2A: MI BILLETERA (EFECTIVO Y VIRTUAL) -->
+    <section id="view-wallet" class="view hidden">
+      <div class="tasks-top-bar" style="margin-bottom: 14px;">
+        <div>
+          <h2>👛 Mi Billetera</h2>
+          <p class="subtitle-text">Control de efectivo, billetera virtual, sueldo y gastos</p>
+        </div>
+        <button id="btn-back-to-economy-from-wallet" class="btn-secondary" style="display:flex;align-items:center;gap:6px;">
+          ← Menú Economía
+        </button>
+      </div>
+
       <div class="wallet-balances-grid">
         <div class="balance-card balance-efectivo">
           <div class="balance-label">💵 Dinero Disponible en Efectivo</div>
@@ -884,19 +906,29 @@
         </div>
       </div>
       <div id="wallet-movements-list" class="tasks-list"></div>
+    </section>
+
+    <!-- MÓDULO 2B: DEUDAS (ME DEBEN Y YO DEBO) -->
+    <section id="view-debts" class="view hidden">
+      <div class="tasks-top-bar" style="margin-bottom: 14px;">
+        <div>
+          <h2>💸 Deudas</h2>
+          <p class="subtitle-text">Control de lo que te deben y lo que vos debés</p>
+        </div>
+        <button id="btn-back-to-economy-from-debts" class="btn-secondary" style="display:flex;align-items:center;gap:6px;">
+          ← Menú Economía
+        </button>
       </div>
 
-      <!-- SUB-VISTA 2: DEUDAS (ME DEBEN Y YO DEBO) -->
-      <div id="subview-econ-debts" class="hidden">
-        <!-- SELECTOR DE SUBPESTAÑAS: ME DEBEN vs YO DEBO -->
-        <div class="debts-subtabs-bar" id="debts-subtabs-bar">
-          <button type="button" id="subtab-debts-owed-to-me" class="debt-subtab-btn active">
-            📥 Me deben
-          </button>
-          <button type="button" id="subtab-debts-i-owe" class="debt-subtab-btn">
-            📤 Yo debo
-          </button>
-        </div>
+      <!-- SELECTOR DE SUBPESTAÑAS: ME DEBEN vs YO DEBO -->
+      <div class="debts-subtabs-bar" id="debts-subtabs-bar">
+        <button type="button" id="subtab-debts-owed-to-me" class="debt-subtab-btn active">
+          📥 Me deben
+        </button>
+        <button type="button" id="subtab-debts-i-owe" class="debt-subtab-btn">
+          📤 Yo debo
+        </button>
+      </div>
 
         <!-- ============================================== -->
         <!-- SUB-SECCIÓN A: "ME DEBEN"                      -->
@@ -1228,7 +1260,6 @@
             <p class="subtitle-text">Si tenés alguna cuenta, tarjeta o préstamo que pagar, tocale a <strong>+ Cargar deuda a pagar</strong>.</p>
           </div>
         </div>
-      </div>
     </section>
 
     <!-- MÓDULO 4: EXTRAS Y HERRAMIENTAS -->
@@ -1715,7 +1746,8 @@
           🚪 Cerrar mi sesión
         </button>
       </div>
-    </section>
+    </div>
+  </section>
 
     <!-- PANTALLA PÚBLICA PARA PERSONAS EXTERNAS (?modo=externo) -->
     <section id="view-external" class="view hidden">
@@ -1867,10 +1899,9 @@
           <h4 style="color: #60a5fa; margin-bottom: 10px;">⏳ Pagos informados pendientes de aceptación:</h4>
           <div id="statement-pending-list" style="display: flex; flex-direction: column; gap: 8px;"></div>
         </div>
-      </div>
     </section>
   </main>
 
-  <script src="app.js?v=20261102_06"></script>
+  <script src="app.js?v=20261102_07"></script>
 </body>
 </html>
