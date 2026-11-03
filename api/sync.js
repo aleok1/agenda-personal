@@ -118,6 +118,15 @@ export default async function handler(req, res) {
     }));
   }
 
+  function esUsuarioParticipanteDeTarea(t, usuarioId) {
+    if (!t || !usuarioId) return false;
+    if (t.creadorId === usuarioId) return true;
+    if (t.socioId === usuarioId) return true;
+    if (Array.isArray(t.sociosIds) && t.sociosIds.includes(usuarioId)) return true;
+    if (Array.isArray(t.participantes) && t.participantes.some(p => p.id === usuarioId)) return true;
+    return false;
+  }
+
   // Propagar la lista de supermercado y heladera a todos los usuarios con los que vive en la misma casa
   function propagarSupermercadoCompartido(db, usuarioOrigen) {
     const listaActual = usuarioOrigen.supermercado || [];
@@ -222,7 +231,7 @@ export default async function handler(req, res) {
         tienePreguntaSeguridad: Boolean(u.respuestaSeguridad),
         preguntaSeguridad: u.preguntaSeguridad || null,
         tareas: u.tareas || [],
-        tareasCompartidas: (db.tareasCompartidas || []).filter(t => t.creadorId === u.id || t.socioId === u.id),
+        tareasCompartidas: (db.tareasCompartidas || []).filter(t => esUsuarioParticipanteDeTarea(t, u.id)),
         avisosTareas: u.avisosTareas || [],
         recordatorios: u.recordatorios || [],
         movimientos: u.movimientos || [],
@@ -319,7 +328,7 @@ export default async function handler(req, res) {
           tienePreguntaSeguridad: Boolean(u.respuestaSeguridad),
           preguntaSeguridad: u.preguntaSeguridad || null,
           tareas: u.tareas || [],
-          tareasCompartidas: (db.tareasCompartidas || []).filter(t => t.creadorId === u.id || t.socioId === u.id),
+          tareasCompartidas: (db.tareasCompartidas || []).filter(t => esUsuarioParticipanteDeTarea(t, u.id)),
           avisosTareas: u.avisosTareas || [],
           recordatorios: u.recordatorios || [],
           movimientos: u.movimientos || [],
@@ -343,10 +352,55 @@ export default async function handler(req, res) {
         if (u.password && body.password && u.password !== String(body.password || '')) {
           return res.status(401).json({ error: 'Sesión no válida' });
         }
-        const socio = db.usuarios[body.socioId];
-        if (!socio) return res.status(404).json({ error: 'Usuario socio no encontrado' });
+
+        // Obtener lista de socios seleccionados (uno o varios)
+        let sociosIds = [];
+        if (Array.isArray(body.sociosIds)) {
+          sociosIds = body.sociosIds.filter(id => id && id !== u.id);
+        } else if (body.socioId) {
+          sociosIds = [body.socioId];
+        }
+
+        if (sociosIds.length === 0) {
+          return res.status(400).json({ error: 'Seleccioná al menos un participante para la tarea' });
+        }
+
+        const sociosValidos = [];
+        sociosIds.forEach(sId => {
+          const sObj = db.usuarios[sId];
+          if (sObj) sociosValidos.push(sObj);
+        });
+
+        if (sociosValidos.length === 0) {
+          return res.status(404).json({ error: 'No se encontraron los usuarios socios seleccionados' });
+        }
 
         if (!Array.isArray(db.tareasCompartidas)) db.tareasCompartidas = [];
+
+        const esProgramada = Boolean(body.esProgramada);
+        const fechaProgramada = esProgramada && body.fechaProgramada ? String(body.fechaProgramada).trim() : null;
+
+        const participantes = [
+          {
+            id: u.id,
+            nombre: u.nombre,
+            rol: 'creador',
+            estadoInvitacion: 'aceptada',
+            realizada: false,
+            realizadaEl: null
+          },
+          ...sociosValidos.map(s => ({
+            id: s.id,
+            nombre: s.nombre,
+            rol: 'socio',
+            estadoInvitacion: 'pendiente',
+            realizada: false,
+            realizadaEl: null
+          }))
+        ];
+
+        const primerSocio = sociosValidos[0];
+        const nombresSociosStr = sociosValidos.map(s => s.nombre).join(', ');
 
         const nueva = {
           id: 'tc-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
@@ -354,8 +408,14 @@ export default async function handler(req, res) {
           prioridad: body.prioridad || 'simple',
           creadorId: u.id,
           creadorNombre: u.nombre,
-          socioId: socio.id,
-          socioNombre: socio.nombre,
+          socioId: primerSocio.id,
+          socioNombre: primerSocio.nombre,
+          sociosIds: sociosValidos.map(s => s.id),
+          sociosNombres: nombresSociosStr,
+          esGrupal: sociosValidos.length > 1,
+          participantes: participantes,
+          esProgramada: esProgramada,
+          fechaProgramada: fechaProgramada,
           estado: 'pendiente_invitacion',
           realizadaPorCreador: false,
           realizadaPorSocio: false,
@@ -365,23 +425,27 @@ export default async function handler(req, res) {
 
         db.tareasCompartidas.push(nueva);
 
-        if (Array.isArray(socio.pushSubscriptions) && socio.pushSubscriptions.length > 0) {
-          const payload = {
-            title: `👥 Invitación de tarea compartida de ${u.nombre}`,
-            body: `Te invitó a hacer: "${nueva.texto}". Entrá a la app para aceptarla.`,
-            tag: 'tc-' + nueva.id,
-            url: '/'
-          };
-          for (const s of socio.pushSubscriptions) {
-            try { await sendWebPushNotification(s, payload); } catch (e) {}
+        // Notificar a todos los socios invitados
+        for (const socio of sociosValidos) {
+          if (Array.isArray(socio.pushSubscriptions) && socio.pushSubscriptions.length > 0) {
+            const fechaTxt = fechaProgramada ? ` para el día ${fechaProgramada.split('-').reverse().join('/')}` : '';
+            const payload = {
+              title: esProgramada ? `📅 Tarea programada de ${u.nombre}` : `👥 Invitación de tarea en equipo de ${u.nombre}`,
+              body: `Te invitó a realizar${fechaTxt}: "${nueva.texto}". Entrá para responder.`,
+              tag: 'tc-' + nueva.id,
+              url: '/'
+            };
+            for (const s of socio.pushSubscriptions) {
+              try { await sendWebPushNotification(s, payload); } catch (e) {}
+            }
           }
         }
 
-        await guardarBaseDeDatos(db, sha, `Tarea compartida entre ${u.nombre} y ${socio.nombre}`);
+        await guardarBaseDeDatos(db, sha, `Tarea ${esProgramada ? 'programada' : 'compartida'} de ${u.nombre} con ${nombresSociosStr}`);
         return res.status(200).json({
           ok: true,
           tarea: nueva,
-          tareasCompartidas: db.tareasCompartidas.filter(t => t.creadorId === u.id || t.socioId === u.id)
+          tareasCompartidas: db.tareasCompartidas.filter(t => esUsuarioParticipanteDeTarea(t, u.id))
         });
       }
 
@@ -394,15 +458,39 @@ export default async function handler(req, res) {
         if (!tc) return res.status(404).json({ error: 'Tarea compartida no encontrada' });
 
         const aceptar = Boolean(body.aceptar);
-        tc.estado = aceptar ? 'activa' : 'rechazada';
+
+        if (!Array.isArray(tc.participantes)) {
+          tc.participantes = [
+            { id: tc.creadorId, nombre: tc.creadorNombre, rol: 'creador', estadoInvitacion: 'aceptada', realizada: Boolean(tc.realizadaPorCreador) },
+            { id: tc.socioId, nombre: tc.socioNombre, rol: 'socio', estadoInvitacion: 'pendiente', realizada: Boolean(tc.realizadaPorSocio) }
+          ];
+        }
+
+        const miPart = tc.participantes.find(p => p.id === u.id);
+        if (miPart) {
+          miPart.estadoInvitacion = aceptar ? 'aceptada' : 'rechazada';
+        }
+
+        const sociosParts = tc.participantes.filter(p => p.rol === 'socio');
+        const tienenPendientes = sociosParts.some(p => p.estadoInvitacion === 'pendiente');
+        const algunAceptado = sociosParts.some(p => p.estadoInvitacion === 'aceptada');
+
+        if (algunAceptado) {
+          tc.estado = 'activa';
+        } else if (!tienenPendientes) {
+          tc.estado = 'rechazada';
+        } else {
+          tc.estado = 'pendiente_invitacion';
+        }
         tc.actualizadoEl = Date.now();
 
+        // Notificar al creador
         const creador = db.usuarios[tc.creadorId];
         if (creador && Array.isArray(creador.pushSubscriptions)) {
           const payload = {
-            title: aceptar ? `✅ ${u.nombre} aceptó tu tarea compartida` : `❌ ${u.nombre} rechazó la tarea compartida`,
-            body: `"${tc.texto}"`,
-            tag: 'tc-resp-' + tc.id,
+            title: aceptar ? `✅ ${u.nombre} aceptó tu tarea grupal` : `❌ ${u.nombre} rechazó la tarea grupal`,
+            body: `"${tc.texto}"${tc.fechaProgramada ? ` (${tc.fechaProgramada.split('-').reverse().join('/')})` : ''}`,
+            tag: 'tc-resp-' + tc.id + '-' + u.id,
             url: '/'
           };
           for (const s of creador.pushSubscriptions) {
@@ -414,7 +502,7 @@ export default async function handler(req, res) {
         return res.status(200).json({
           ok: true,
           tarea: tc,
-          tareasCompartidas: db.tareasCompartidas.filter(t => t.creadorId === u.id || t.socioId === u.id)
+          tareasCompartidas: db.tareasCompartidas.filter(t => esUsuarioParticipanteDeTarea(t, u.id))
         });
       }
 
@@ -427,13 +515,27 @@ export default async function handler(req, res) {
         if (!tc) return res.status(404).json({ error: 'Tarea compartida no encontrada' });
 
         const realizada = Boolean(body.realizada);
-        if (tc.creadorId === u.id) {
-          tc.realizadaPorCreador = realizada;
-        } else if (tc.socioId === u.id) {
-          tc.realizadaPorSocio = realizada;
+
+        if (!Array.isArray(tc.participantes)) {
+          tc.participantes = [
+            { id: tc.creadorId, nombre: tc.creadorNombre, rol: 'creador', estadoInvitacion: 'aceptada', realizada: Boolean(tc.realizadaPorCreador) },
+            { id: tc.socioId, nombre: tc.socioNombre, rol: 'socio', estadoInvitacion: 'aceptada', realizada: Boolean(tc.realizadaPorSocio) }
+          ];
         }
 
-        if (tc.realizadaPorCreador && tc.realizadaPorSocio) {
+        const miPart = tc.participantes.find(p => p.id === u.id);
+        if (miPart) {
+          miPart.realizada = realizada;
+          miPart.realizadaEl = realizada ? Date.now() : null;
+        }
+
+        if (tc.creadorId === u.id) tc.realizadaPorCreador = realizada;
+        if (tc.socioId === u.id) tc.realizadaPorSocio = realizada;
+
+        const participantesAceptados = tc.participantes.filter(p => p.estadoInvitacion === 'aceptada');
+        const todosTildaron = participantesAceptados.length > 0 && participantesAceptados.every(p => p.realizada);
+
+        if (todosTildaron) {
           tc.estado = 'completada';
           tc.completadaEl = Date.now();
         } else {
@@ -441,20 +543,23 @@ export default async function handler(req, res) {
         }
         tc.actualizadoEl = Date.now();
 
-        const otroId = tc.creadorId === u.id ? tc.socioId : tc.creadorId;
-        const otro = db.usuarios[otroId];
-        if (otro && realizada && Array.isArray(otro.pushSubscriptions)) {
-          const textoPush = tc.estado === 'completada'
-            ? `🎉 ¡Tarea compartida completada! Ambos marcaron "${tc.texto}"`
-            : `☑️ ${u.nombre} marcó como realizada: "${tc.texto}". ¡Marcála vos para completarla!`;
-          const payload = {
-            title: `👥 Tarea compartida: ${u.nombre}`,
-            body: textoPush,
-            tag: 'tc-mark-' + tc.id,
-            url: '/'
-          };
-          for (const s of otro.pushSubscriptions) {
-            try { await sendWebPushNotification(s, payload); } catch (e) {}
+        // Notificar a los otros participantes activos
+        const otrosIds = tc.participantes.filter(p => p.id !== u.id && p.estadoInvitacion === 'aceptada').map(p => p.id);
+        for (const otroId of otrosIds) {
+          const otro = db.usuarios[otroId];
+          if (otro && realizada && Array.isArray(otro.pushSubscriptions)) {
+            const textoPush = tc.estado === 'completada'
+              ? `🎉 ¡Tarea grupal completada! Todos marcaron "${tc.texto}"`
+              : `☑️ ${u.nombre} marcó como realizada: "${tc.texto}". ¡Marcála vos para completarla!`;
+            const payload = {
+              title: `👥 Tarea grupal: ${u.nombre}`,
+              body: textoPush,
+              tag: 'tc-mark-' + tc.id + '-' + u.id,
+              url: '/'
+            };
+            for (const s of otro.pushSubscriptions) {
+              try { await sendWebPushNotification(s, payload); } catch (e) {}
+            }
           }
         }
 
@@ -462,7 +567,7 @@ export default async function handler(req, res) {
         return res.status(200).json({
           ok: true,
           tarea: tc,
-          tareasCompartidas: db.tareasCompartidas.filter(t => t.creadorId === u.id || t.socioId === u.id)
+          tareasCompartidas: db.tareasCompartidas.filter(t => esUsuarioParticipanteDeTarea(t, u.id))
         });
       }
 
@@ -471,11 +576,11 @@ export default async function handler(req, res) {
         if (!u) return res.status(404).json({ error: 'Usuario no encontrado' });
         if (!Array.isArray(db.tareasCompartidas)) db.tareasCompartidas = [];
 
-        db.tareasCompartidas = db.tareasCompartidas.filter(t => t.id !== body.tareaId || (t.creadorId !== u.id && t.socioId !== u.id));
+        db.tareasCompartidas = db.tareasCompartidas.filter(t => t.id !== body.tareaId || !esUsuarioParticipanteDeTarea(t, u.id));
         await guardarBaseDeDatos(db, sha, `Eliminar tarea compartida`);
         return res.status(200).json({
           ok: true,
-          tareasCompartidas: db.tareasCompartidas.filter(t => t.creadorId === u.id || t.socioId === u.id)
+          tareasCompartidas: db.tareasCompartidas.filter(t => esUsuarioParticipanteDeTarea(t, u.id))
         });
       }
 
@@ -493,7 +598,7 @@ export default async function handler(req, res) {
           usuario: { id: u.id, nombre: u.nombre, esAdmin: Boolean(u.esAdmin), avatar: u.esAdmin ? '👑' : (u.avatar || '👤') },
           dni: u.dni || null,
           tareas: u.tareas || [],
-          tareasCompartidas: (db.tareasCompartidas || []).filter(t => t.creadorId === u.id || t.socioId === u.id),
+          tareasCompartidas: (db.tareasCompartidas || []).filter(t => esUsuarioParticipanteDeTarea(t, u.id)),
           avisosTareas: u.avisosTareas || [],
           recordatorios: u.recordatorios || [],
           movimientos: u.movimientos || [],
@@ -523,7 +628,7 @@ export default async function handler(req, res) {
           usuario: { id: u.id, nombre: u.nombre, esAdmin: Boolean(u.esAdmin), avatar: u.esAdmin ? '👑' : (u.avatar || '👤') },
           dni: u.dni || null,
           tareas: u.tareas || [],
-          tareasCompartidas: (db.tareasCompartidas || []).filter(t => t.creadorId === u.id || t.socioId === u.id),
+          tareasCompartidas: (db.tareasCompartidas || []).filter(t => esUsuarioParticipanteDeTarea(t, u.id)),
           avisosTareas: u.avisosTareas || [],
           recordatorios: u.recordatorios || [],
           movimientos: u.movimientos || [],
@@ -681,7 +786,7 @@ export default async function handler(req, res) {
         });
 
         if (Array.isArray(db.tareasCompartidas)) {
-          db.tareasCompartidas = db.tareasCompartidas.filter(t => t.creadorId !== targetId && t.socioId !== targetId);
+          db.tareasCompartidas = db.tareasCompartidas.filter(t => !esUsuarioParticipanteDeTarea(t, targetId));
         }
 
         await guardarBaseDeDatos(db, sha, `Eliminar usuario ${targetId} por administrador`);
@@ -1356,7 +1461,7 @@ export default async function handler(req, res) {
         dni: u.dni || null,
         avatar: u.esAdmin ? '👑' : (u.avatar || '👤'),
         tareas: u.tareas,
-        tareasCompartidas: (db.tareasCompartidas || []).filter(t => t.creadorId === u.id || t.socioId === u.id),
+        tareasCompartidas: (db.tareasCompartidas || []).filter(t => esUsuarioParticipanteDeTarea(t, u.id)),
         avisosTareas: u.avisosTareas || [],
         recordatorios: u.recordatorios,
         movimientos: u.movimientos,
