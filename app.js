@@ -703,6 +703,7 @@ async function intentarIngresoConPassword(u, pass, eraAutomatico) {
     yaConfiguroCasa = Boolean(data.yaConfiguroCasa);
     borrados = Array.isArray(data.borrados) ? data.borrados : [];
     borradosListas = Array.isArray(data.borradosListas) ? data.borradosListas : [];
+    if (data.tnaConfig) usuarioActivo.tnaConfig = data.tnaConfig;
 
     registrarActividadSesion();
     loginPasswordBox.classList.add('hidden');
@@ -1971,6 +1972,7 @@ async function sincronizarDesdeNube() {
     if (typeof cloud.yaConfiguroCasa === 'boolean') yaConfiguroCasa = cloud.yaConfiguroCasa;
     if (Array.isArray(cloud.tareasCompartidas)) tareasCompartidas = cloud.tareasCompartidas;
     if (cloud.dni) usuarioActivo.dni = cloud.dni;
+    if (cloud.tnaConfig) usuarioActivo.tnaConfig = cloud.tnaConfig;
 
     const seLimpiaronVencidas = limpiarTareasVencidas();
     actualizarContadoresYAlertas();
@@ -2024,6 +2026,7 @@ async function guardarEnNube(avisoParaAutor) {
       yoDebo: yoDebo,
       borradosListas: borradosListas,
       tiempoBloqueoMin: usuarioActivo.tiempoBloqueoMin || 60,
+      tnaConfig: usuarioActivo.tnaConfig || null,
       borrados: borrados
     };
     if (avisoParaAutor) {
@@ -2922,6 +2925,240 @@ if (selectWalletDate) {
 
 btnSaveWallet.addEventListener('click', guardarMovimientoBilletera);
 
+// ==========================================
+// RENDIMIENTO DIARIO ESTIMADO (TNA BILLETERAS VIRTUALES)
+// ==========================================
+const TNA_BILLETERAS_INFO = {
+  mercadopago: {
+    nombre: 'Mercado Pago',
+    tnaDefault: 37.0,
+    icono: '💙',
+    tipo: 'Fondo Money Market'
+  },
+  naranjax: {
+    nombre: 'Naranja X',
+    tnaDefault: 42.0,
+    icono: '🧡',
+    tipo: 'Cuenta Remunerada'
+  },
+  uala: {
+    nombre: 'Ualá',
+    tnaDefault: 38.0,
+    icono: '💳',
+    tipo: 'Cuenta Remunerada'
+  }
+};
+
+function obtenerTNAConfigUsuario() {
+  if (!usuarioActivo) return { habilitada: false, billetera: 'mercadopago', tna: 37.0, ultimaFecha: null };
+  if (!usuarioActivo.tnaConfig) {
+    usuarioActivo.tnaConfig = {
+      habilitada: false,
+      billetera: 'mercadopago',
+      tna: 37.0,
+      ultimaFecha: null
+    };
+  }
+  return usuarioActivo.tnaConfig;
+}
+
+function renderizarTNAConfig() {
+  const cfg = obtenerTNAConfigUsuario();
+  const info = TNA_BILLETERAS_INFO[cfg.billetera] || TNA_BILLETERAS_INFO.mercadopago;
+
+  const chk = document.getElementById('chk-tna-active');
+  const pill = document.getElementById('wallet-tna-status-pill');
+  const subtitle = document.getElementById('wallet-tna-subtitle');
+  const inputRate = document.getElementById('input-wallet-tna-rate');
+
+  if (chk) chk.checked = Boolean(cfg.habilitada);
+
+  const tnaNum = cfg.tna !== undefined ? cfg.tna : info.tnaDefault;
+
+  if (pill) {
+    if (cfg.habilitada) {
+      pill.textContent = `Activo (${tnaNum}% TNA)`;
+      pill.style.background = 'rgba(34, 197, 94, 0.2)';
+      pill.style.color = '#4ade80';
+    } else {
+      pill.textContent = 'Inactivo';
+      pill.style.background = 'rgba(148, 163, 184, 0.15)';
+      pill.style.color = '#94a3b8';
+    }
+  }
+
+  if (subtitle) {
+    if (cfg.habilitada) {
+      subtitle.textContent = `Rindiendo con ${info.nombre} al ${tnaNum}% TNA diario · (Tocá para modificar)`;
+    } else {
+      subtitle.textContent = `(Aclaración y modificación solo si toco en ella)`;
+    }
+  }
+
+  if (inputRate && document.activeElement !== inputRate) {
+    inputRate.value = tnaNum;
+  }
+
+  const chips = document.querySelectorAll('#wallet-tna-chips-grid .tna-chip');
+  chips.forEach(c => {
+    c.classList.toggle('active', c.dataset.wallet === cfg.billetera);
+  });
+}
+
+let procesandoRendimientos = false;
+function procesarRendimientosAutomaticos() {
+  if (ES_MODO_EXTERNO || !usuarioActivo || procesandoRendimientos) return;
+  const cfg = obtenerTNAConfigUsuario();
+  if (!cfg.habilitada) return;
+
+  const tna = parseFloat(cfg.tna);
+  if (!tna || tna <= 0) return;
+
+  const saldos = calcularSaldosBilletera();
+  const saldoVirtual = saldos.virtual;
+  if (saldoVirtual <= 0) return;
+
+  const hoy = HOY_ISO;
+  if (!cfg.ultimaFecha) {
+    cfg.ultimaFecha = hoy;
+    guardarEnNube();
+    return;
+  }
+
+  if (cfg.ultimaFecha === hoy) {
+    return;
+  }
+
+  procesandoRendimientos = true;
+  try {
+    const fechaUltima = new Date(cfg.ultimaFecha + 'T12:00:00');
+    const fechaHoy = new Date(hoy + 'T12:00:00');
+    const diffMs = fechaHoy.getTime() - fechaUltima.getTime();
+    const diffDias = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffDias > 0) {
+      const diasAProcesar = Math.min(diffDias, 30);
+      const info = TNA_BILLETERAS_INFO[cfg.billetera] || TNA_BILLETERAS_INFO.mercadopago;
+      const tasaDiaria = tna / (100 * 365);
+      let huboAcreditaciones = false;
+
+      for (let i = 1; i <= diasAProcesar; i++) {
+        const d = new Date(fechaUltima);
+        d.setDate(d.getDate() + i);
+        const diaStr = obtenerFechaISO(d);
+
+        const yaAcreditado = movimientos.some(m =>
+          m.fecha === diaStr &&
+          m.tipo === 'ingreso' &&
+          m.medio === 'virtual' &&
+          String(m.detalle).includes('Rendimiento estimado app')
+        );
+
+        if (!yaAcreditado) {
+          const montoRend = Math.round((saldoVirtual * tasaDiaria) * 100) / 100;
+          if (montoRend >= 0.01) {
+            movimientos.push({
+              id: 'mov-rend-' + diaStr + '-' + Math.random().toString(36).slice(2, 6),
+              tipo: 'ingreso',
+              medio: 'virtual',
+              monto: montoRend,
+              detalle: `📈 Rendimiento estimado app (${info.nombre})`,
+              fecha: diaStr,
+              updatedAt: Date.now()
+            });
+            huboAcreditaciones = true;
+          }
+        }
+      }
+
+      cfg.ultimaFecha = hoy;
+
+      if (huboAcreditaciones) {
+        fechaFiltroBilletera = hoy;
+        guardarEnNube();
+      }
+    }
+  } catch (err) {
+    console.warn('Error al procesar rendimientos:', err);
+  } finally {
+    procesandoRendimientos = false;
+  }
+}
+
+function inicializarEventosTNA() {
+  const headerToggle = document.getElementById('wallet-tna-header-toggle');
+  const settingsBox = document.getElementById('wallet-tna-settings-box');
+  const chkActive = document.getElementById('chk-tna-active');
+  const chips = document.querySelectorAll('#wallet-tna-chips-grid .tna-chip');
+  const inputRate = document.getElementById('input-wallet-tna-rate');
+  const btnSave = document.getElementById('btn-save-tna-config');
+
+  if (headerToggle && settingsBox) {
+    headerToggle.addEventListener('click', (e) => {
+      if (e.target.closest('.switch-toggle')) return;
+      settingsBox.classList.toggle('hidden');
+    });
+  }
+
+  if (chkActive) {
+    chkActive.addEventListener('change', () => {
+      const cfg = obtenerTNAConfigUsuario();
+      cfg.habilitada = chkActive.checked;
+      if (cfg.habilitada && !cfg.ultimaFecha) {
+        cfg.ultimaFecha = HOY_ISO;
+      }
+      renderizarTNAConfig();
+      if (cfg.habilitada) {
+        procesarRendimientosAutomaticos();
+      }
+      guardarEnNube();
+    });
+  }
+
+  chips.forEach(chip => {
+    chip.addEventListener('click', () => {
+      const walletKey = chip.dataset.wallet;
+      const defaultTna = parseFloat(chip.dataset.defaultTna) || 37.0;
+      const cfg = obtenerTNAConfigUsuario();
+      cfg.billetera = walletKey;
+      cfg.tna = defaultTna;
+      if (inputRate) inputRate.value = defaultTna;
+      renderizarTNAConfig();
+    });
+  });
+
+  if (inputRate) {
+    inputRate.addEventListener('input', () => {
+      const val = parseFloat(inputRate.value);
+      if (!isNaN(val) && val >= 0) {
+        const cfg = obtenerTNAConfigUsuario();
+        cfg.tna = val;
+        renderizarTNAConfig();
+      }
+    });
+  }
+
+  if (btnSave) {
+    btnSave.addEventListener('click', () => {
+      const cfg = obtenerTNAConfigUsuario();
+      if (inputRate) {
+        const val = parseFloat(inputRate.value);
+        if (!isNaN(val) && val >= 0) {
+          cfg.tna = val;
+        }
+      }
+      renderizarTNAConfig();
+      if (settingsBox) settingsBox.classList.add('hidden');
+      if (cfg.habilitada) {
+        procesarRendimientosAutomaticos();
+      }
+      renderizarBilletera();
+      guardarEnNube();
+    });
+  }
+}
+inicializarEventosTNA();
+
 function guardarMovimientoBilletera() {
   const monto = parseFloat(inputWalletAmount.value);
   if (!monto || monto <= 0) { inputWalletAmount.focus(); return; }
@@ -2959,6 +3196,8 @@ function obtenerFechaDeMovimiento(mov) {
 }
 
 function renderizarBilletera() {
+  renderizarTNAConfig();
+  procesarRendimientosAutomaticos();
   const saldos = calcularSaldosBilletera();
   balanceEfectivoVal.textContent = formatearPesos(saldos.efectivo);
   balanceVirtualVal.textContent = formatearPesos(saldos.virtual);
@@ -7394,6 +7633,7 @@ async function iniciarSesionConDni() {
     yaConfiguroCasa = Boolean(data.yaConfiguroCasa);
     borrados = Array.isArray(data.borrados) ? data.borrados : [];
     borradosListas = Array.isArray(data.borradosListas) ? data.borradosListas : [];
+    if (data.tnaConfig) usuarioActivo.tnaConfig = data.tnaConfig;
 
     registrarActividadSesion();
     if (inputLoginDni) inputLoginDni.value = '';
