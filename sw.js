@@ -1,10 +1,14 @@
-// SW Version: 20261102_12
+// SW Version: 20261103_01
 self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(self.clients.claim());
+  event.waitUntil(
+    caches.keys().then((keys) => {
+      return Promise.all(keys.map(k => caches.delete(k)));
+    }).then(() => self.clients.claim())
+  );
 });
 
 // Mensaje desde la app para programar alarmas en el Service Worker
