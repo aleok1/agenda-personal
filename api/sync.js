@@ -244,7 +244,7 @@ export default async function handler(req, res) {
       if (accion === 'guardar_dni') {
         const u = db.usuarios[body.usuarioId];
         if (!u) return res.status(404).json({ error: 'Usuario no encontrado' });
-        if (u.password && u.password !== String(body.password || '')) {
+        if (u.password && body.password && u.password !== String(body.password || '')) {
           return res.status(401).json({ error: 'Sesión no válida' });
         }
         const dniLimpio = String(body.dni || '').replace(/\D/g, '').trim();
@@ -325,7 +325,7 @@ export default async function handler(req, res) {
       if (accion === 'crear_tarea_compartida') {
         const u = db.usuarios[body.usuarioId];
         if (!u) return res.status(404).json({ error: 'Usuario no encontrado' });
-        if (u.password && u.password !== String(body.password || '')) {
+        if (u.password && body.password && u.password !== String(body.password || '')) {
           return res.status(401).json({ error: 'Sesión no válida' });
         }
         const socio = db.usuarios[body.socioId];
