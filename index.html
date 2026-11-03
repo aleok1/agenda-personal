@@ -8,11 +8,11 @@
   <link rel="icon" type="image/svg+xml" href="logo.svg">
   <link rel="apple-touch-icon" href="logo.svg">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="styles.css?v=20261102_08">
+  <link rel="stylesheet" href="styles.css?v=20261102_09">
   <!-- ESCUDO DE DIAGNÓSTICO TEMPRANO Y CAPTURA DE ERRORES PÚBLICOS -->
   <script>
     (function() {
-      window.__APP_VERSION = '20261102_08';
+      window.__APP_VERSION = '20261102_09';
       window.__ERRORES_APP = [];
 
       function copiarTexto(texto) {
@@ -244,6 +244,73 @@
           <button type="button" id="btn-submit-dni-login" class="btn-primary" style="width: 100%; padding: 12px; font-weight: 700; font-size: 1rem;">
             Iniciar sesión (Enter)
           </button>
+        </div>
+
+        <!-- ENLACE PARA RESTABLECER / BLANQUEO DE CONTRASEÑA -->
+        <div style="margin-top: 10px; text-align: center;">
+          <button type="button" id="btn-open-recover-pass" style="background: none; border: none; color: #fbbf24; font-size: 0.85rem; text-decoration: underline; cursor: pointer; padding: 4px;">
+            🔑 ¿Olvidaste tu contraseña o fue blanqueada? Restablecer aquí
+          </button>
+        </div>
+
+        <!-- CUADRO DE RESTABLECIMIENTO / PREGUNTA CLAVE -->
+        <div id="box-recover-pass" class="hidden" style="margin-top: 14px; padding: 14px; background: rgba(120, 53, 15, 0.25); border: 1px solid #f59e0b; border-radius: 12px; text-align: left;">
+          <h4 style="color: #fbbf24; margin-bottom: 6px; font-size: 1rem;">🔑 Restablecer mi contraseña</h4>
+          <p class="subtitle-text" style="margin-bottom: 12px; font-size: 0.82rem;">Escribí tu DNI y tu pregunta clave para ingresar tu nueva contraseña:</p>
+
+          <div class="form-group" style="margin-bottom: 10px;">
+            <label for="input-recover-dni">Tu número de DNI</label>
+            <input type="tel" id="input-recover-dni" placeholder="Ingresá tu DNI (solo números)..." autocomplete="off">
+          </div>
+
+          <div id="box-recover-step2" class="hidden">
+            <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid #475569; border-radius: 8px; padding: 10px; margin-bottom: 10px;">
+              <span style="color: #94a3b8; font-size: 0.78rem; display: block;">Pregunta clave de seguridad:</span>
+              <strong id="label-recover-question" style="color: #fde68a; font-size: 0.92rem;"></strong>
+            </div>
+
+            <div class="form-group" id="group-recover-answer" style="margin-bottom: 10px;">
+              <label for="input-recover-answer">Tu respuesta a la pregunta clave</label>
+              <input type="text" id="input-recover-answer" placeholder="Escribí tu respuesta..." autocomplete="off">
+            </div>
+
+            <!-- Si el usuario no tenía pregunta todavía configurada -->
+            <div id="box-recover-setup-question" class="hidden" style="margin-bottom: 10px;">
+              <div class="form-group" style="margin-bottom: 8px;">
+                <label for="input-recover-setup-q">Creá tu pregunta de seguridad</label>
+                <input type="text" id="input-recover-setup-q" placeholder="Ej: ¿Cuál es tu comida favorita?">
+              </div>
+              <div class="form-group" style="margin-bottom: 8px;">
+                <label for="input-recover-setup-a">Tu respuesta</label>
+                <input type="text" id="input-recover-setup-a" placeholder="Tu respuesta secreta...">
+              </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 10px;">
+              <label for="input-recover-new-pass">Nueva contraseña</label>
+              <div class="password-wrapper">
+                <input type="password" id="input-recover-new-pass" placeholder="Mínimo 3 caracteres...">
+                <button type="button" id="btn-toggle-rec-pass1" class="btn-eye" title="Ver contraseña">👁️</button>
+              </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 12px;">
+              <label for="input-recover-repeat-pass">Confirmar nueva contraseña</label>
+              <div class="password-wrapper">
+                <input type="password" id="input-recover-repeat-pass" placeholder="Repetí tu nueva contraseña...">
+                <button type="button" id="btn-toggle-rec-pass2" class="btn-eye" title="Ver contraseña">👁️</button>
+              </div>
+            </div>
+          </div>
+
+          <div id="recover-pass-error" class="login-error hidden" style="margin-bottom: 10px;"></div>
+          <div id="recover-pass-success" class="share-copied-msg hidden" style="margin-bottom: 10px;">✓ ¡Contraseña restablecida! Ya podés iniciar sesión.</div>
+
+          <div class="form-actions" style="margin-top: 10px;">
+            <button type="button" id="btn-cancel-recover-pass" class="btn-secondary">Cancelar</button>
+            <button type="button" id="btn-check-recover-dni" class="btn-primary" style="background: #d97706; border-color: #b45309; font-weight: 700;">Continuar</button>
+            <button type="button" id="btn-submit-recover-pass" class="btn-primary hidden" style="background: #10b981; border-color: #059669; font-weight: 700;">Guardar contraseña</button>
+          </div>
         </div>
 
         <div style="margin-top: 16px; text-align: center; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 12px;">
@@ -1553,6 +1620,101 @@
             <div id="settings-bio-actions"></div>
           </div>
 
+          <!-- 2.1. CONTRASEÑA Y PREGUNTA CLAVE DE SEGURIDAD -->
+          <div class="settings-card" id="card-password-security">
+            <div class="settings-card-header">
+              <span class="settings-icon">🔐</span>
+              <div>
+                <h3>Contraseña y Pregunta Clave</h3>
+                <p class="subtitle-text">Cambiá tu contraseña cuando quieras o configurá tu pregunta clave para recuperar el acceso</p>
+              </div>
+            </div>
+
+            <div id="settings-sec-q-badge" style="margin-bottom: 12px;"></div>
+
+            <!-- BOTONES DE ACCIÓN: CAMBIAR CONTRASEÑA Y PREGUNTA CLAVE -->
+            <div style="display:flex; flex-wrap:wrap; gap:10px; margin-top:10px;">
+              <button type="button" id="btn-toggle-change-pass" class="btn-primary" style="flex:1; min-width:180px; padding:10px 14px; font-weight:600; font-size:0.9rem; background:#2563eb; border-color:#1d4ed8;">
+                🔑 Cambiar contraseña
+              </button>
+              <button type="button" id="btn-toggle-security-q" class="btn-secondary" style="flex:1; min-width:180px; padding:10px 14px; font-weight:600; font-size:0.9rem; border-color:#38bdf8; color:#7dd3fc;">
+                ❓ Pregunta clave de recuperación
+              </button>
+            </div>
+
+            <!-- FORMULARIO CAMBIAR CONTRASEÑA (DESPLEGABLE) -->
+            <div id="box-change-password-form" class="hidden" style="margin-top:14px; padding:14px; background:rgba(15,23,42,0.65); border:1px solid #334155; border-radius:10px;">
+              <h4 style="color:#60a5fa; margin-bottom:8px; font-size:0.95rem;">🔑 Cambiar mi contraseña</h4>
+              <p class="subtitle-text" style="font-size:0.82rem; margin-bottom:12px;">Ingresá tu contraseña anterior y dos veces la nueva contraseña:</p>
+              <div class="form-group" style="margin-bottom:10px;">
+                <label for="input-change-pass-current">Contraseña anterior (actual)</label>
+                <div class="password-wrapper">
+                  <input type="password" id="input-change-pass-current" placeholder="Tu contraseña actual..." autocomplete="current-password">
+                  <button type="button" id="btn-toggle-chg-cur" class="btn-eye" title="Ver contraseña">👁️</button>
+                </div>
+              </div>
+              <div class="form-group" style="margin-bottom:10px;">
+                <label for="input-change-pass-new">Nueva contraseña</label>
+                <div class="password-wrapper">
+                  <input type="password" id="input-change-pass-new" placeholder="Tu nueva contraseña..." autocomplete="new-password">
+                  <button type="button" id="btn-toggle-chg-new" class="btn-eye" title="Ver contraseña">👁️</button>
+                </div>
+              </div>
+              <div class="form-group" style="margin-bottom:12px;">
+                <label for="input-change-pass-repeat">Repetir nueva contraseña</label>
+                <div class="password-wrapper">
+                  <input type="password" id="input-change-pass-repeat" placeholder="Repetí tu nueva contraseña..." autocomplete="new-password">
+                  <button type="button" id="btn-toggle-chg-rep" class="btn-eye" title="Ver contraseña">👁️</button>
+                </div>
+              </div>
+              <div id="change-pass-error" class="login-error hidden" style="margin-bottom:10px;"></div>
+              <div id="change-pass-success" class="share-copied-msg hidden" style="margin-bottom:10px;">✓ ¡Contraseña actualizada con éxito!</div>
+              <div class="form-actions" style="margin-top:10px;">
+                <button type="button" id="btn-cancel-change-pass" class="btn-secondary">Cancelar</button>
+                <button type="button" id="btn-submit-change-pass" class="btn-primary" style="background:#10b981; border-color:#059669; font-weight:700;">Guardar contraseña</button>
+              </div>
+            </div>
+
+            <!-- FORMULARIO PREGUNTA CLAVE DE RECUPERACIÓN (DESPLEGABLE) -->
+            <div id="box-security-question-form" class="hidden" style="margin-top:14px; padding:14px; background:rgba(15,23,42,0.65); border:1px solid #334155; border-radius:10px;">
+              <h4 style="color:#fbbf24; margin-bottom:6px; font-size:0.95rem;">❓ Pregunta clave de recuperación</h4>
+              <p class="subtitle-text" style="font-size:0.82rem; margin-bottom:12px;">Esta pregunta te servirá para recuperar o restablecer tu clave con tu DNI si la olvidás o si el administrador te la blanquea:</p>
+              
+              <div class="form-group" style="margin-bottom:10px;">
+                <label for="select-security-q">Elegí tu pregunta de seguridad</label>
+                <select id="select-security-q" style="width:100%; padding:10px; border-radius:8px; background:#1e293b; color:#fff; border:1px solid #475569;">
+                  <option value="¿Cuál es tu comida favorita?">¿Cuál es tu comida favorita?</option>
+                  <option value="¿Nombre de tu primera mascota?">¿Nombre de tu primera mascota?</option>
+                  <option value="¿Nombre de tu escuela primaria?">¿Nombre de tu escuela primaria?</option>
+                  <option value="¿Lugar o ciudad de vacaciones preferido?">¿Lugar o ciudad de vacaciones preferido?</option>
+                  <option value="¿Cuál es tu equipo o deporte favorito?">¿Cuál es tu equipo o deporte favorito?</option>
+                  <option value="otra">Escribir mi propia pregunta personalizada...</option>
+                </select>
+              </div>
+              <div class="form-group hidden" id="box-custom-security-q" style="margin-bottom:10px;">
+                <label for="input-custom-security-q">Tu pregunta personalizada</label>
+                <input type="text" id="input-custom-security-q" placeholder="Ej: ¿En qué calle vivías de chico?">
+              </div>
+              <div class="form-group" style="margin-bottom:10px;">
+                <label for="input-security-a">Tu respuesta secreta (pregunta clave)</label>
+                <input type="text" id="input-security-a" placeholder="Escribí tu respuesta..." autocomplete="off">
+              </div>
+              <div class="form-group" style="margin-bottom:12px;">
+                <label for="input-security-confirm-pass">Confirmá con tu contraseña actual</label>
+                <div class="password-wrapper">
+                  <input type="password" id="input-security-confirm-pass" placeholder="Tu contraseña..." autocomplete="current-password">
+                  <button type="button" id="btn-toggle-sec-pass" class="btn-eye" title="Ver contraseña">👁️</button>
+                </div>
+              </div>
+              <div id="security-q-error" class="login-error hidden" style="margin-bottom:10px;"></div>
+              <div id="security-q-success" class="share-copied-msg hidden" style="margin-bottom:10px;">✓ ¡Pregunta clave guardada con éxito!</div>
+              <div class="form-actions" style="margin-top:10px;">
+                <button type="button" id="btn-cancel-security-q" class="btn-secondary">Cancelar</button>
+                <button type="button" id="btn-submit-security-q" class="btn-primary" style="background:#0284c7; border-color:#0369a1; font-weight:700;">Guardar pregunta clave</button>
+              </div>
+            </div>
+          </div>
+
           <!-- 3. NOTIFICACIONES DEL CELULAR -->
           <div class="settings-card">
             <div class="settings-card-header">
@@ -1902,6 +2064,6 @@
     </section>
   </main>
 
-  <script src="app.js?v=20261102_08"></script>
+  <script src="app.js?v=20261102_09"></script>
 </body>
 </html>
