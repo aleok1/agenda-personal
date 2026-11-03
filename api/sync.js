@@ -112,7 +112,9 @@ export default async function handler(req, res) {
       nombre: u.nombre,
       esAdmin: Boolean(u.esAdmin),
       avatar: u.avatar || defaultAvatars[u.id] || (u.esAdmin ? '👑' : '👤'),
-      tienePassword: Boolean(u.password)
+      tienePassword: Boolean(u.password),
+      passwordBlanqueada: Boolean(u.passwordBlanqueada),
+      tienePreguntaSeguridad: Boolean(u.respuestaSeguridad)
     }));
   }
 
@@ -217,6 +219,8 @@ export default async function handler(req, res) {
       return res.status(200).json({
         dni: u.dni || null,
         avatar: u.esAdmin ? '👑' : (u.avatar || '👤'),
+        tienePreguntaSeguridad: Boolean(u.respuestaSeguridad),
+        preguntaSeguridad: u.preguntaSeguridad || null,
         tareas: u.tareas || [],
         tareasCompartidas: (db.tareasCompartidas || []).filter(t => t.creadorId === u.id || t.socioId === u.id),
         avisosTareas: u.avisosTareas || [],
@@ -289,6 +293,13 @@ export default async function handler(req, res) {
           return res.status(404).json({ error: 'No se encontró ningún usuario con ese DNI o nombre' });
         }
 
+        if (u.passwordBlanqueada) {
+          return res.status(403).json({
+            error: 'Tu contraseña fue blanqueada por el administrador Alejandro. Hacé clic en "¿Olvidaste tu contraseña o fue blanqueada?" para restablecerla con tu pregunta clave.',
+            blanqueada: true
+          });
+        }
+
         if (u.password && u.password !== pass) {
           return res.status(401).json({ error: 'Contraseña incorrecta' });
         }
@@ -300,9 +311,13 @@ export default async function handler(req, res) {
             nombre: u.nombre,
             dni: u.dni || null,
             esAdmin: Boolean(u.esAdmin),
-            avatar: u.esAdmin ? '👑' : (u.avatar || '👤')
+            avatar: u.esAdmin ? '👑' : (u.avatar || '👤'),
+            tienePreguntaSeguridad: Boolean(u.respuestaSeguridad),
+            preguntaSeguridad: u.preguntaSeguridad || null
           },
           dni: u.dni || null,
+          tienePreguntaSeguridad: Boolean(u.respuestaSeguridad),
+          preguntaSeguridad: u.preguntaSeguridad || null,
           tareas: u.tareas || [],
           tareasCompartidas: (db.tareasCompartidas || []).filter(t => t.creadorId === u.id || t.socioId === u.id),
           avisosTareas: u.avisosTareas || [],
@@ -642,22 +657,189 @@ export default async function handler(req, res) {
 
       if (accion === 'eliminar_usuario') {
         const admin = db.usuarios['alejandro'];
-        if (!admin || admin.password !== String(body.adminPassword || '').trim()) {
+        if (!admin) return res.status(404).json({ error: 'Usuario administrador no encontrado' });
+
+        const passEnviada = String(body.adminPassword || body.password || '').trim();
+        const targetId = String(body.targetUsuarioId || body.eliminarUsuarioId || '').trim();
+
+        if (admin.password && passEnviada && admin.password !== passEnviada) {
+          return res.status(403).json({ error: 'Contraseña de administrador incorrecta' });
+        }
+        if (admin.password && !passEnviada && body.usuarioId !== 'alejandro') {
           return res.status(403).json({ error: 'Solo el administrador Alejandro puede eliminar usuarios' });
         }
-        const targetId = body.targetUsuarioId;
+
         if (!targetId || targetId === 'alejandro') {
           return res.status(400).json({ error: 'No se puede eliminar al administrador principal' });
         }
+
         delete db.usuarios[targetId];
+
         // Limpiar referencias en superCompartidoCon
         Object.values(db.usuarios).forEach(u => {
           u.superCompartidoCon = (u.superCompartidoCon || []).filter(id => id !== targetId);
         });
-        await guardarBaseDeDatos(db, sha, `Eliminar usuario ${targetId}`);
+
+        if (Array.isArray(db.tareasCompartidas)) {
+          db.tareasCompartidas = db.tareasCompartidas.filter(t => t.creadorId !== targetId && t.socioId !== targetId);
+        }
+
+        await guardarBaseDeDatos(db, sha, `Eliminar usuario ${targetId} por administrador`);
         return res.status(200).json({
           ok: true,
           usuarios: resumenPublicoUsuarios(db.usuarios)
+        });
+      }
+
+      if (accion === 'blanquear_password') {
+        const admin = db.usuarios['alejandro'];
+        if (!admin) return res.status(404).json({ error: 'Usuario administrador no encontrado' });
+
+        const passEnviada = String(body.adminPassword || body.password || '').trim();
+        const targetId = String(body.targetUsuarioId || body.eliminarUsuarioId || '').trim();
+
+        if (admin.password && passEnviada && admin.password !== passEnviada) {
+          return res.status(403).json({ error: 'Contraseña de administrador incorrecta' });
+        }
+        if (admin.password && !passEnviada && body.usuarioId !== 'alejandro') {
+          return res.status(403).json({ error: 'Solo el administrador Alejandro puede blanquear contraseñas' });
+        }
+
+        const targetUser = db.usuarios[targetId];
+        if (!targetUser) return res.status(404).json({ error: 'Usuario no encontrado' });
+        if (targetUser.id === 'alejandro' || targetUser.esAdmin) {
+          return res.status(400).json({ error: 'No se puede blanquear la contraseña del administrador principal' });
+        }
+
+        targetUser.password = '';
+        targetUser.passwordBlanqueada = true;
+        targetUser.blanqueadaEl = Date.now();
+
+        await guardarBaseDeDatos(db, sha, `Blanquear contraseña de ${targetUser.nombre}`);
+        return res.status(200).json({
+          ok: true,
+          mensaje: `Contraseña de ${targetUser.nombre} blanqueada exitosamente.`,
+          usuarios: resumenPublicoUsuarios(db.usuarios)
+        });
+      }
+
+      if (accion === 'obtener_pregunta_seguridad') {
+        const inputDni = String(body.dni || '').trim();
+        const dniSoloNumeros = inputDni.replace(/\D/g, '');
+        if (!inputDni) return res.status(400).json({ error: 'Ingresá tu DNI' });
+
+        const targetUser = Object.values(db.usuarios).find(x => {
+          if (dniSoloNumeros && x.dni && String(x.dni).replace(/\D/g, '') === dniSoloNumeros) return true;
+          if (String(x.nombre || '').toLowerCase() === inputDni.toLowerCase()) return true;
+          if (x.id.toLowerCase() === inputDni.toLowerCase()) return true;
+          return false;
+        });
+
+        if (!targetUser) {
+          return res.status(404).json({ error: 'No se encontró ningún usuario con ese DNI o nombre' });
+        }
+
+        return res.status(200).json({
+          ok: true,
+          usuarioId: targetUser.id,
+          nombre: targetUser.nombre,
+          blanqueada: Boolean(targetUser.passwordBlanqueada),
+          tienePregunta: Boolean(targetUser.respuestaSeguridad),
+          preguntaSeguridad: targetUser.preguntaSeguridad || '¿Cuál es tu pregunta de seguridad registrada?'
+        });
+      }
+
+      if (accion === 'restablecer_password') {
+        const inputDni = String(body.dni || '').trim();
+        const dniSoloNumeros = inputDni.replace(/\D/g, '');
+        const nuevaPass = String(body.nuevaPassword || '').trim();
+        const respEnviada = String(body.respuestaSeguridad || '').trim().toLowerCase();
+
+        if (!inputDni) return res.status(400).json({ error: 'Ingresá tu DNI' });
+        if (!nuevaPass || nuevaPass.length < 3) {
+          return res.status(400).json({ error: 'La nueva contraseña debe tener al menos 3 caracteres' });
+        }
+
+        const targetUser = Object.values(db.usuarios).find(x => {
+          if (dniSoloNumeros && x.dni && String(x.dni).replace(/\D/g, '') === dniSoloNumeros) return true;
+          if (String(x.nombre || '').toLowerCase() === inputDni.toLowerCase()) return true;
+          if (x.id.toLowerCase() === inputDni.toLowerCase()) return true;
+          return false;
+        });
+
+        if (!targetUser) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+        if (targetUser.respuestaSeguridad) {
+          const respReal = String(targetUser.respuestaSeguridad).trim().toLowerCase();
+          if (respReal !== respEnviada) {
+            return res.status(400).json({ error: 'La respuesta a la pregunta clave no es correcta' });
+          }
+        } else {
+          if (body.nuevaPreguntaSeguridad && body.nuevaRespuestaSeguridad) {
+            targetUser.preguntaSeguridad = String(body.nuevaPreguntaSeguridad).trim();
+            targetUser.respuestaSeguridad = String(body.nuevaRespuestaSeguridad).trim().toLowerCase();
+          }
+        }
+
+        targetUser.password = nuevaPass;
+        targetUser.passwordBlanqueada = false;
+
+        await guardarBaseDeDatos(db, sha, `Restablecer contraseña para ${targetUser.nombre}`);
+        return res.status(200).json({
+          ok: true,
+          mensaje: '¡Contraseña restablecida exitosamente! Ya podés ingresar.'
+        });
+      }
+
+      if (accion === 'cambiar_password') {
+        const u = db.usuarios[body.usuarioId];
+        if (!u) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+        const passAnterior = String(body.passwordAnterior || '').trim();
+        const passNueva = String(body.nuevaPassword || '').trim();
+
+        if (!passNueva || passNueva.length < 3) {
+          return res.status(400).json({ error: 'La nueva contraseña debe tener al menos 3 caracteres' });
+        }
+
+        if (u.password && u.password !== passAnterior) {
+          return res.status(401).json({ error: 'La contraseña anterior no es correcta' });
+        }
+
+        u.password = passNueva;
+        u.passwordBlanqueada = false;
+
+        await guardarBaseDeDatos(db, sha, `Cambio de contraseña para ${u.nombre}`);
+        return res.status(200).json({
+          ok: true,
+          mensaje: '¡Contraseña cambiada exitosamente!'
+        });
+      }
+
+      if (accion === 'guardar_pregunta_seguridad') {
+        const u = db.usuarios[body.usuarioId];
+        if (!u) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+        const pass = String(body.password || '').trim();
+        if (u.password && pass && u.password !== pass) {
+          return res.status(401).json({ error: 'Contraseña actual incorrecta' });
+        }
+
+        const preg = String(body.preguntaSeguridad || '').trim();
+        const resp = String(body.respuestaSeguridad || '').trim().toLowerCase();
+
+        if (!preg || !resp) {
+          return res.status(400).json({ error: 'Debés ingresar la pregunta y la respuesta clave' });
+        }
+
+        u.preguntaSeguridad = preg;
+        u.respuestaSeguridad = resp;
+
+        await guardarBaseDeDatos(db, sha, `Pregunta de seguridad guardada para ${u.nombre}`);
+        return res.status(200).json({
+          ok: true,
+          mensaje: '¡Pregunta clave guardada exitosamente!',
+          preguntaSeguridad: preg
         });
       }
 
