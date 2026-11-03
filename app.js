@@ -2713,6 +2713,18 @@ function renderizarCalendario() {
     const delDia = recordatorios.filter(r => r.fecha === fechaISO);
     const pendientesDia = delDia.filter(r => !r.realizada).length;
 
+    const grupalesDia = (tareasCompartidas || []).filter(t =>
+      t.esProgramada && t.fechaProgramada === fechaISO &&
+      (t.creadorId === usuarioActivo?.id || (t.participantes && t.participantes.some(p => p.id === usuarioActivo?.id && p.estadoInvitacion === 'aceptada')) || (t.socioId === usuarioActivo?.id && t.estado === 'activa'))
+    );
+    const pendientesGrupales = grupalesDia.filter(t => {
+      const miP = t.participantes ? t.participantes.find(p => p.id === usuarioActivo?.id) : null;
+      return miP ? !miP.realizada : (t.creadorId === usuarioActivo?.id ? !t.realizadaPorCreador : !t.realizadaPorSocio);
+    }).length;
+
+    const totalPendientes = pendientesDia + pendientesGrupales;
+    const totalTareas = delDia.length + grupalesDia.length;
+
     const btnDia = document.createElement('button');
     btnDia.type = 'button';
     btnDia.className = 'cal-day';
@@ -2720,9 +2732,9 @@ function renderizarCalendario() {
     if (fechaISO === fechaSeleccionadaISO) btnDia.classList.add('is-selected');
 
     let badgeHtml = '';
-    if (pendientesDia > 0) {
-      badgeHtml = `<span class="cal-day-badge">${pendientesDia}</span>`;
-    } else if (delDia.length > 0) {
+    if (totalPendientes > 0) {
+      badgeHtml = `<span class="cal-day-badge">${totalPendientes}</span>`;
+    } else if (totalTareas > 0) {
       badgeHtml = `<span class="cal-day-badge" style="background:#22c55e;color:#052e16">✓</span>`;
     }
 
@@ -2749,10 +2761,50 @@ function renderizarRecordatoriosDelDia() {
       return (a.hora || '99:99').localeCompare(b.hora || '99:99');
     });
 
-  if (listaDia.length === 0) {
-    dayRemindersList.innerHTML = `<div class="empty-state">No hay recordatorios guardados para este día.<br>Escribí uno arriba y apretá <b>Enter</b> para guardarlo.</div>`;
+  const grupalesDia = (tareasCompartidas || []).filter(t =>
+    t.esProgramada && t.fechaProgramada === fechaSeleccionadaISO &&
+    (t.creadorId === usuarioActivo?.id || (t.participantes && t.participantes.some(p => p.id === usuarioActivo?.id && p.estadoInvitacion === 'aceptada')) || (t.socioId === usuarioActivo?.id && t.estado === 'activa'))
+  );
+
+  if (listaDia.length === 0 && grupalesDia.length === 0) {
+    dayRemindersList.innerHTML = `<div class="empty-state">No hay recordatorios ni tareas guardadas para este día.<br>Escribí uno arriba y apretá <b>Enter</b> para guardarlo.</div>`;
     return;
   }
+
+  // Primero renderizar tareas grupales programadas para este día
+  grupalesDia.forEach(gt => {
+    const miP = gt.participantes ? gt.participantes.find(p => p.id === usuarioActivo?.id) : null;
+    const realizada = miP ? Boolean(miP.realizada) : (gt.creadorId === usuarioActivo?.id ? Boolean(gt.realizadaPorCreador) : Boolean(gt.realizadaPorSocio));
+    const fila = document.createElement('div');
+    fila.className = `task-item reminder-item ${realizada ? 'realizada' : ''}`;
+    fila.style.borderColor = '#0284c7';
+    fila.style.background = 'rgba(2, 132, 199, 0.14)';
+
+    const creadorLabel = gt.creadorId === usuarioActivo?.id ? 'Organizada por vos' : `Organizada por ${escaparHTML(gt.creadorNombre)}`;
+
+    fila.innerHTML = `
+      <div class="task-info">
+        <span class="priority-pill" style="background:#0284c7; color:#e0f2fe; font-size:0.75rem;">👥 Tarea grupal</span>
+        <span class="task-text">${escaparHTML(gt.texto)} <small style="color:#7dd3fc; font-weight:normal;">(${creadorLabel})</small></span>
+      </div>
+      <div class="task-actions">
+        <button class="btn-done ${realizada ? 'is-done' : ''}" type="button">
+          ${realizada ? '↩ Pendiente' : '✓ Realizada'}
+        </button>
+      </div>
+    `;
+
+    const btnDone = fila.querySelector('.btn-done');
+    btnDone.onclick = () => {
+      marcarTareaCompartida(gt.id, !realizada);
+      setTimeout(() => {
+        renderizarRecordatoriosDelDia();
+        renderizarCalendario();
+      }, 300);
+    };
+
+    dayRemindersList.appendChild(fila);
+  });
 
   listaDia.forEach(rec => {
     const fila = document.createElement('div');
@@ -6760,37 +6812,66 @@ if (btnGenerateWorkout) btnGenerateWorkout.addEventListener('click', () => gener
 if (btnAnotherWorkout) btnAnotherWorkout.addEventListener('click', () => generarRutinaEntrenamiento(true));
 
 // ==========================================
-// TAREAS COMPARTIDAS (EN EQUIPO)
+// TAREAS COMPARTIDAS (EN EQUIPO Y PROGRAMADAS)
 // ==========================================
+let sociosSeleccionadosParaTarea = new Set();
+let modoTareaProgramada = false;
+
+const btnNewScheduledTask = document.getElementById('btn-new-scheduled-task');
+const sharedPartnersChipsContainer = document.getElementById('shared-partners-chips-container');
+const groupSharedScheduledDate = document.getElementById('group-shared-scheduled-date');
+const inputSharedScheduledDate = document.getElementById('input-shared-scheduled-date');
+const formSharedTaskTitle = document.getElementById('form-shared-task-title');
+const formSharedTaskDesc = document.getElementById('form-shared-task-desc');
+
+function renderizarChipsSociosCompartidos() {
+  if (!sharedPartnersChipsContainer) return;
+  sharedPartnersChipsContainer.innerHTML = '';
+  const otros = (listaUsuariosPublica || []).filter(u => u.id !== usuarioActivo?.id);
+
+  if (otros.length === 0) {
+    sharedPartnersChipsContainer.innerHTML = '<span style="color:var(--text-muted); font-size:0.85rem;">No hay otros usuarios registrados en la app.</span>';
+    return;
+  }
+
+  // Si no hay seleccionado ninguno, seleccionar el primero por defecto
+  if (sociosSeleccionadosParaTarea.size === 0 && otros.length > 0) {
+    sociosSeleccionadosParaTarea.add(otros[0].id);
+  }
+
+  otros.forEach(u => {
+    const isSelected = sociosSeleccionadosParaTarea.has(u.id);
+    const chip = document.createElement('div');
+    chip.className = `partner-chip ${isSelected ? 'active' : ''}`;
+    chip.innerHTML = `
+      <span>${u.avatar || '👤'}</span>
+      <span>${escaparHTML(u.nombre)}</span>
+      <span class="chip-check">${isSelected ? '✓' : '+'}</span>
+    `;
+    chip.onclick = () => {
+      if (sociosSeleccionadosParaTarea.has(u.id)) {
+        sociosSeleccionadosParaTarea.delete(u.id);
+      } else {
+        sociosSeleccionadosParaTarea.add(u.id);
+      }
+      renderizarChipsSociosCompartidos();
+    };
+    sharedPartnersChipsContainer.appendChild(chip);
+  });
+}
+
 function renderizarTareasCompartidas() {
   if (!usuarioActivo || !viewSharedTasks) return;
 
-  if (selectSharedPartner) {
-    const otros = (listaUsuariosPublica || []).filter(u => u.id !== usuarioActivo.id);
-    const anterior = selectSharedPartner.value;
-    selectSharedPartner.innerHTML = '';
-    if (otros.length === 0) {
-      const opt = document.createElement('option');
-      opt.value = '';
-      opt.textContent = 'No hay otros usuarios registrados';
-      selectSharedPartner.appendChild(opt);
-    } else {
-      otros.forEach(u => {
-        const opt = document.createElement('option');
-        opt.value = u.id;
-        opt.textContent = `${u.avatar || '👤'} ${u.nombre}`;
-        selectSharedPartner.appendChild(opt);
-      });
-      if (anterior && otros.some(u => u.id === anterior)) {
-        selectSharedPartner.value = anterior;
-      }
-    }
-  }
+  renderizarChipsSociosCompartidos();
 
   // 1. Invitaciones pendientes hacia el usuario activo
-  const invitaciones = (tareasCompartidas || []).filter(
-    t => t.socioId === usuarioActivo.id && t.estado === 'pendiente_invitacion'
-  );
+  const invitaciones = (tareasCompartidas || []).filter(t => {
+    if (t.participantes) {
+      return t.participantes.some(p => p.id === usuarioActivo.id && p.estadoInvitacion === 'pendiente');
+    }
+    return t.socioId === usuarioActivo.id && t.estado === 'pendiente_invitacion';
+  });
 
   if (sharedTasksInvitationsBox && sharedInvitationsList) {
     if (invitaciones.length > 0) {
@@ -6799,18 +6880,25 @@ function renderizarTareasCompartidas() {
       invitaciones.forEach(inv => {
         const card = document.createElement('div');
         card.className = 'shared-invitation-card';
+        const programadaPill = inv.esProgramada && inv.fechaProgramada
+          ? `<div style="margin-top:6px;"><span class="priority-pill" style="background:#0284c7; color:#e0f2fe; font-size:0.82rem;">📅 Para el: ${inv.fechaProgramada.split('-').reverse().join('/')} (se agregará a tu Agenda Mensual)</span></div>`
+          : '';
+
+        const equipoTxt = inv.esGrupal ? 'en grupo' : 'en equipo';
+
         card.innerHTML = `
           <div>
             <div style="font-size:0.85rem; color:#93c5fd; margin-bottom:4px;">
-              <b>${escaparHTML(inv.creadorNombre || 'Un usuario')}</b> te invitó a realizar juntos:
+              <b>${escaparHTML(inv.creadorNombre || 'Un usuario')}</b> te invitó a realizar una tarea ${equipoTxt}:
             </div>
             <div style="font-size:1.05rem; font-weight:700; color:#fff;">
               ${escaparHTML(inv.texto)}
             </div>
-            <div style="margin-top:6px;">
+            <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:6px; align-items:center;">
               <span class="priority-pill pill-${inv.prioridad || 'simple'}">
                 ${ETIQUETA_PRIORIDAD[inv.prioridad || 'simple']}
               </span>
+              ${programadaPill}
             </div>
           </div>
           <div style="display:flex; gap:8px; margin-top:10px;">
@@ -6835,21 +6923,23 @@ function renderizarTareasCompartidas() {
     }
   }
 
-  // 2. Lista de tareas compartidas activas o invitaciones pendientes enviadas por mí
+  // 2. Lista de tareas compartidas activas o invitaciones enviadas por mí
   if (!sharedTasksList) return;
   sharedTasksList.innerHTML = '';
 
   const activas = (tareasCompartidas || []).filter(t => {
-    if (t.estado === 'activa') return true;
-    if (t.creadorId === usuarioActivo.id && t.estado === 'pendiente_invitacion') return true;
-    return false;
+    if (t.creadorId === usuarioActivo.id) return true;
+    if (t.participantes) {
+      return t.participantes.some(p => p.id === usuarioActivo.id && (p.estadoInvitacion === 'aceptada' || p.estadoInvitacion === 'pendiente'));
+    }
+    return t.socioId === usuarioActivo.id && t.estado === 'activa';
   });
 
   if (activas.length === 0) {
     sharedTasksList.innerHTML = `
       <div class="empty-state">
         No tenés tareas compartidas activas en este momento.<br>
-        Tocá el botón <b>+ Nueva tarea compartida</b> para invitar a otro usuario a realizar una tarea en equipo.
+        Tocá <b>+ Nueva tarea compartida</b> o <b>📅 Tarea programada</b> para invitar a tus compañeros a realizar una tarea juntos.
       </div>
     `;
     return;
@@ -6857,24 +6947,54 @@ function renderizarTareasCompartidas() {
 
   activas.forEach(tc => {
     const soyCreador = tc.creadorId === usuarioActivo.id;
-    const nombreSocio = soyCreador ? (tc.socioNombre || 'Socio') : (tc.creadorNombre || 'Creador');
-    const miMarca = soyCreador ? Boolean(tc.realizadaPorCreador) : Boolean(tc.realizadaPorSocio);
-    const marcaSocio = soyCreador ? Boolean(tc.realizadaPorSocio) : Boolean(tc.creadorNombre ? tc.realizadaPorCreador : false);
-    const esPendienteInvitacion = tc.estado === 'pendiente_invitacion';
+    const miPart = tc.participantes ? tc.participantes.find(p => p.id === usuarioActivo.id) : null;
+    const miMarca = miPart ? Boolean(miPart.realizada) : (soyCreador ? Boolean(tc.realizadaPorCreador) : Boolean(tc.realizadaPorSocio));
+    const esPendienteInvitacion = miPart ? miPart.estadoInvitacion === 'pendiente' : (tc.estado === 'pendiente_invitacion');
+
+    const otrosParticipantes = tc.participantes
+      ? tc.participantes.filter(p => p.id !== usuarioActivo.id)
+      : [{
+          id: soyCreador ? tc.socioId : tc.creadorId,
+          nombre: soyCreador ? (tc.socioNombre || 'Socio') : (tc.creadorNombre || 'Creador'),
+          estadoInvitacion: tc.estado === 'pendiente_invitacion' ? 'pendiente' : 'aceptada',
+          realizada: soyCreador ? Boolean(tc.realizadaPorSocio) : Boolean(tc.realizadaPorCreador)
+        }];
+
+    const nombresOtros = otrosParticipantes.map(p => p.nombre).join(', ');
+    const encabezadoEquipo = otrosParticipantes.length > 1
+      ? `👥 En grupo (${(tc.participantes ? tc.participantes.length : otrosParticipantes.length + 1)} personas): <b>${escaparHTML(nombresOtros)}</b>`
+      : `👥 Con: <b>${escaparHTML(nombresOtros || 'Compañero')}</b>`;
+
+    const badgeProgramada = tc.esProgramada && tc.fechaProgramada
+      ? `<span class="priority-pill" style="background:#0284c7; color:#e0f2fe; font-size:0.75rem;">📅 Agenda: ${tc.fechaProgramada.split('-').reverse().join('/')}</span>`
+      : '';
+
+    let estadosSociosHtml = '';
+    otrosParticipantes.forEach(p => {
+      if (p.estadoInvitacion === 'pendiente') {
+        estadosSociosHtml += `<div style="margin-top:4px;"><span class="partner-status-pill partner-status-pending" style="background:rgba(234, 179, 8, 0.2); color:#fde047;">⏳ Esperando que ${escaparHTML(p.nombre)} acepte la invitación</span></div>`;
+      } else if (p.estadoInvitacion === 'rechazada') {
+        estadosSociosHtml += `<div style="margin-top:4px;"><span class="partner-status-pill" style="background:rgba(239, 68, 68, 0.2); color:#fca5a5;">❌ ${escaparHTML(p.nombre)} rechazó la invitación</span></div>`;
+      } else if (p.realizada) {
+        estadosSociosHtml += `<div style="margin-top:4px;"><span class="partner-status-pill partner-status-done">✅ ${escaparHTML(p.nombre)} ya la tildó como realizada</span></div>`;
+      } else {
+        estadosSociosHtml += `<div style="margin-top:4px;"><span class="partner-status-pill partner-status-pending">⏳ Falta que ${escaparHTML(p.nombre)} la tilde</span></div>`;
+      }
+    });
+
+    const sociosAceptados = otrosParticipantes.filter(p => p.estadoInvitacion === 'aceptada');
+    const todosCompletaron = miMarca && (sociosAceptados.length === 0 || sociosAceptados.every(p => p.realizada));
 
     const card = document.createElement('div');
-    card.className = `shared-task-card prio-${tc.prioridad || 'simple'} ${miMarca && marcaSocio ? 'completada' : ''}`;
-
-    const estadoSocioHtml = esPendienteInvitacion
-      ? `<span class="partner-status-pill partner-status-pending" style="background:rgba(234, 179, 8, 0.2); color:#fde047;">⏳ Esperando que ${escaparHTML(nombreSocio)} acepte la invitación</span>`
-      : (marcaSocio
-          ? `<span class="partner-status-pill partner-status-done">✅ ${escaparHTML(nombreSocio)} ya la tildó como realizada</span>`
-          : `<span class="partner-status-pill partner-status-pending">⏳ Falta que ${escaparHTML(nombreSocio)} la tilde</span>`);
+    card.className = `shared-task-card prio-${tc.prioridad || 'simple'} ${todosCompletaron ? 'completada' : ''}`;
 
     card.innerHTML = `
       <div class="shared-task-header">
-        <span class="partner-tag">👥 Con: <b>${escaparHTML(nombreSocio)}</b></span>
-        <span class="priority-pill pill-${tc.prioridad || 'simple'}">${ETIQUETA_PRIORIDAD[tc.prioridad || 'simple']}</span>
+        <span class="partner-tag">${encabezadoEquipo}</span>
+        <div style="display:flex; gap:6px; align-items:center;">
+          ${badgeProgramada}
+          <span class="priority-pill pill-${tc.prioridad || 'simple'}">${ETIQUETA_PRIORIDAD[tc.prioridad || 'simple']}</span>
+        </div>
       </div>
 
       <div class="shared-task-text ${miMarca ? 'realizada-por-mi' : ''}">
@@ -6887,13 +7007,13 @@ function renderizarTareasCompartidas() {
           <span>${miMarca ? '✓ Ya la marcaste como realizada' : 'Tildar cuando vos la realices'}</span>
         </label>
         <div style="margin-top:6px;">
-          ${estadoSocioHtml}
+          ${estadosSociosHtml}
         </div>
       </div>
 
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px; flex-wrap:wrap; gap:6px;">
         <span style="font-size:0.75rem; color:#94a3b8;">
-          ${esPendienteInvitacion ? 'Invitación enviada' : (miMarca && marcaSocio ? '🎉 Ambos la completaron' : 'Ambos deben tildarla para que desaparezca')}
+          ${esPendienteInvitacion ? 'Invitación enviada' : (todosCompletaron ? '🎉 Todos los integrantes la completaron' : 'Todos deben tildarla para que desaparezca')}
         </span>
         <button type="button" class="btn-delete btn-delete-shared" style="padding:4px 8px; font-size:0.8rem;" title="Eliminar tarea compartida">
           🗑️ Eliminar
@@ -6921,12 +7041,11 @@ function renderizarTareasCompartidas() {
 
 async function crearNuevaTareaCompartida() {
   if (!usuarioActivo) return;
-  const partnerId = selectSharedPartner ? selectSharedPartner.value : '';
+  const sociosIds = Array.from(sociosSeleccionadosParaTarea);
   const texto = inputSharedTaskText ? inputSharedTaskText.value.trim() : '';
 
-  if (!partnerId) {
-    alert('Seleccioná con qué usuario vas a compartir esta tarea.');
-    if (selectSharedPartner) selectSharedPartner.focus();
+  if (sociosIds.length === 0) {
+    alert('Por favor seleccioná al menos a un compañero tocando su tarjeta.');
     return;
   }
   if (!texto) {
@@ -6935,8 +7054,12 @@ async function crearNuevaTareaCompartida() {
     return;
   }
 
-  const partnerObj = listaUsuariosPublica.find(u => u.id === partnerId);
-  const socioNombre = partnerObj ? partnerObj.nombre : 'Usuario';
+  const fechaProgramada = inputSharedScheduledDate ? inputSharedScheduledDate.value : '';
+  if (modoTareaProgramada && !fechaProgramada) {
+    alert('Por favor elegí una fecha en el calendario para programar la tarea.');
+    if (inputSharedScheduledDate) inputSharedScheduledDate.focus();
+    return;
+  }
 
   if (btnSaveSharedTask) {
     btnSaveSharedTask.disabled = true;
@@ -6951,15 +7074,16 @@ async function crearNuevaTareaCompartida() {
         accion: 'crear_tarea_compartida',
         usuarioId: usuarioActivo.id,
         password: (usuarioActivo && usuarioActivo.password) || obtenerPasswordSesionVigente(usuarioActivo.id) || '',
-        socioId: partnerId,
-        socioNombre: socioNombre,
+        sociosIds: sociosIds,
+        esProgramada: modoTareaProgramada,
+        fechaProgramada: modoTareaProgramada ? fechaProgramada : null,
         texto: texto,
         prioridad: prioridadTareaCompartida
       })
     });
     const data = await res.json();
     if (!res.ok) {
-      alert(data.error || 'No se pudo crear la tarea compartida');
+      alert(data.error || 'No se pudo crear la tarea');
       return;
     }
 
@@ -6973,16 +7097,23 @@ async function crearNuevaTareaCompartida() {
     if (formNewSharedTaskBox) formNewSharedTaskBox.classList.add('hidden');
 
     renderizarTareasCompartidas();
+    renderizarCalendario();
+    renderizarRecordatoriosDelDia();
     actualizarContadoresTareasAgendaMenu();
     actualizarContadoresEconomiaMenu();
     actualizarContadoresYAlertas();
-    alert(`¡Invitación enviada a ${socioNombre}! Le llegará una notificación para aceptarla.`);
+
+    const cant = sociosIds.length;
+    const msg = modoTareaProgramada
+      ? `¡Tarea programada para el ${fechaProgramada.split('-').reverse().join('/')} enviada a ${cant === 1 ? 'tu compañero' : cant + ' compañeros'}!\n\nCuando la acepten, se les sumará en su Agenda Mensual.`
+      : `¡Invitación enviada a ${cant === 1 ? 'tu compañero' : cant + ' compañeros'}!\n\nLes llegará una notificación para aceptarla.`;
+    alert(msg);
   } catch (e) {
-    alert('Error al enviar la tarea compartida: ' + (e.message || String(e)));
+    alert('Error al enviar la tarea: ' + (e.message || String(e)));
   } finally {
     if (btnSaveSharedTask) {
       btnSaveSharedTask.disabled = false;
-      btnSaveSharedTask.textContent = 'Enviar invitación (Enter)';
+      btnSaveSharedTask.textContent = modoTareaProgramada ? 'Enviar y programar en agenda' : 'Enviar invitación (Enter)';
     }
   }
 }
@@ -7018,9 +7149,15 @@ async function responderInvitacionTareaCompartida(tareaId, aceptar) {
     }
     actualizarEstadoSync('☁️ En línea', 'verde');
     renderizarTareasCompartidas();
+    renderizarCalendario();
+    renderizarRecordatoriosDelDia();
     actualizarContadoresTareasAgendaMenu();
     actualizarContadoresEconomiaMenu();
     actualizarContadoresYAlertas();
+
+    if (aceptar && data.tarea && data.tarea.esProgramada && data.tarea.fechaProgramada) {
+      alert(`¡Aceptaste la tarea!\n\nSe ha añadido a tus Tareas Compartidas y a tu Agenda Mensual para el día ${data.tarea.fechaProgramada.split('-').reverse().join('/')}.`);
+    }
   } catch (e) {
     actualizarEstadoSync('☁️ Error', 'amarillo');
     alert('Error al responder: ' + (e.message || String(e)));
@@ -7031,9 +7168,15 @@ async function marcarTareaCompartida(tareaId, realizada) {
   if (!usuarioActivo) return;
   const tc = tareasCompartidas.find(t => t.id === tareaId);
   if (tc) {
+    if (tc.participantes) {
+      const p = tc.participantes.find(x => x.id === usuarioActivo.id);
+      if (p) p.realizada = Boolean(realizada);
+    }
     if (tc.creadorId === usuarioActivo.id) tc.realizadaPorCreador = Boolean(realizada);
     else tc.realizadaPorSocio = Boolean(realizada);
     renderizarTareasCompartidas();
+    renderizarCalendario();
+    renderizarRecordatoriosDelDia();
   }
 
   try {
@@ -7059,6 +7202,8 @@ async function marcarTareaCompartida(tareaId, realizada) {
     }
     actualizarEstadoSync('☁️ En línea', 'verde');
     renderizarTareasCompartidas();
+    renderizarCalendario();
+    renderizarRecordatoriosDelDia();
     actualizarContadoresTareasAgendaMenu();
     actualizarContadoresEconomiaMenu();
     actualizarContadoresYAlertas();
@@ -7069,7 +7214,7 @@ async function marcarTareaCompartida(tareaId, realizada) {
 
 async function eliminarTareaCompartida(tareaId) {
   if (!usuarioActivo) return;
-  if (!confirm('¿Seguro que querés eliminar esta tarea compartida? Desaparecerá para ambos usuarios.')) return;
+  if (!confirm('¿Seguro que querés eliminar esta tarea compartida? Desaparecerá para todos los integrantes.')) return;
   try {
     actualizarEstadoSync('☁️ Eliminando...', 'amarillo');
     const res = await fetch(API_SYNC_URL, {
@@ -7094,8 +7239,10 @@ async function eliminarTareaCompartida(tareaId) {
     }
     actualizarEstadoSync('☁️ En línea', 'verde');
     renderizarTareasCompartidas();
+    renderizarCalendario();
+    renderizarRecordatoriosDelDia();
     actualizarContadoresTareasAgendaMenu();
-  actualizarContadoresEconomiaMenu();
+    actualizarContadoresEconomiaMenu();
     actualizarContadoresYAlertas();
   } catch (e) {
     actualizarEstadoSync('☁️ Error', 'amarillo');
@@ -7105,10 +7252,30 @@ async function eliminarTareaCompartida(tareaId) {
 
 if (btnNewSharedTask && formNewSharedTaskBox) {
   btnNewSharedTask.addEventListener('click', () => {
-    formNewSharedTaskBox.classList.toggle('hidden');
-    if (!formNewSharedTaskBox.classList.contains('hidden') && inputSharedTaskText) {
-      inputSharedTaskText.focus();
+    modoTareaProgramada = false;
+    if (formSharedTaskTitle) formSharedTaskTitle.textContent = '➕ Crear tarea compartida';
+    if (formSharedTaskDesc) formSharedTaskDesc.textContent = 'Al compañero o compañeros seleccionados les llegará una invitación para aceptarla. Todos la verán en su lista:';
+    if (groupSharedScheduledDate) groupSharedScheduledDate.classList.add('hidden');
+    if (btnSaveSharedTask) btnSaveSharedTask.textContent = 'Enviar invitación (Enter)';
+    formNewSharedTaskBox.classList.remove('hidden');
+    renderizarChipsSociosCompartidos();
+    if (inputSharedTaskText) inputSharedTaskText.focus();
+  });
+}
+
+if (btnNewScheduledTask && formNewSharedTaskBox) {
+  btnNewScheduledTask.addEventListener('click', () => {
+    modoTareaProgramada = true;
+    if (formSharedTaskTitle) formSharedTaskTitle.textContent = '📅 Crear tarea grupal programada';
+    if (formSharedTaskDesc) formSharedTaskDesc.textContent = 'Elegí los compañeros y la fecha. Al aceptarla, la tarea se agregará automáticamente a la agenda mensual de cada uno:';
+    if (groupSharedScheduledDate) groupSharedScheduledDate.classList.remove('hidden');
+    if (inputSharedScheduledDate && !inputSharedScheduledDate.value) {
+      inputSharedScheduledDate.value = new Date().toISOString().slice(0, 10);
     }
+    if (btnSaveSharedTask) btnSaveSharedTask.textContent = 'Enviar y programar en agenda';
+    formNewSharedTaskBox.classList.remove('hidden');
+    renderizarChipsSociosCompartidos();
+    if (inputSharedTaskText) inputSharedTaskText.focus();
   });
 }
 
