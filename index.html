@@ -8,11 +8,11 @@
   <link rel="icon" type="image/svg+xml" href="logo.svg">
   <link rel="apple-touch-icon" href="logo.svg">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="styles.css?v=20261102_09">
+  <link rel="stylesheet" href="styles.css?v=20261102_10">
   <!-- ESCUDO DE DIAGNÓSTICO TEMPRANO Y CAPTURA DE ERRORES PÚBLICOS -->
   <script>
     (function() {
-      window.__APP_VERSION = '20261102_09';
+      window.__APP_VERSION = '20261102_10';
       window.__ERRORES_APP = [];
 
       function copiarTexto(texto) {
@@ -812,6 +812,9 @@
           <button id="btn-new-shared-task" class="btn-add-plus">
             <span class="plus-symbol">+</span> Nueva tarea compartida
           </button>
+          <button id="btn-new-scheduled-task" class="btn-add-plus" style="background:#0284c7; border-color:#0369a1;">
+            📅 Tarea programada
+          </button>
         </div>
       </div>
 
@@ -822,15 +825,25 @@
         <div id="shared-invitations-list" style="display:flex; flex-direction:column; gap:10px;"></div>
       </div>
 
-      <!-- FORMULARIO NUEVA TAREA COMPARTIDA -->
+      <!-- FORMULARIO NUEVA TAREA COMPARTIDA / PROGRAMADA -->
       <div id="form-new-shared-task-box" class="task-form-box hidden" style="border-color: #3b82f6;">
-        <h3>➕ Crear tarea compartida</h3>
-        <p class="subtitle-text" style="margin-bottom: 14px;">Al otro usuario le llegará una invitación para aceptarla. Ambos la verán en su lista:</p>
+        <h3 id="form-shared-task-title">➕ Crear tarea compartida</h3>
+        <p id="form-shared-task-desc" class="subtitle-text" style="margin-bottom: 14px;">Al otro usuario le llegará una invitación para aceptarla. Ambos la verán en su lista:</p>
+        
+        <!-- SELECCIÓN MÚLTIPLE DE COMPAÑEROS / PARTICIPANTES -->
+        <div class="form-group" style="width: 100%; margin-bottom: 14px;">
+          <label style="display:block; margin-bottom:6px; font-weight:600;">¿Con quién o quiénes hacés esta tarea? <span style="font-size:0.8rem; color:#93c5fd; font-weight:normal;">(Podés marcar a uno o varios compañeros para hacerla en grupo)</span></label>
+          <div id="shared-partners-chips-container" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
+          <select id="select-shared-partner" class="select-input hidden"></select>
+        </div>
+
+        <!-- SELECTOR DE FECHA (PARA TAREAS PROGRAMADAS) -->
+        <div class="form-group hidden" id="group-shared-scheduled-date" style="margin-bottom: 14px;">
+          <label for="input-shared-scheduled-date" style="font-weight:600; color:#38bdf8;">📅 Fecha programada (se agregará a la agenda mensual de todos al aceptar):</label>
+          <input type="date" id="input-shared-scheduled-date" class="select-input" style="padding:10px; background:#1e293b; color:#fff; border:1px solid #38bdf8; border-radius:8px; max-width:280px;">
+        </div>
+
         <div class="form-row">
-          <div class="form-group" style="min-width: 220px;">
-            <label for="select-shared-partner">¿Con quién hacés esta tarea?</label>
-            <select id="select-shared-partner" class="select-input"></select>
-          </div>
           <div class="form-group flex-grow">
             <label for="input-shared-task-text">¿Qué tarea van a realizar?</label>
             <input type="text" id="input-shared-task-text" placeholder="Ej: Pintar rejas, comprar regalo..." autocomplete="off">
@@ -2064,6 +2077,6 @@
     </section>
   </main>
 
-  <script src="app.js?v=20261102_09"></script>
+  <script src="app.js?v=20261102_10"></script>
 </body>
 </html>
