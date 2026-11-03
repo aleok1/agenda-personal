@@ -1634,6 +1634,20 @@ if (btnCloseAdminUsers && adminUsersBox) {
   btnCloseAdminUsers.addEventListener('click', () => adminUsersBox.classList.add('hidden'));
 }
 
+function obtenerPasswordAdminParaAcciones() {
+  if (usuarioActivo && usuarioActivo.password) return String(usuarioActivo.password);
+  const sesionPass = obtenerPasswordSesionVigente('alejandro') || (usuarioActivo && obtenerPasswordSesionVigente(usuarioActivo.id));
+  if (sesionPass) return String(sesionPass);
+  try {
+    const raw = localStorage.getItem('agenda_bio_alejandro');
+    if (raw) {
+      const b = JSON.parse(raw);
+      if (b && b.pass) return String(b.pass);
+    }
+  } catch(e) {}
+  return '';
+}
+
 function renderizarListaAdminUsuarios() {
   if (!adminUsersList) return;
   adminUsersList.innerHTML = '';
@@ -1647,40 +1661,111 @@ function renderizarListaAdminUsuarios() {
   otrosUsuarios.forEach(u => {
     const fila = document.createElement('div');
     fila.className = 'task-item';
+    fila.style.flexWrap = 'wrap';
+    fila.style.gap = '8px';
     fila.innerHTML = `
-      <div class="task-info">
+      <div class="task-info" style="flex:1; min-width:180px;">
         <span class="priority-pill pill-hora">👤 Usuario</span>
-        <span class="task-text">${escaparHTML(u.nombre)}</span>
+        <strong class="task-text">${escaparHTML(u.nombre)}</strong>
+        ${u.passwordBlanqueada ? '<span class="priority-pill pill-urgente" style="font-size:0.75rem; margin-left:6px;">🔑 Clave blanqueada</span>' : ''}
+        ${!u.tienePreguntaSeguridad ? '<small style="color:#fca5a5; font-size:0.75rem; margin-left:4px;">(Sin pregunta clave)</small>' : '<small style="color:#86efac; font-size:0.75rem; margin-left:4px;">(Con pregunta clave)</small>'}
       </div>
-      <div class="task-actions">
-        <button type="button" class="btn-delete" data-del-user="${u.id}">✕ Eliminar usuario</button>
+      <div class="task-actions" style="display:flex; gap:6px; flex-wrap:wrap;">
+        <button type="button" class="btn-secondary btn-blank-user" style="border-color:#f59e0b; color:#fbbf24; padding:6px 10px; font-size:0.82rem; font-weight:600;">
+          🔑 Blanquear contraseña
+        </button>
+        <button type="button" class="btn-delete btn-del-user" style="padding:6px 10px; font-size:0.82rem;">
+          🗑️ Eliminar usuario
+        </button>
       </div>
     `;
 
-    fila.querySelector('[data-del-user]').addEventListener('click', async () => {
-      if (!confirm(`¿Seguro que querés eliminar el usuario "${u.nombre}" y toda su agenda?`)) return;
+    const btnBlank = fila.querySelector('.btn-blank-user');
+    btnBlank.onclick = async () => {
+      if (!confirm(`¿Estás seguro de blanquear la contraseña de "${u.nombre}"?\n\nAl blanquearla, el usuario podrá restablecer su contraseña desde la pantalla de inicio ingresando su número de DNI y su pregunta clave.`)) return;
+      let passAdmin = obtenerPasswordAdminParaAcciones();
+      if (!passAdmin) {
+        passAdmin = prompt('Ingresá tu contraseña de administrador Alejandro para confirmar:') || '';
+        if (!passAdmin) return;
+      }
       try {
+        btnBlank.disabled = true;
+        btnBlank.textContent = 'Blanqueando...';
+        const res = await fetch(API_SYNC_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            accion: 'blanquear_password',
+            usuarioId: 'alejandro',
+            adminPassword: passAdmin,
+            password: passAdmin,
+            targetUsuarioId: u.id,
+            eliminarUsuarioId: u.id
+          })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          alert(`¡Contraseña de ${u.nombre} blanqueada con éxito!\n\nAhora ${u.nombre} podrá ingresar su DNI y responder su pregunta clave para crear una nueva contraseña.`);
+          listaUsuariosPublica = data.usuarios || listaUsuariosPublica;
+          renderizarListaAdminUsuarios();
+          if (typeof renderizarListaAdminEnSettings === 'function' && settingsAdminUsersList) {
+            renderizarListaAdminEnSettings(settingsAdminUsersList);
+          }
+        } else {
+          alert(data.error || 'No se pudo blanquear la contraseña');
+          btnBlank.disabled = false;
+          btnBlank.textContent = '🔑 Blanquear contraseña';
+        }
+      } catch (e) {
+        alert('Error de conexión al blanquear contraseña.');
+        btnBlank.disabled = false;
+        btnBlank.textContent = '🔑 Blanquear contraseña';
+      }
+    };
+
+    const btnDel = fila.querySelector('.btn-del-user');
+    btnDel.onclick = async () => {
+      if (!confirm(`¿Estás SEGURO de eliminar definitivamente al usuario "${u.nombre}" y todos sus datos? Esta acción no se puede deshacer.`)) return;
+      let passAdmin = obtenerPasswordAdminParaAcciones();
+      if (!passAdmin) {
+        passAdmin = prompt('Ingresá tu contraseña de administrador Alejandro para confirmar la eliminación:') || '';
+        if (!passAdmin) return;
+      }
+      try {
+        btnDel.disabled = true;
+        btnDel.textContent = 'Eliminando...';
         const res = await fetch(API_SYNC_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             accion: 'eliminar_usuario',
-            adminPassword: usuarioActivo.password,
-            targetUsuarioId: u.id
+            usuarioId: 'alejandro',
+            adminPassword: passAdmin,
+            password: passAdmin,
+            targetUsuarioId: u.id,
+            eliminarUsuarioId: u.id
           })
         });
         const data = await res.json();
         if (res.ok) {
+          alert(`Usuario "${u.nombre}" eliminado correctamente.`);
           listaUsuariosPublica = data.usuarios || listaUsuariosPublica.filter(x => x.id !== u.id);
           renderizarListaAdminUsuarios();
+          if (typeof renderizarListaAdminEnSettings === 'function' && settingsAdminUsersList) {
+            renderizarListaAdminEnSettings(settingsAdminUsersList);
+          }
           renderizarGrillaUsuarios();
         } else {
-          alert(data.error || 'No se pudo eliminar');
+          alert(data.error || 'No se pudo eliminar el usuario');
+          btnDel.disabled = false;
+          btnDel.textContent = '🗑️ Eliminar usuario';
         }
       } catch (e) {
         alert('Error de conexión al eliminar usuario.');
+        btnDel.disabled = false;
+        btnDel.textContent = '🗑️ Eliminar usuario';
       }
-    });
+    };
 
     adminUsersList.appendChild(fila);
   });
@@ -3116,6 +3201,32 @@ async function renderizarConfiguracion() {
     }
   }
 
+  // 2.1. CONTRASEÑA Y PREGUNTA CLAVE DE SEGURIDAD
+  const settingsSecQBadge = document.getElementById('settings-sec-q-badge');
+  if (settingsSecQBadge && usuarioActivo) {
+    if (usuarioActivo.tienePreguntaSeguridad) {
+      settingsSecQBadge.innerHTML = `
+        <div style="background: rgba(16, 185, 129, 0.15); border: 1px solid #10b981; border-radius: 8px; padding: 8px 12px; color: #a7f3d0; font-size: 0.85rem; display: flex; align-items: center; gap: 8px;">
+          <span>✅</span>
+          <div>
+            <strong>Pregunta clave de seguridad configurada</strong>
+            ${usuarioActivo.preguntaSeguridad ? `<br><small style="color:#d1fae5;">"${escaparHTML(usuarioActivo.preguntaSeguridad)}"</small>` : ''}
+          </div>
+        </div>
+      `;
+    } else {
+      settingsSecQBadge.innerHTML = `
+        <div style="background: rgba(245, 158, 11, 0.15); border: 1px solid #f59e0b; border-radius: 8px; padding: 8px 12px; color: #fde68a; font-size: 0.85rem; display: flex; align-items: center; gap: 8px;">
+          <span>⚠️</span>
+          <div>
+            <strong>Aún no registraste tu pregunta clave</strong>
+            <br><small style="color:#fef3c7;">Tocá "❓ Pregunta clave de recuperación" para registrarla y poder recuperar tu clave si la olvidás.</small>
+          </div>
+        </div>
+      `;
+    }
+  }
+
   // 3. NOTIFICACIONES DEL CELULAR
   const settingsPushStatus = document.getElementById('settings-push-status');
   const btnSettingsEnablePush = document.getElementById('btn-settings-enable-push');
@@ -3209,49 +3320,120 @@ async function renderizarConfiguracion() {
 function renderizarListaAdminEnSettings(cont) {
   if (!cont) return;
   cont.innerHTML = '';
-  const otros = listaUsuariosPublica.filter(u => !u.esAdmin);
+  const otros = listaUsuariosPublica.filter(u => !u.esAdmin && u.id !== 'alejandro');
   if (otros.length === 0) {
-    cont.innerHTML = '<div style="padding: 10px; color: var(--text-muted);">No hay otros usuarios creados para eliminar.</div>';
+    cont.innerHTML = '<div style="padding: 10px; color: var(--text-muted);">No hay otros usuarios creados para administrar.</div>';
     return;
   }
   otros.forEach(u => {
     const fila = document.createElement('div');
     fila.className = 'task-item';
+    fila.style.flexWrap = 'wrap';
+    fila.style.gap = '8px';
     fila.innerHTML = `
-      <div class="task-info">
+      <div class="task-info" style="flex:1; min-width:180px;">
         <span class="priority-pill pill-hora">${u.avatar || '👤'} Usuario</span>
-        <span class="task-text">${escaparHTML(u.nombre)}</span>
+        <strong class="task-text">${escaparHTML(u.nombre)}</strong>
+        ${u.passwordBlanqueada ? '<span class="priority-pill pill-urgente" style="font-size:0.75rem; margin-left:6px;">🔑 Clave blanqueada</span>' : ''}
+        ${!u.tienePreguntaSeguridad ? '<small style="color:#fca5a5; font-size:0.75rem; margin-left:4px;">(Sin pregunta clave)</small>' : '<small style="color:#86efac; font-size:0.75rem; margin-left:4px;">(Con pregunta clave)</small>'}
       </div>
-      <div class="task-actions">
-        <button type="button" class="btn-delete" data-del-user="${u.id}">🗑️ Eliminar usuario</button>
+      <div class="task-actions" style="display:flex; gap:6px; flex-wrap:wrap;">
+        <button type="button" class="btn-secondary btn-blank-user" style="border-color:#f59e0b; color:#fbbf24; padding:6px 10px; font-size:0.82rem; font-weight:600;">
+          🔑 Blanquear contraseña
+        </button>
+        <button type="button" class="btn-delete btn-del-user" style="padding:6px 10px; font-size:0.82rem;">
+          🗑️ Eliminar usuario
+        </button>
       </div>
     `;
-    const btnDel = fila.querySelector('button');
+
+    const btnBlank = fila.querySelector('.btn-blank-user');
+    btnBlank.onclick = async () => {
+      if (!confirm(`¿Estás seguro de blanquear la contraseña de "${u.nombre}"?\n\nAl blanquearla, el usuario podrá restablecer su contraseña desde la pantalla de inicio ingresando su número de DNI y su pregunta clave.`)) return;
+      let passAdmin = obtenerPasswordAdminParaAcciones();
+      if (!passAdmin) {
+        passAdmin = prompt('Ingresá tu contraseña de administrador Alejandro para confirmar:') || '';
+        if (!passAdmin) return;
+      }
+      try {
+        btnBlank.disabled = true;
+        btnBlank.textContent = 'Blanqueando...';
+        const res = await fetch(API_SYNC_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            accion: 'blanquear_password',
+            usuarioId: 'alejandro',
+            adminPassword: passAdmin,
+            password: passAdmin,
+            targetUsuarioId: u.id,
+            eliminarUsuarioId: u.id
+          })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          alert(`¡Contraseña de ${u.nombre} blanqueada con éxito!\n\nAhora ${u.nombre} podrá ingresar su DNI y responder su pregunta clave para crear una nueva contraseña.`);
+          listaUsuariosPublica = data.usuarios || listaUsuariosPublica;
+          renderizarListaAdminEnSettings(cont);
+          if (typeof renderizarListaAdminUsuarios === 'function' && adminUsersList) {
+            renderizarListaAdminUsuarios();
+          }
+        } else {
+          alert(data.error || 'No se pudo blanquear la contraseña');
+          btnBlank.disabled = false;
+          btnBlank.textContent = '🔑 Blanquear contraseña';
+        }
+      } catch (e) {
+        alert('Error de conexión al blanquear contraseña.');
+        btnBlank.disabled = false;
+        btnBlank.textContent = '🔑 Blanquear contraseña';
+      }
+    };
+
+    const btnDel = fila.querySelector('.btn-del-user');
     btnDel.onclick = async () => {
       if (!confirm(`¿Estás SEGURO de eliminar definitivamente al usuario "${u.nombre}" y todos sus datos? Esta acción no se puede deshacer.`)) return;
+      let passAdmin = obtenerPasswordAdminParaAcciones();
+      if (!passAdmin) {
+        passAdmin = prompt('Ingresá tu contraseña de administrador Alejandro para confirmar la eliminación:') || '';
+        if (!passAdmin) return;
+      }
       try {
+        btnDel.disabled = true;
+        btnDel.textContent = 'Eliminando...';
         const res = await fetch(API_SYNC_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             accion: 'eliminar_usuario',
             usuarioId: 'alejandro',
-            password: usuarioActivo.password,
+            adminPassword: passAdmin,
+            password: passAdmin,
+            targetUsuarioId: u.id,
             eliminarUsuarioId: u.id
           })
         });
         const data = await res.json();
         if (res.ok) {
+          alert(`Usuario "${u.nombre}" eliminado correctamente.`);
           listaUsuariosPublica = data.usuarios || listaUsuariosPublica.filter(x => x.id !== u.id);
           renderizarListaAdminEnSettings(cont);
+          if (typeof renderizarListaAdminUsuarios === 'function' && adminUsersList) {
+            renderizarListaAdminUsuarios();
+          }
           renderizarGrillaUsuarios();
         } else {
           alert(data.error || 'No se pudo eliminar el usuario');
+          btnDel.disabled = false;
+          btnDel.textContent = '🗑️ Eliminar usuario';
         }
       } catch (e) {
         alert('Error de conexión al eliminar usuario.');
+        btnDel.disabled = false;
+        btnDel.textContent = '🗑️ Eliminar usuario';
       }
     };
+
     cont.appendChild(fila);
   });
 }
@@ -7007,6 +7189,9 @@ async function iniciarSesionConDni() {
         dniLoginError.textContent = data.error || 'DNI o contraseña incorrectos';
         dniLoginError.classList.remove('hidden');
       }
+      if (data.blanqueada && typeof abrirRecuperacionPassword === 'function') {
+        abrirRecuperacionPassword(dni);
+      }
       return;
     }
 
@@ -7019,6 +7204,8 @@ async function iniciarSesionConDni() {
       dni: data.dni || u.dni || null,
       esAdmin: Boolean(u.esAdmin),
       avatar: u.esAdmin ? '👑' : (u.avatar || '👤'),
+      tienePreguntaSeguridad: Boolean(data.tienePreguntaSeguridad || u.tienePreguntaSeguridad),
+      preguntaSeguridad: data.preguntaSeguridad || u.preguntaSeguridad || null,
       password: pass,
       tiempoBloqueoMin: data.tiempoBloqueoMin || Number(localStorage.getItem('agenda_bloqueo_' + u.id)) || 60
     };
@@ -7275,6 +7462,543 @@ if (btnLogoutDevice) {
     }
   });
 }
+
+// ==========================================
+// RECUPERACIÓN / RESTABLECIMIENTO DE CONTRASEÑA CON PREGUNTA CLAVE
+// ==========================================
+const btnOpenRecoverPass = document.getElementById('btn-open-recover-pass');
+const boxRecoverPass = document.getElementById('box-recover-pass');
+const inputRecoverDni = document.getElementById('input-recover-dni');
+const btnCheckRecoverDni = document.getElementById('btn-check-recover-dni');
+const boxRecoverStep2 = document.getElementById('box-recover-step2');
+const labelRecoverQuestion = document.getElementById('label-recover-question');
+const groupRecoverAnswer = document.getElementById('group-recover-answer');
+const inputRecoverAnswer = document.getElementById('input-recover-answer');
+const boxRecoverSetupQuestion = document.getElementById('box-recover-setup-question');
+const inputRecoverSetupQ = document.getElementById('input-recover-setup-q');
+const inputRecoverSetupA = document.getElementById('input-recover-setup-a');
+const inputRecoverNewPass = document.getElementById('input-recover-new-pass');
+const inputRecoverRepeatPass = document.getElementById('input-recover-repeat-pass');
+const btnSubmitRecoverPass = document.getElementById('btn-submit-recover-pass');
+const btnCancelRecoverPass = document.getElementById('btn-cancel-recover-pass');
+const recoverPassError = document.getElementById('recover-pass-error');
+const recoverPassSuccess = document.getElementById('recover-pass-success');
+
+let usuarioRecuperando = null;
+
+function abrirRecuperacionPassword(dniPrellenado) {
+  if (!boxRecoverPass) return;
+  boxRecoverPass.classList.remove('hidden');
+  if (recoverPassError) recoverPassError.classList.add('hidden');
+  if (recoverPassSuccess) recoverPassSuccess.classList.add('hidden');
+  if (boxRecoverStep2) boxRecoverStep2.classList.add('hidden');
+  if (btnCheckRecoverDni) btnCheckRecoverDni.classList.remove('hidden');
+  if (btnSubmitRecoverPass) btnSubmitRecoverPass.classList.add('hidden');
+
+  if (inputRecoverDni) {
+    inputRecoverDni.value = dniPrellenado || (inputLoginDni ? inputLoginDni.value.trim() : '');
+    inputRecoverDni.focus();
+  }
+}
+
+if (btnOpenRecoverPass) {
+  btnOpenRecoverPass.addEventListener('click', () => {
+    if (boxRecoverPass) {
+      if (boxRecoverPass.classList.contains('hidden')) {
+        abrirRecuperacionPassword();
+      } else {
+        boxRecoverPass.classList.add('hidden');
+      }
+    }
+  });
+}
+
+if (btnCancelRecoverPass) {
+  btnCancelRecoverPass.addEventListener('click', () => {
+    if (boxRecoverPass) boxRecoverPass.classList.add('hidden');
+  });
+}
+
+if (btnCheckRecoverDni) {
+  btnCheckRecoverDni.addEventListener('click', async () => {
+    const rawDni = inputRecoverDni ? inputRecoverDni.value.trim() : '';
+    const dniLimpio = rawDni.replace(/\D/g, '');
+    if (recoverPassError) recoverPassError.classList.add('hidden');
+
+    if (!rawDni) {
+      if (recoverPassError) {
+        recoverPassError.textContent = 'Por favor ingresá tu número de DNI';
+        recoverPassError.classList.remove('hidden');
+      }
+      if (inputRecoverDni) inputRecoverDni.focus();
+      return;
+    }
+
+    btnCheckRecoverDni.disabled = true;
+    btnCheckRecoverDni.textContent = 'Consultando...';
+
+    try {
+      const res = await fetch(API_SYNC_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          accion: 'obtener_pregunta_seguridad',
+          dni: dniLimpio || rawDni
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        if (recoverPassError) {
+          recoverPassError.textContent = data.error || 'No se encontró ningún usuario con ese DNI';
+          recoverPassError.classList.remove('hidden');
+        }
+        return;
+      }
+
+      usuarioRecuperando = data;
+
+      if (boxRecoverStep2) boxRecoverStep2.classList.remove('hidden');
+      if (btnCheckRecoverDni) btnCheckRecoverDni.classList.add('hidden');
+      if (btnSubmitRecoverPass) btnSubmitRecoverPass.classList.remove('hidden');
+
+      if (data.tienePregunta) {
+        if (labelRecoverQuestion) labelRecoverQuestion.textContent = data.preguntaSeguridad;
+        if (groupRecoverAnswer) groupRecoverAnswer.classList.remove('hidden');
+        if (boxRecoverSetupQuestion) boxRecoverSetupQuestion.classList.add('hidden');
+        if (inputRecoverAnswer) {
+          inputRecoverAnswer.value = '';
+          inputRecoverAnswer.focus();
+        }
+      } else {
+        if (labelRecoverQuestion) labelRecoverQuestion.textContent = 'Aún no tenías pregunta clave registrada. Podés crear una ahora junto a tu nueva clave.';
+        if (groupRecoverAnswer) groupRecoverAnswer.classList.add('hidden');
+        if (boxRecoverSetupQuestion) boxRecoverSetupQuestion.classList.remove('hidden');
+        if (inputRecoverSetupQ) inputRecoverSetupQ.focus();
+      }
+    } catch(e) {
+      if (recoverPassError) {
+        recoverPassError.textContent = 'Error de conexión. Intentá nuevamente.';
+        recoverPassError.classList.remove('hidden');
+      }
+    } finally {
+      if (btnCheckRecoverDni) {
+        btnCheckRecoverDni.disabled = false;
+        btnCheckRecoverDni.textContent = 'Continuar';
+      }
+    }
+  });
+}
+
+if (btnSubmitRecoverPass) {
+  btnSubmitRecoverPass.addEventListener('click', async () => {
+    const rawDni = inputRecoverDni ? inputRecoverDni.value.trim() : '';
+    const dniLimpio = rawDni.replace(/\D/g, '') || rawDni;
+    const resp = inputRecoverAnswer ? inputRecoverAnswer.value.trim() : '';
+    const newPass = inputRecoverNewPass ? inputRecoverNewPass.value.trim() : '';
+    const repeatPass = inputRecoverRepeatPass ? inputRecoverRepeatPass.value.trim() : '';
+
+    const setupQ = inputRecoverSetupQ ? inputRecoverSetupQ.value.trim() : '';
+    const setupA = inputRecoverSetupA ? inputRecoverSetupA.value.trim() : '';
+
+    if (recoverPassError) recoverPassError.classList.add('hidden');
+
+    if (usuarioRecuperando && usuarioRecuperando.tienePregunta && !resp) {
+      if (recoverPassError) {
+        recoverPassError.textContent = 'Por favor escribí la respuesta a tu pregunta clave';
+        recoverPassError.classList.remove('hidden');
+      }
+      if (inputRecoverAnswer) inputRecoverAnswer.focus();
+      return;
+    }
+
+    if (usuarioRecuperando && !usuarioRecuperando.tienePregunta && (!setupQ || !setupA)) {
+      if (recoverPassError) {
+        recoverPassError.textContent = 'Por favor completá tu nueva pregunta y respuesta de seguridad';
+        recoverPassError.classList.remove('hidden');
+      }
+      return;
+    }
+
+    if (!newPass || newPass.length < 3) {
+      if (recoverPassError) {
+        recoverPassError.textContent = 'La nueva contraseña debe tener al menos 3 caracteres';
+        recoverPassError.classList.remove('hidden');
+      }
+      if (inputRecoverNewPass) inputRecoverNewPass.focus();
+      return;
+    }
+
+    if (newPass !== repeatPass) {
+      if (recoverPassError) {
+        recoverPassError.textContent = 'Las contraseñas no coinciden. Verificalas.';
+        recoverPassError.classList.remove('hidden');
+      }
+      if (inputRecoverRepeatPass) inputRecoverRepeatPass.focus();
+      return;
+    }
+
+    btnSubmitRecoverPass.disabled = true;
+    btnSubmitRecoverPass.textContent = 'Guardando...';
+
+    try {
+      const res = await fetch(API_SYNC_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          accion: 'restablecer_password',
+          dni: dniLimpio,
+          respuestaSeguridad: resp,
+          nuevaPreguntaSeguridad: setupQ,
+          nuevaRespuestaSeguridad: setupA,
+          nuevaPassword: newPass
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        if (recoverPassError) {
+          recoverPassError.textContent = data.error || 'No se pudo restablecer la contraseña';
+          recoverPassError.classList.remove('hidden');
+        }
+        return;
+      }
+
+      if (recoverPassSuccess) {
+        recoverPassSuccess.textContent = '✓ ¡Contraseña restablecida con éxito! Ingresando a la agenda...';
+        recoverPassSuccess.classList.remove('hidden');
+      }
+
+      if (inputLoginDni) inputLoginDni.value = rawDni;
+      if (inputLoginDniPass) inputLoginDniPass.value = newPass;
+
+      setTimeout(() => {
+        if (boxRecoverPass) boxRecoverPass.classList.add('hidden');
+        iniciarSesionConDni();
+      }, 1000);
+
+    } catch(e) {
+      if (recoverPassError) {
+        recoverPassError.textContent = 'Error de conexión al restablecer contraseña.';
+        recoverPassError.classList.remove('hidden');
+      }
+    } finally {
+      if (btnSubmitRecoverPass) {
+        btnSubmitRecoverPass.disabled = false;
+        btnSubmitRecoverPass.textContent = 'Guardar contraseña';
+      }
+    }
+  });
+}
+
+// ==========================================
+// CAMBIAR CONTRASEÑA EN CONFIGURACIÓN
+// ==========================================
+const btnToggleChangePass = document.getElementById('btn-toggle-change-pass');
+const boxChangePasswordForm = document.getElementById('box-change-password-form');
+const btnCancelChangePass = document.getElementById('btn-cancel-change-pass');
+const btnSubmitChangePass = document.getElementById('btn-submit-change-pass');
+const inputChangePassCurrent = document.getElementById('input-change-pass-current');
+const inputChangePassNew = document.getElementById('input-change-pass-new');
+const inputChangePassRepeat = document.getElementById('input-change-pass-repeat');
+const changePassError = document.getElementById('change-pass-error');
+const changePassSuccess = document.getElementById('change-pass-success');
+
+if (btnToggleChangePass) {
+  btnToggleChangePass.addEventListener('click', () => {
+    if (boxChangePasswordForm) {
+      boxChangePasswordForm.classList.toggle('hidden');
+      if (changePassError) changePassError.classList.add('hidden');
+      if (changePassSuccess) changePassSuccess.classList.add('hidden');
+      if (!boxChangePasswordForm.classList.contains('hidden') && inputChangePassCurrent) {
+        inputChangePassCurrent.value = '';
+        if (inputChangePassNew) inputChangePassNew.value = '';
+        if (inputChangePassRepeat) inputChangePassRepeat.value = '';
+        inputChangePassCurrent.focus();
+      }
+    }
+    const secBox = document.getElementById('box-security-question-form');
+    if (secBox) secBox.classList.add('hidden');
+  });
+}
+
+if (btnCancelChangePass) {
+  btnCancelChangePass.addEventListener('click', () => {
+    if (boxChangePasswordForm) boxChangePasswordForm.classList.add('hidden');
+  });
+}
+
+if (btnSubmitChangePass) {
+  btnSubmitChangePass.addEventListener('click', async () => {
+    if (!usuarioActivo) return;
+    const curPass = inputChangePassCurrent ? inputChangePassCurrent.value.trim() : '';
+    const newPass = inputChangePassNew ? inputChangePassNew.value.trim() : '';
+    const repPass = inputChangePassRepeat ? inputChangePassRepeat.value.trim() : '';
+
+    if (changePassError) changePassError.classList.add('hidden');
+    if (changePassSuccess) changePassSuccess.classList.add('hidden');
+
+    if (!curPass) {
+      if (changePassError) {
+        changePassError.textContent = 'Por favor ingresá tu contraseña anterior';
+        changePassError.classList.remove('hidden');
+      }
+      if (inputChangePassCurrent) inputChangePassCurrent.focus();
+      return;
+    }
+
+    if (!newPass || newPass.length < 3) {
+      if (changePassError) {
+        changePassError.textContent = 'La nueva contraseña debe tener al menos 3 caracteres';
+        changePassError.classList.remove('hidden');
+      }
+      if (inputChangePassNew) inputChangePassNew.focus();
+      return;
+    }
+
+    if (newPass !== repPass) {
+      if (changePassError) {
+        changePassError.textContent = 'Las nuevas contraseñas no coinciden';
+        changePassError.classList.remove('hidden');
+      }
+      if (inputChangePassRepeat) inputChangePassRepeat.focus();
+      return;
+    }
+
+    btnSubmitChangePass.disabled = true;
+    btnSubmitChangePass.textContent = 'Guardando...';
+
+    try {
+      const res = await fetch(API_SYNC_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          accion: 'cambiar_password',
+          usuarioId: usuarioActivo.id,
+          passwordAnterior: curPass,
+          nuevaPassword: newPass
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        if (changePassError) {
+          changePassError.textContent = data.error || 'No se pudo cambiar la contraseña';
+          changePassError.classList.remove('hidden');
+        }
+        return;
+      }
+
+      usuarioActivo.password = newPass;
+
+      // Actualizar sesión guardada
+      const sesiones = leerSesionesGuardadas();
+      if (sesiones[usuarioActivo.id]) {
+        sesiones[usuarioActivo.id].password = newPass;
+        sesiones[usuarioActivo.id].ultimaActividad = Date.now();
+        localStorage.setItem(STORAGE_SESSIONS_KEY, JSON.stringify(sesiones));
+      }
+
+      // Actualizar huella biométrica local si está activada
+      try {
+        const bioRaw = localStorage.getItem('agenda_bio_' + usuarioActivo.id);
+        if (bioRaw) {
+          const bioObj = JSON.parse(bioRaw);
+          if (bioObj) {
+            bioObj.pass = newPass;
+            localStorage.setItem('agenda_bio_' + usuarioActivo.id, JSON.stringify(bioObj));
+          }
+        }
+      } catch(e) {}
+
+      if (changePassSuccess) {
+        changePassSuccess.textContent = '✓ ¡Contraseña cambiada exitosamente!';
+        changePassSuccess.classList.remove('hidden');
+      }
+
+      setTimeout(() => {
+        if (boxChangePasswordForm) boxChangePasswordForm.classList.add('hidden');
+      }, 2000);
+
+    } catch(e) {
+      if (changePassError) {
+        changePassError.textContent = 'Error de conexión al cambiar la contraseña.';
+        changePassError.classList.remove('hidden');
+      }
+    } finally {
+      if (btnSubmitChangePass) {
+        btnSubmitChangePass.disabled = false;
+        btnSubmitChangePass.textContent = 'Guardar contraseña';
+      }
+    }
+  });
+}
+
+// ==========================================
+// PREGUNTA CLAVE DE SEGURIDAD EN CONFIGURACIÓN
+// ==========================================
+const btnToggleSecurityQ = document.getElementById('btn-toggle-security-q');
+const boxSecurityQuestionForm = document.getElementById('box-security-question-form');
+const selectSecurityQ = document.getElementById('select-security-q');
+const boxCustomSecurityQ = document.getElementById('box-custom-security-q');
+const inputCustomSecurityQ = document.getElementById('input-custom-security-q');
+const inputSecurityA = document.getElementById('input-security-a');
+const inputSecurityConfirmPass = document.getElementById('input-security-confirm-pass');
+const btnCancelSecurityQ = document.getElementById('btn-cancel-security-q');
+const btnSubmitSecurityQ = document.getElementById('btn-submit-security-q');
+const securityQError = document.getElementById('security-q-error');
+const securityQSuccess = document.getElementById('security-q-success');
+
+if (btnToggleSecurityQ) {
+  btnToggleSecurityQ.addEventListener('click', () => {
+    if (boxSecurityQuestionForm) {
+      boxSecurityQuestionForm.classList.toggle('hidden');
+      if (securityQError) securityQError.classList.add('hidden');
+      if (securityQSuccess) securityQSuccess.classList.add('hidden');
+      if (!boxSecurityQuestionForm.classList.contains('hidden')) {
+        if (usuarioActivo && usuarioActivo.preguntaSeguridad && selectSecurityQ) {
+          let found = false;
+          for (let opt of selectSecurityQ.options) {
+            if (opt.value === usuarioActivo.preguntaSeguridad) {
+              selectSecurityQ.value = opt.value;
+              found = true;
+              break;
+            }
+          }
+          if (!found) {
+            selectSecurityQ.value = 'otra';
+            if (boxCustomSecurityQ) boxCustomSecurityQ.classList.remove('hidden');
+            if (inputCustomSecurityQ) inputCustomSecurityQ.value = usuarioActivo.preguntaSeguridad;
+          }
+        }
+      }
+    }
+    if (boxChangePasswordForm) boxChangePasswordForm.classList.add('hidden');
+  });
+}
+
+if (selectSecurityQ) {
+  selectSecurityQ.addEventListener('change', () => {
+    if (boxCustomSecurityQ) {
+      if (selectSecurityQ.value === 'otra') {
+        boxCustomSecurityQ.classList.remove('hidden');
+        if (inputCustomSecurityQ) inputCustomSecurityQ.focus();
+      } else {
+        boxCustomSecurityQ.classList.add('hidden');
+      }
+    }
+  });
+}
+
+if (btnCancelSecurityQ) {
+  btnCancelSecurityQ.addEventListener('click', () => {
+    if (boxSecurityQuestionForm) boxSecurityQuestionForm.classList.add('hidden');
+  });
+}
+
+if (btnSubmitSecurityQ) {
+  btnSubmitSecurityQ.addEventListener('click', async () => {
+    if (!usuarioActivo) return;
+    let preg = selectSecurityQ ? selectSecurityQ.value : '';
+    if (preg === 'otra') {
+      preg = inputCustomSecurityQ ? inputCustomSecurityQ.value.trim() : '';
+    }
+    const resp = inputSecurityA ? inputSecurityA.value.trim() : '';
+    const pass = inputSecurityConfirmPass ? inputSecurityConfirmPass.value.trim() : '';
+
+    if (securityQError) securityQError.classList.add('hidden');
+    if (securityQSuccess) securityQSuccess.classList.add('hidden');
+
+    if (!preg) {
+      if (securityQError) {
+        securityQError.textContent = 'Por favor elegí o escribí tu pregunta de seguridad';
+        securityQError.classList.remove('hidden');
+      }
+      return;
+    }
+
+    if (!resp) {
+      if (securityQError) {
+        securityQError.textContent = 'Por favor escribí tu respuesta a la pregunta clave';
+        securityQError.classList.remove('hidden');
+      }
+      if (inputSecurityA) inputSecurityA.focus();
+      return;
+    }
+
+    if (!pass && usuarioActivo.password) {
+      if (securityQError) {
+        securityQError.textContent = 'Por favor confirmá con tu contraseña actual';
+        securityQError.classList.remove('hidden');
+      }
+      if (inputSecurityConfirmPass) inputSecurityConfirmPass.focus();
+      return;
+    }
+
+    btnSubmitSecurityQ.disabled = true;
+    btnSubmitSecurityQ.textContent = 'Guardando...';
+
+    try {
+      const res = await fetch(API_SYNC_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          accion: 'guardar_pregunta_seguridad',
+          usuarioId: usuarioActivo.id,
+          password: pass || usuarioActivo.password || '',
+          preguntaSeguridad: preg,
+          respuestaSeguridad: resp
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        if (securityQError) {
+          securityQError.textContent = data.error || 'No se pudo guardar la pregunta clave';
+          securityQError.classList.remove('hidden');
+        }
+        return;
+      }
+
+      usuarioActivo.tienePreguntaSeguridad = true;
+      usuarioActivo.preguntaSeguridad = preg;
+
+      renderizarConfiguracion();
+
+      if (securityQSuccess) {
+        securityQSuccess.textContent = '✓ ¡Pregunta clave guardada con éxito!';
+        securityQSuccess.classList.remove('hidden');
+      }
+
+      setTimeout(() => {
+        if (boxSecurityQuestionForm) boxSecurityQuestionForm.classList.add('hidden');
+      }, 2000);
+
+    } catch(e) {
+      if (securityQError) {
+        securityQError.textContent = 'Error de conexión al guardar la pregunta clave.';
+        securityQError.classList.remove('hidden');
+      }
+    } finally {
+      if (btnSubmitSecurityQ) {
+        btnSubmitSecurityQ.disabled = false;
+        btnSubmitSecurityQ.textContent = 'Guardar pregunta clave';
+      }
+    }
+  });
+}
+
+// Botones de mostrar/ocultar contraseña (ojos)
+function togglePasswordInputVisibility(id) {
+  const el = document.getElementById(id);
+  if (el) el.type = el.type === 'password' ? 'text' : 'password';
+}
+['btn-toggle-rec-pass1:input-recover-new-pass', 'btn-toggle-rec-pass2:input-recover-repeat-pass',
+ 'btn-toggle-chg-cur:input-change-pass-current', 'btn-toggle-chg-new:input-change-pass-new',
+ 'btn-toggle-chg-rep:input-change-pass-repeat', 'btn-toggle-sec-pass:input-security-confirm-pass'].forEach(pair => {
+  const [btnId, inpId] = pair.split(':');
+  const b = document.getElementById(btnId);
+  if (b) b.addEventListener('click', () => togglePasswordInputVisibility(inpId));
+});
 
 // ==========================================
 // INICIALIZACIÓN
