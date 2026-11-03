@@ -2937,3 +2937,34 @@ body {
   border-color: #3b82f6;
 }
 
+.partner-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 9999px;
+  background: #1e293b;
+  border: 1.5px solid #475569;
+  color: #e2e8f0;
+  cursor: pointer;
+  font-size: 0.88rem;
+  font-weight: 500;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+.partner-chip:hover {
+  border-color: #60a5fa;
+  background: #334155;
+}
+.partner-chip.active {
+  background: #1d4ed8;
+  border-color: #60a5fa;
+  color: #ffffff;
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.4);
+}
+.partner-chip .chip-check {
+  font-size: 0.8rem;
+  font-weight: bold;
+}
+
+
