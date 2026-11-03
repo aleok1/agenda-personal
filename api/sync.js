@@ -244,6 +244,7 @@ export default async function handler(req, res) {
         superCompartidoCon: u.superCompartidoCon || [],
         yaConfiguroCasa: Boolean(u.yaConfiguroCasa),
         tiempoBloqueoMin: u.tiempoBloqueoMin || 60,
+        tnaConfig: u.tnaConfig || null,
         borrados: u.borrados || [],
         usuarios: resumenPublicoUsuarios(db.usuarios)
       });
@@ -341,6 +342,7 @@ export default async function handler(req, res) {
           superCompartidoCon: u.superCompartidoCon || [],
           yaConfiguroCasa: Boolean(u.yaConfiguroCasa),
           tiempoBloqueoMin: u.tiempoBloqueoMin || 60,
+          tnaConfig: u.tnaConfig || null,
           borrados: u.borrados || [],
           usuarios: resumenPublicoUsuarios(db.usuarios)
         });
@@ -611,6 +613,7 @@ export default async function handler(req, res) {
           superCompartidoCon: u.superCompartidoCon || [],
           yaConfiguroCasa: Boolean(u.yaConfiguroCasa),
           tiempoBloqueoMin: u.tiempoBloqueoMin || 60,
+          tnaConfig: u.tnaConfig || null,
           borrados: u.borrados || [],
           usuarios: resumenPublicoUsuarios(db.usuarios)
         });
@@ -641,6 +644,7 @@ export default async function handler(req, res) {
           superCompartidoCon: u.superCompartidoCon || [],
           yaConfiguroCasa: Boolean(u.yaConfiguroCasa),
           tiempoBloqueoMin: u.tiempoBloqueoMin || 60,
+          tnaConfig: u.tnaConfig || null,
           borrados: u.borrados || [],
           usuarios: resumenPublicoUsuarios(db.usuarios)
         });
@@ -1410,6 +1414,9 @@ export default async function handler(req, res) {
       if (body.tiempoBloqueoMin !== undefined) {
         u.tiempoBloqueoMin = Number(body.tiempoBloqueoMin) || 60;
       }
+      if (body.tnaConfig !== undefined) {
+        u.tnaConfig = body.tnaConfig;
+      }
       if (!u.esAdmin && body.avatar && body.avatar !== '👑') {
         u.avatar = String(body.avatar);
       }
@@ -1472,6 +1479,7 @@ export default async function handler(req, res) {
         deudores: u.deudores || [],
         yoDebo: u.yoDebo || [],
         superCompartidoCon: u.superCompartidoCon,
+        tnaConfig: u.tnaConfig || null,
         borrados: u.borrados,
         usuarios: resumenPublicoUsuarios(db.usuarios)
       });
