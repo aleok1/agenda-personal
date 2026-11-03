@@ -8,11 +8,11 @@
   <link rel="icon" type="image/svg+xml" href="logo.svg">
   <link rel="apple-touch-icon" href="logo.svg">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="styles.css?v=20261102_10">
+  <link rel="stylesheet" href="styles.css?v=20261102_11">
   <!-- ESCUDO DE DIAGNÓSTICO TEMPRANO Y CAPTURA DE ERRORES PÚBLICOS -->
   <script>
     (function() {
-      window.__APP_VERSION = '20261102_10';
+      window.__APP_VERSION = '20261102_11';
       window.__ERRORES_APP = [];
 
       function copiarTexto(texto) {
@@ -916,35 +916,116 @@
         </button>
       </div>
 
-      <div class="wallet-balances-grid">
-        <div class="balance-card balance-efectivo">
-          <div class="balance-label">💵 Dinero Disponible en Efectivo</div>
+      <!-- BARRA DE CONFIGURACIÓN TNA AUTOMÁTICO (SEGÚN BOCETO) -->
+      <div class="wallet-tna-card" id="wallet-tna-card">
+        <div class="wallet-tna-header" id="wallet-tna-header-toggle">
+          <div class="wallet-tna-header-left">
+            <div class="wallet-tna-title-row">
+              <span class="wallet-tna-badge-icon">📈</span>
+              <strong style="color: #38bdf8; font-size: 0.95rem;">Billetera Virtual · TNA Automático</strong>
+              <span id="wallet-tna-status-pill" class="badge-tag" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; font-size: 0.75rem; padding: 2px 8px; border-radius: 6px;">Inactivo</span>
+            </div>
+            <div class="wallet-tna-subtitle" id="wallet-tna-subtitle">
+              (Aclaración y modificación solo si toco en ella)
+            </div>
+          </div>
+          <div class="wallet-tna-header-right" style="display:flex;align-items:center;gap:10px;">
+            <label class="switch-toggle" title="Activar/Desactivar TNA Automático" onclick="event.stopPropagation();">
+              <input type="checkbox" id="chk-tna-active">
+              <span class="slider round"></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- PANEL DESPLEGABLE DE CONFIGURACIÓN Y MODIFICACIÓN TNA -->
+        <div id="wallet-tna-settings-box" class="wallet-tna-settings-box hidden">
+          <div class="wallet-tna-tip">
+            💡 <strong>Rendimiento diario:</strong> Si está activo, día a día se acredita automáticamente el rendimiento estimado según tu saldo en Billetera Virtual bajo el concepto <em>"Rendimiento estimado app"</em>.
+          </div>
+
+          <label style="font-size: 0.82rem; font-weight: 700; color: #cbd5e1; display: block; margin-bottom: 6px;">
+            1. Elegí tu billetera virtual:
+          </label>
+          <div class="wallet-tna-chips-grid" id="wallet-tna-chips-grid">
+            <button type="button" class="tna-chip active" data-wallet="mercadopago" data-default-tna="37.0">
+              <span style="font-size:1.1rem;">💙</span>
+              <div>
+                <div style="font-weight:700;">Mercado Pago</div>
+                <div style="font-size:0.72rem;opacity:0.8;">Fondo (~37% TNA)</div>
+              </div>
+            </button>
+            <button type="button" class="tna-chip" data-wallet="naranjax" data-default-tna="42.0">
+              <span style="font-size:1.1rem;">🧡</span>
+              <div>
+                <div style="font-weight:700;">Naranja X</div>
+                <div style="font-size:0.72rem;opacity:0.8;">Cta Remunerada (~42% TNA)</div>
+              </div>
+            </button>
+            <button type="button" class="tna-chip" data-wallet="uala" data-default-tna="38.0">
+              <span style="font-size:1.1rem;">💳</span>
+              <div>
+                <div style="font-weight:700;">Ualá</div>
+                <div style="font-size:0.72rem;opacity:0.8;">Cta Remunerada (~38% TNA)</div>
+              </div>
+            </button>
+          </div>
+
+          <div style="display: flex; gap: 12px; align-items: flex-end; margin-top: 12px; flex-wrap: wrap;">
+            <div class="form-group" style="flex: 1; min-width: 140px; margin-bottom: 0;">
+              <label for="input-wallet-tna-rate" style="font-size: 0.8rem; font-weight: 700; color: #cbd5e1;">
+                2. TNA Anual (%) editable:
+              </label>
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <input type="number" id="input-wallet-tna-rate" placeholder="37.0" step="0.1" min="0" max="200" style="padding: 8px 10px; font-weight: 700; font-size: 1rem; color: #38bdf8;">
+                <span style="font-weight: 700; color: #94a3b8;">%</span>
+              </div>
+            </div>
+            <button type="button" id="btn-save-tna-config" class="btn-primary" style="padding: 9px 16px; font-size: 0.88rem; height: 42px;">
+              💾 Guardar cambios
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- SALDOS COMPACTOS Y ORDENADOS EN 2 COLUMNAS (EFECTIVO Y VIRTUAL) -->
+      <div class="wallet-balances-grid compact">
+        <div class="balance-card compact balance-efectivo">
+          <div class="balance-label">💵 Saldo Efectivo</div>
           <div class="balance-amount" id="balance-efectivo-val">$ 0</div>
         </div>
-        <div class="balance-card balance-virtual">
-          <div class="balance-label">📱 Dinero Disponible en Billetera Virtual</div>
+        <div class="balance-card compact balance-virtual">
+          <div class="balance-label">📱 Saldo Virtual</div>
           <div class="balance-amount" id="balance-virtual-val">$ 0</div>
         </div>
       </div>
 
-      <div class="wallet-buttons-grid">
-        <button type="button" class="wallet-action-btn btn-sueldo" data-wallet-type="sueldo">
+      <!-- BOTONES DE ACCIÓN ORGANIZADOS SEGÚN EL BOCETO -->
+      <div class="wallet-actions-layout">
+        <button type="button" class="wallet-action-btn btn-sueldo full-width" data-wallet-type="sueldo">
           <span class="wallet-btn-icon">💼</span>
-          <span class="wallet-btn-title">Sueldo</span>
-          <span class="wallet-btn-sub">Cargar ingreso mensual</span>
+          <div class="wallet-btn-texts">
+            <span class="wallet-btn-title">Ingreso sueldo</span>
+            <span class="wallet-btn-sub">Cargar ingreso mensual</span>
+          </div>
         </button>
 
-        <button type="button" class="wallet-action-btn btn-ingreso" data-wallet-type="ingreso">
-          <span class="wallet-btn-icon">➕</span>
-          <span class="wallet-btn-title">Ingresos corrientes</span>
-          <span class="wallet-btn-sub">Sumar un ingreso extra</span>
-        </button>
+        <div class="wallet-actions-subgrid">
+          <button type="button" class="wallet-action-btn btn-gasto" data-wallet-type="gasto">
+            <span class="wallet-btn-icon">➖</span>
+            <div class="wallet-btn-texts">
+              <span class="wallet-btn-title">Gasto corriente</span>
+              <span class="wallet-btn-sub">Descontar un gasto</span>
+            </div>
+          </button>
 
-        <button type="button" class="wallet-action-btn btn-gasto" data-wallet-type="gasto">
-          <span class="wallet-btn-icon">➖</span>
-          <span class="wallet-btn-title">Gasto corriente</span>
-          <span class="wallet-btn-sub">Descontar un gasto</span>
-        </button>
+          <button type="button" class="wallet-action-btn btn-ingreso" data-wallet-type="ingreso">
+            <span class="wallet-btn-icon">➕</span>
+            <div class="wallet-btn-texts">
+              <span class="wallet-btn-title">Ingreso corriente</span>
+              <span class="wallet-btn-sub">Sumar un ingreso</span>
+            </div>
+          </button>
+        </div>
       </div>
 
       <div id="wallet-form-box" class="task-form-box hidden">
@@ -2077,6 +2158,6 @@
     </section>
   </main>
 
-  <script src="app.js?v=20261102_10"></script>
+  <script src="app.js?v=20261102_11"></script>
 </body>
 </html>
