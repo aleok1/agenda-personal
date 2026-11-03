@@ -3,16 +3,19 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <meta name="theme-color" content="#059669">
   <title>Agenda Familiar</title>
   <link rel="icon" type="image/svg+xml" href="logo.svg">
   <link rel="apple-touch-icon" href="logo.svg">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="styles.css?v=20261102_12">
+  <link rel="stylesheet" href="styles.css?v=20261103_01">
   <!-- ESCUDO DE DIAGNÓSTICO TEMPRANO Y CAPTURA DE ERRORES PÚBLICOS -->
   <script>
     (function() {
-      window.__APP_VERSION = '20261102_12';
+      window.__APP_VERSION = '20261103_01';
       window.__ERRORES_APP = [];
 
       function copiarTexto(texto) {
@@ -215,7 +218,7 @@
           <h2 id="view-users-heading">🔐 Ingreso a la Agenda Familiar</h2>
           <p class="subtitle-text" id="view-users-subtitle">Ingresá tu DNI y contraseña privada para acceder a tu agenda</p>
         </div>
-        <button id="btn-new-user-toggle" class="btn-add-plus" style="display:none;">
+        <button id="btn-new-user-toggle" class="btn-add-plus" style="display:inline-flex; align-items:center; gap:6px;">
           <span class="plus-symbol">+</span> Nuevo usuario
         </button>
       </div>
@@ -226,28 +229,31 @@
           <span>👤</span> Iniciar sesión
         </h3>
         <p class="subtitle-text" style="margin-bottom: 16px; font-size: 0.88rem;">
-          Ingresá tu número de DNI y tu contraseña privada:
+          Ingresá tu número de DNI o tu nombre de usuario y tu contraseña privada:
         </p>
         <div class="form-group" style="margin-bottom: 14px;">
-          <label for="input-login-dni">Tu DNI o Usuario</label>
+          <label for="input-login-dni">Usuario o DNI</label>
           <input type="text" id="input-login-dni" placeholder="Ingresá tu DNI (o tu nombre)..." autocomplete="username">
         </div>
         <div class="form-group" style="margin-bottom: 14px;">
-          <label for="input-login-dni-pass">Tu Contraseña</label>
+          <label for="input-login-dni-pass">Contraseña</label>
           <div class="password-wrapper">
             <input type="password" id="input-login-dni-pass" placeholder="Tu contraseña privada..." autocomplete="current-password">
             <button type="button" id="btn-toggle-dni-pass" class="btn-eye" title="Mostrar u ocultar contraseña">👁️</button>
           </div>
         </div>
         <div id="dni-login-error" class="login-error hidden" style="margin-bottom: 12px;"></div>
-        <div class="form-actions" style="margin-top: 14px;">
+        <div class="form-actions" style="margin-top: 14px; display: flex; flex-direction: column; gap: 10px;">
           <button type="button" id="btn-submit-dni-login" class="btn-primary" style="width: 100%; padding: 12px; font-weight: 700; font-size: 1rem;">
             Iniciar sesión (Enter)
+          </button>
+          <button type="button" id="btn-open-create-user" class="btn-secondary" style="width: 100%; padding: 11px; font-weight: 600; font-size: 0.95rem; border: 1px dashed #38bdf8; color: #38bdf8; background: rgba(56, 189, 248, 0.08); cursor: pointer; border-radius: 8px;">
+            ➕ Crear nuevo usuario
           </button>
         </div>
 
         <!-- ENLACE PARA RESTABLECER / BLANQUEO DE CONTRASEÑA -->
-        <div style="margin-top: 10px; text-align: center;">
+        <div style="margin-top: 12px; text-align: center;">
           <button type="button" id="btn-open-recover-pass" style="background: none; border: none; color: #fbbf24; font-size: 0.85rem; text-decoration: underline; cursor: pointer; padding: 4px;">
             🔑 ¿Olvidaste tu contraseña o fue blanqueada? Restablecer aquí
           </button>
@@ -2158,6 +2164,6 @@
     </section>
   </main>
 
-  <script src="app.js?v=20261102_12"></script>
+  <script src="app.js?v=20261103_01"></script>
 </body>
 </html>
