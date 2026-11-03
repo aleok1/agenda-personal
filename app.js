@@ -6768,6 +6768,7 @@ async function crearNuevaTareaCompartida() {
       body: JSON.stringify({
         accion: 'crear_tarea_compartida',
         usuarioId: usuarioActivo.id,
+        password: (usuarioActivo && usuarioActivo.password) || obtenerPasswordSesionVigente(usuarioActivo.id) || '',
         socioId: partnerId,
         socioNombre: socioNombre,
         texto: texto,
@@ -6791,7 +6792,7 @@ async function crearNuevaTareaCompartida() {
 
     renderizarTareasCompartidas();
     actualizarContadoresTareasAgendaMenu();
-  actualizarContadoresEconomiaMenu();
+    actualizarContadoresEconomiaMenu();
     actualizarContadoresYAlertas();
     alert(`¡Invitación enviada a ${socioNombre}! Le llegará una notificación para aceptarla.`);
   } catch (e) {
@@ -6814,6 +6815,7 @@ async function responderInvitacionTareaCompartida(tareaId, aceptar) {
       body: JSON.stringify({
         accion: 'responder_tarea_compartida',
         usuarioId: usuarioActivo.id,
+        password: (usuarioActivo && usuarioActivo.password) || obtenerPasswordSesionVigente(usuarioActivo.id) || '',
         tareaId: tareaId,
         aceptar: Boolean(aceptar)
       })
@@ -6835,7 +6837,7 @@ async function responderInvitacionTareaCompartida(tareaId, aceptar) {
     actualizarEstadoSync('☁️ En línea', 'verde');
     renderizarTareasCompartidas();
     actualizarContadoresTareasAgendaMenu();
-  actualizarContadoresEconomiaMenu();
+    actualizarContadoresEconomiaMenu();
     actualizarContadoresYAlertas();
   } catch (e) {
     actualizarEstadoSync('☁️ Error', 'amarillo');
@@ -6860,6 +6862,7 @@ async function marcarTareaCompartida(tareaId, realizada) {
       body: JSON.stringify({
         accion: 'marcar_tarea_compartida',
         usuarioId: usuarioActivo.id,
+        password: (usuarioActivo && usuarioActivo.password) || obtenerPasswordSesionVigente(usuarioActivo.id) || '',
         tareaId: tareaId,
         realizada: Boolean(realizada)
       })
@@ -6875,7 +6878,7 @@ async function marcarTareaCompartida(tareaId, realizada) {
     actualizarEstadoSync('☁️ En línea', 'verde');
     renderizarTareasCompartidas();
     actualizarContadoresTareasAgendaMenu();
-  actualizarContadoresEconomiaMenu();
+    actualizarContadoresEconomiaMenu();
     actualizarContadoresYAlertas();
   } catch (e) {
     actualizarEstadoSync('☁️ Error', 'amarillo');
@@ -6893,6 +6896,7 @@ async function eliminarTareaCompartida(tareaId) {
       body: JSON.stringify({
         accion: 'eliminar_tarea_compartida',
         usuarioId: usuarioActivo.id,
+        password: (usuarioActivo && usuarioActivo.password) || obtenerPasswordSesionVigente(usuarioActivo.id) || '',
         tareaId: tareaId
       })
     });
