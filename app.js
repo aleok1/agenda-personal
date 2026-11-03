@@ -201,6 +201,17 @@ const menuTasksCounter = document.getElementById('menu-tasks-counter');
 const menuAgendaCounter = document.getElementById('menu-agenda-counter');
 const menuSharedTasksCounter = document.getElementById('menu-shared-tasks-counter');
 
+// Menú unificado de Economía Personal y vistas separadas
+const viewEconomyMenu = document.getElementById('view-economy-menu');
+const btnBackFromEconomyMenu = document.getElementById('btn-back-from-economy-menu');
+const btnSubWallet = document.getElementById('btn-sub-wallet');
+const btnSubDebts = document.getElementById('btn-sub-debts');
+const viewDebts = document.getElementById('view-debts');
+const btnBackToEconomyFromWallet = document.getElementById('btn-back-to-economy-from-wallet');
+const btnBackToEconomyFromDebts = document.getElementById('btn-back-to-economy-from-debts');
+const menuWalletCounter = document.getElementById('menu-wallet-counter');
+const menuDebtsCounter = document.getElementById('menu-debts-counter');
+
 // Tareas Compartidas
 const viewSharedTasks = document.getElementById('view-shared-tasks');
 const btnBackSharedToMenu = document.getElementById('btn-back-shared-to-menu');
@@ -1392,10 +1403,12 @@ function entrarAMenuDeUsuarioActivo() {
   registrarPasoHistorial('home');
   viewUsers.classList.add('hidden');
   if (viewTasksAgendaMenu) viewTasksAgendaMenu.classList.add('hidden');
+  if (viewEconomyMenu) viewEconomyMenu.classList.add('hidden');
   viewTasks.classList.add('hidden');
   viewAgenda.classList.add('hidden');
   if (viewSharedTasks) viewSharedTasks.classList.add('hidden');
   viewWallet.classList.add('hidden');
+  if (viewDebts) viewDebts.classList.add('hidden');
   if (viewAssistant) viewAssistant.classList.add('hidden');
   if (viewExtras) viewExtras.classList.add('hidden');
   viewHome.classList.remove('hidden');
@@ -1426,6 +1439,7 @@ function entrarAMenuDeUsuarioActivo() {
   limpiarTareasVencidas();
   actualizarContadoresYAlertas();
   actualizarContadoresTareasAgendaMenu();
+  actualizarContadoresEconomiaMenu();
   renderizarTareas();
   renderizarTareasCompartidas();
   renderizarCalendario();
@@ -1459,10 +1473,12 @@ function volverAPantallaUsuarios(forzarDni) {
   usuarioActivo = null;
   viewHome.classList.add('hidden');
   if (viewTasksAgendaMenu) viewTasksAgendaMenu.classList.add('hidden');
+  if (viewEconomyMenu) viewEconomyMenu.classList.add('hidden');
   viewTasks.classList.add('hidden');
   viewAgenda.classList.add('hidden');
   if (viewSharedTasks) viewSharedTasks.classList.add('hidden');
   viewWallet.classList.add('hidden');
+  if (viewDebts) viewDebts.classList.add('hidden');
   if (viewAssistant) viewAssistant.classList.add('hidden');
   if (viewExtras) viewExtras.classList.add('hidden');
   const hp = document.getElementById('housemates-prompt-box');
@@ -1874,6 +1890,7 @@ async function sincronizarDesdeNube() {
     const seLimpiaronVencidas = limpiarTareasVencidas();
     actualizarContadoresYAlertas();
     actualizarContadoresTareasAgendaMenu();
+  actualizarContadoresEconomiaMenu();
     renderizarTareas();
     renderizarTareasCompartidas();
     renderizarCalendario();
@@ -1975,6 +1992,7 @@ function actualizarContadoresYAlertas() {
   }
 
   actualizarContadoresTareasAgendaMenu();
+  actualizarContadoresEconomiaMenu();
 
   const saldos = calcularSaldosBilletera();
   if (homeWalletCounter) {
@@ -2059,10 +2077,12 @@ function irAInicio() {
   if (!usuarioActivo) { volverAPantallaUsuarios(); return; }
   registrarPasoHistorial('home');
   if (viewTasksAgendaMenu) viewTasksAgendaMenu.classList.add('hidden');
+  if (viewEconomyMenu) viewEconomyMenu.classList.add('hidden');
   viewTasks.classList.add('hidden');
   viewAgenda.classList.add('hidden');
   if (viewSharedTasks) viewSharedTasks.classList.add('hidden');
   viewWallet.classList.add('hidden');
+  if (viewDebts) viewDebts.classList.add('hidden');
   if (viewAssistant) viewAssistant.classList.add('hidden');
   if (viewExtras) viewExtras.classList.add('hidden');
   viewHome.classList.remove('hidden');
@@ -2083,6 +2103,7 @@ function irAMenuTareasAgenda() {
   if (viewTasksAgendaMenu) viewTasksAgendaMenu.classList.remove('hidden');
   btnHome.classList.remove('hidden');
   actualizarContadoresTareasAgendaMenu();
+  actualizarContadoresEconomiaMenu();
 }
 
 function irATareas() {
@@ -2135,32 +2156,65 @@ function irATareasCompartidas() {
   renderizarTareasCompartidas();
 }
 
-function irABilletera(subtabDeseada) {
-  registrarPasoHistorial('wallet');
-  viewHome.classList.add('hidden');
-  if (viewTasksAgendaMenu) viewTasksAgendaMenu.classList.add('hidden');
-  viewTasks.classList.add('hidden');
-  viewAgenda.classList.add('hidden');
-  if (viewSharedTasks) viewSharedTasks.classList.add('hidden');
-  if (viewAssistant) viewAssistant.classList.add('hidden');
-  if (viewExtras) viewExtras.classList.add('hidden');
-  viewWallet.classList.remove('hidden');
-  btnHome.classList.remove('hidden');
-  if (subtabDeseada === 'debts') {
-    cambiarPestanaEconomia('debts');
-  } else {
-    cambiarPestanaEconomia('wallet');
-  }
-}
-
-function irAAsistente() {
-  registrarPasoHistorial('assistant');
+function irAMenuEconomia() {
+  if (!usuarioActivo) { volverAPantallaUsuarios(); return; }
+  registrarPasoHistorial('economy-menu');
   viewHome.classList.add('hidden');
   if (viewTasksAgendaMenu) viewTasksAgendaMenu.classList.add('hidden');
   viewTasks.classList.add('hidden');
   viewAgenda.classList.add('hidden');
   if (viewSharedTasks) viewSharedTasks.classList.add('hidden');
   viewWallet.classList.add('hidden');
+  if (viewDebts) viewDebts.classList.add('hidden');
+  if (viewAssistant) viewAssistant.classList.add('hidden');
+  if (viewExtras) viewExtras.classList.add('hidden');
+  if (viewEconomyMenu) viewEconomyMenu.classList.remove('hidden');
+  btnHome.classList.remove('hidden');
+  actualizarContadoresEconomiaMenu();
+}
+
+function irABilletera() {
+  registrarPasoHistorial('wallet');
+  viewHome.classList.add('hidden');
+  if (viewEconomyMenu) viewEconomyMenu.classList.add('hidden');
+  if (viewTasksAgendaMenu) viewTasksAgendaMenu.classList.add('hidden');
+  viewTasks.classList.add('hidden');
+  viewAgenda.classList.add('hidden');
+  if (viewSharedTasks) viewSharedTasks.classList.add('hidden');
+  if (viewDebts) viewDebts.classList.add('hidden');
+  if (viewAssistant) viewAssistant.classList.add('hidden');
+  if (viewExtras) viewExtras.classList.add('hidden');
+  viewWallet.classList.remove('hidden');
+  btnHome.classList.remove('hidden');
+  renderizarBilletera();
+}
+
+function irADeudas(subtabDeseada) {
+  registrarPasoHistorial('debts');
+  viewHome.classList.add('hidden');
+  if (viewEconomyMenu) viewEconomyMenu.classList.add('hidden');
+  if (viewTasksAgendaMenu) viewTasksAgendaMenu.classList.add('hidden');
+  viewTasks.classList.add('hidden');
+  viewAgenda.classList.add('hidden');
+  if (viewSharedTasks) viewSharedTasks.classList.add('hidden');
+  viewWallet.classList.add('hidden');
+  if (viewAssistant) viewAssistant.classList.add('hidden');
+  if (viewExtras) viewExtras.classList.add('hidden');
+  if (viewDebts) viewDebts.classList.remove('hidden');
+  btnHome.classList.remove('hidden');
+  cambiarSubtabDeudas(subtabDeseada || subtabDeudaActiva || 'me-deben');
+}
+
+function irAAsistente() {
+  registrarPasoHistorial('assistant');
+  viewHome.classList.add('hidden');
+  if (viewEconomyMenu) viewEconomyMenu.classList.add('hidden');
+  if (viewTasksAgendaMenu) viewTasksAgendaMenu.classList.add('hidden');
+  viewTasks.classList.add('hidden');
+  viewAgenda.classList.add('hidden');
+  if (viewSharedTasks) viewSharedTasks.classList.add('hidden');
+  viewWallet.classList.add('hidden');
+  if (viewDebts) viewDebts.classList.add('hidden');
   if (viewExtras) viewExtras.classList.add('hidden');
   if (viewAssistant) viewAssistant.classList.remove('hidden');
   btnHome.classList.remove('hidden');
@@ -2171,11 +2225,13 @@ function irAAsistente() {
 function irAExtras() {
   registrarPasoHistorial('extras');
   viewHome.classList.add('hidden');
+  if (viewEconomyMenu) viewEconomyMenu.classList.add('hidden');
   if (viewTasksAgendaMenu) viewTasksAgendaMenu.classList.add('hidden');
   viewTasks.classList.add('hidden');
   viewAgenda.classList.add('hidden');
   if (viewSharedTasks) viewSharedTasks.classList.add('hidden');
   viewWallet.classList.add('hidden');
+  if (viewDebts) viewDebts.classList.add('hidden');
   if (viewAssistant) viewAssistant.classList.add('hidden');
   viewExtras.classList.remove('hidden');
   btnHome.classList.remove('hidden');
@@ -2206,7 +2262,14 @@ window.addEventListener('popstate', () => {
       return;
     }
 
-    // 2. Si está adentro de una herramienta de Extras, volver al menú de opciones de Extras
+    // 2. Si está en el detalle de un deudor específico, volver a la lista de deudores
+    if (idDeudorActivo && debtorDetailView && !debtorDetailView.classList.contains('hidden')) {
+      volverAListaDeudores();
+      history.pushState({ vista: 'debts' }, '');
+      return;
+    }
+
+    // Si está adentro de una herramienta de Extras, volver al menú de opciones de Extras
     if (viewExtras && !viewExtras.classList.contains('hidden') && extrasSubviewNav && !extrasSubviewNav.classList.contains('hidden')) {
       mostrarMenuExtras();
       history.pushState({ vista: 'extras' }, '');
@@ -2225,10 +2288,21 @@ window.addEventListener('popstate', () => {
       return;
     }
 
-    // 3. Si está adentro de alguno de los otros módulos o en el menú de tareas, volver al menú de inicio del usuario
+    // Si está adentro de Billetera o Deudas, volver al menú de Economía
+    const enSubModuloEconomia =
+      (viewWallet && !viewWallet.classList.contains('hidden')) ||
+      (viewDebts && !viewDebts.classList.contains('hidden'));
+
+    if (enSubModuloEconomia && usuarioActivo) {
+      irAMenuEconomia();
+      history.pushState({ vista: 'economy-menu' }, '');
+      return;
+    }
+
+    // 3. Si está adentro de alguno de los otros módulos o en los menús unificados, volver al menú de inicio del usuario
     const enSubModulo =
       (viewTasksAgendaMenu && !viewTasksAgendaMenu.classList.contains('hidden')) ||
-      (viewWallet && !viewWallet.classList.contains('hidden')) ||
+      (viewEconomyMenu && !viewEconomyMenu.classList.contains('hidden')) ||
       (viewAssistant && !viewAssistant.classList.contains('hidden')) ||
       (viewExtras && !viewExtras.classList.contains('hidden'));
 
@@ -2267,9 +2341,16 @@ if (btnBackToTasksMenu) btnBackToTasksMenu.addEventListener('click', irAMenuTare
 if (btnBackToAgendaMenu) btnBackToAgendaMenu.addEventListener('click', irAMenuTareasAgenda);
 if (btnBackSharedToMenu) btnBackSharedToMenu.addEventListener('click', irAMenuTareasAgenda);
 
+// Botones de Economía Personal
+if (btnOpenWallet) btnOpenWallet.addEventListener('click', irAMenuEconomia);
+if (btnBackFromEconomyMenu) btnBackFromEconomyMenu.addEventListener('click', irAInicio);
+if (btnSubWallet) btnSubWallet.addEventListener('click', irABilletera);
+if (btnSubDebts) btnSubDebts.addEventListener('click', () => irADeudas('me-deben'));
+if (btnBackToEconomyFromWallet) btnBackToEconomyFromWallet.addEventListener('click', irAMenuEconomia);
+if (btnBackToEconomyFromDebts) btnBackToEconomyFromDebts.addEventListener('click', irAMenuEconomia);
+
 if (btnOpenTasks) btnOpenTasks.addEventListener('click', irATareas);
 if (btnOpenAgenda) btnOpenAgenda.addEventListener('click', () => irAAgenda());
-btnOpenWallet.addEventListener('click', irABilletera);
 if (btnOpenAssistant) btnOpenAssistant.addEventListener('click', irAAsistente);
 if (btnOpenExtras) btnOpenExtras.addEventListener('click', irAExtras);
 btnAlertGoAgenda.addEventListener('click', () => irAAgenda(HOY_ISO));
@@ -3628,34 +3709,46 @@ if (btnDeleteActiveList) {
 }
 
 // ==========================================
-// MÓDULO 3: ECONOMÍA PERSONAL (BILLETERA + DEUDAS)
+// MÓDULO 2: ECONOMÍA PERSONAL (BILLETERA + DEUDAS)
 // ==========================================
-const tabEconWallet = document.getElementById('tab-econ-wallet');
-const tabEconDebts = document.getElementById('tab-econ-debts');
-const subviewEconWallet = document.getElementById('subview-econ-wallet');
-const subviewEconDebts = document.getElementById('subview-econ-debts');
-
 const subtabDebtsOwedToMe = document.getElementById('subtab-debts-owed-to-me');
 const subtabDebtsIOwe = document.getElementById('subtab-debts-i-owe');
 const debtsOwedToMeSection = document.getElementById('debts-owed-to-me-section');
 const debtsIOweSection = document.getElementById('debts-i-owe-section');
 
-function cambiarPestanaEconomia(tab) {
-  subtabEconomiaActiva = tab;
-  if (tabEconWallet) tabEconWallet.classList.toggle('active', tab === 'wallet');
-  if (tabEconDebts) tabEconDebts.classList.toggle('active', tab === 'debts');
-  if (subviewEconWallet) subviewEconWallet.classList.toggle('hidden', tab !== 'wallet');
-  if (subviewEconDebts) subviewEconDebts.classList.toggle('hidden', tab !== 'debts');
-
-  if (tab === 'wallet') {
-    renderizarBilletera();
-  } else {
-    cambiarSubtabDeudas(subtabDeudaActiva || 'me-deben');
+function actualizarContadoresEconomiaMenu() {
+  if (menuWalletCounter) {
+    let totE = 0;
+    let totV = 0;
+    (movimientos || []).forEach(m => {
+      const val = Number(m.monto) || 0;
+      if (m.tipo === 'ingreso' || m.tipo === 'sueldo') {
+        if (m.medio === 'virtual') totV += val;
+        else totE += val;
+      } else if (m.tipo === 'gasto') {
+        if (m.medio === 'virtual') totV -= val;
+        else totE -= val;
+      }
+    });
+    const totalDisp = totE + totV;
+    menuWalletCounter.textContent = `${formatearPesos(totalDisp)} disponible`;
+  }
+  if (menuDebtsCounter) {
+    let sumaDeudas = 0;
+    (deudores || []).forEach(d => {
+      const res = calcularResumenDeudor(d);
+      sumaDeudas += res.saldoPendiente;
+    });
+    let sumaYoDebo = 0;
+    (yoDebo || []).forEach(d => {
+      sumaYoDebo += Math.max(0, (Number(d.montoTotal) || 0) - (Number(d.montoPagado) || 0));
+    });
+    menuDebtsCounter.textContent = `Me deben: ${formatearPesos(sumaDeudas)} · Debo: ${formatearPesos(sumaYoDebo)}`;
+  }
+  if (homeWalletCounter) {
+    homeWalletCounter.textContent = '2 opciones';
   }
 }
-
-if (tabEconWallet) tabEconWallet.addEventListener('click', () => cambiarPestanaEconomia('wallet'));
-if (tabEconDebts) tabEconDebts.addEventListener('click', () => cambiarPestanaEconomia('debts'));
 
 function cambiarSubtabDeudas(sub) {
   subtabDeudaActiva = sub;
@@ -6698,6 +6791,7 @@ async function crearNuevaTareaCompartida() {
 
     renderizarTareasCompartidas();
     actualizarContadoresTareasAgendaMenu();
+  actualizarContadoresEconomiaMenu();
     actualizarContadoresYAlertas();
     alert(`¡Invitación enviada a ${socioNombre}! Le llegará una notificación para aceptarla.`);
   } catch (e) {
@@ -6741,6 +6835,7 @@ async function responderInvitacionTareaCompartida(tareaId, aceptar) {
     actualizarEstadoSync('☁️ En línea', 'verde');
     renderizarTareasCompartidas();
     actualizarContadoresTareasAgendaMenu();
+  actualizarContadoresEconomiaMenu();
     actualizarContadoresYAlertas();
   } catch (e) {
     actualizarEstadoSync('☁️ Error', 'amarillo');
@@ -6780,6 +6875,7 @@ async function marcarTareaCompartida(tareaId, realizada) {
     actualizarEstadoSync('☁️ En línea', 'verde');
     renderizarTareasCompartidas();
     actualizarContadoresTareasAgendaMenu();
+  actualizarContadoresEconomiaMenu();
     actualizarContadoresYAlertas();
   } catch (e) {
     actualizarEstadoSync('☁️ Error', 'amarillo');
@@ -6813,6 +6909,7 @@ async function eliminarTareaCompartida(tareaId) {
     actualizarEstadoSync('☁️ En línea', 'verde');
     renderizarTareasCompartidas();
     actualizarContadoresTareasAgendaMenu();
+  actualizarContadoresEconomiaMenu();
     actualizarContadoresYAlertas();
   } catch (e) {
     actualizarEstadoSync('☁️ Error', 'amarillo');
