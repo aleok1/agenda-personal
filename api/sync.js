@@ -181,7 +181,6 @@ export default async function handler(req, res) {
       });
     });
   }
-  }
 
   async function guardarBaseDeDatos(db, sha, mensajeCommit) {
     db.actualizado = new Date().toISOString();
