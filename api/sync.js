@@ -211,7 +211,8 @@ export default async function handler(req, res) {
 
       if (accion === 'lista_usuarios') {
         return res.status(200).json({
-          usuarios: resumenPublicoUsuarios(db.usuarios)
+          usuarios: resumenPublicoUsuarios(db.usuarios),
+          configTna: db.configTna || { mercadopago: 31.5, uala: 19.0 }
         });
       }
 
@@ -354,6 +355,7 @@ export default async function handler(req, res) {
           yaConfiguroCasa: Boolean(u.yaConfiguroCasa),
           tiempoBloqueoMin: u.tiempoBloqueoMin || 60,
           tnaConfig: u.tnaConfig || null,
+          configTna: db.configTna || { mercadopago: 31.5, uala: 19.0 },
           borrados: u.borrados || [],
           usuarios: resumenPublicoUsuarios(db.usuarios)
         });
@@ -625,6 +627,7 @@ export default async function handler(req, res) {
           yaConfiguroCasa: Boolean(u.yaConfiguroCasa),
           tiempoBloqueoMin: u.tiempoBloqueoMin || 60,
           tnaConfig: u.tnaConfig || null,
+          configTna: db.configTna || { mercadopago: 31.5, uala: 19.0 },
           borrados: u.borrados || [],
           usuarios: resumenPublicoUsuarios(db.usuarios)
         });
@@ -656,6 +659,7 @@ export default async function handler(req, res) {
           yaConfiguroCasa: Boolean(u.yaConfiguroCasa),
           tiempoBloqueoMin: u.tiempoBloqueoMin || 60,
           tnaConfig: u.tnaConfig || null,
+          configTna: db.configTna || { mercadopago: 31.5, uala: 19.0 },
           borrados: u.borrados || [],
           usuarios: resumenPublicoUsuarios(db.usuarios)
         });
@@ -840,6 +844,33 @@ export default async function handler(req, res) {
           ok: true,
           mensaje: `Contraseña de ${targetUser.nombre} blanqueada exitosamente.`,
           usuarios: resumenPublicoUsuarios(db.usuarios)
+        });
+      }
+
+      if (accion === 'guardar_tasas_globales') {
+        const admin = db.usuarios['alejandro'];
+        const passEnviada = String(body.adminPassword || body.password || '').trim();
+        if (admin && admin.password && passEnviada && admin.password !== passEnviada) {
+          return res.status(403).json({ error: 'Contraseña de administrador incorrecta' });
+        }
+        if (admin && admin.password && !passEnviada && body.usuarioId !== 'alejandro') {
+          return res.status(403).json({ error: 'Solo el administrador Alejandro puede modificar las tasas globales' });
+        }
+
+        const mpRate = Number(body.mercadopago) || 31.5;
+        const ualaRate = Number(body.uala) || 19.0;
+        db.configTna = {
+          mercadopago: mpRate,
+          uala: ualaRate,
+          actualizadoPor: 'Alejandro',
+          fecha: new Date().toISOString()
+        };
+
+        await guardarBaseDeDatos(db, sha, 'Actualizar tasas globales TNA de billeteras');
+        return res.status(200).json({
+          ok: true,
+          configTna: db.configTna,
+          mensaje: 'Tasas oficiales actualizadas con éxito'
         });
       }
 
