@@ -11,11 +11,11 @@
   <link rel="icon" type="image/svg+xml" href="logo.svg">
   <link rel="apple-touch-icon" href="logo.svg">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="styles.css?v=20261104_03">
+  <link rel="stylesheet" href="styles.css?v=20261104_04">
   <!-- ESCUDO DE DIAGNÓSTICO TEMPRANO Y CAPTURA DE ERRORES PÚBLICOS -->
   <script>
     (function() {
-      window.__APP_VERSION = '20261104_03';
+      window.__APP_VERSION = '20261104_04';
       window.__ERRORES_APP = [];
 
       function copiarTexto(texto) {
@@ -1415,76 +1415,100 @@
     </section>
 
     <!-- MÓDULO 4: EXTRAS Y HERRAMIENTAS -->
+    <!-- MÃ“DULO 4: ELEMENTOS DIARIOS -->
     <section id="view-extras" class="view hidden">
-      <!-- 1. PANTALLA PRINCIPAL DE EXTRAS: MENÚ CON BOTONES DE TODAS LAS OPCIONES -->
-      <div id="extras-menu-section">
-        <div class="tasks-top-bar">
+      <!-- NIVEL 1: PANTALLA PRINCIPAL DE ELEMENTOS DIARIOS (CASA VS USO DIARIO) -->
+      <div id="daily-menu-section">
+        <div class="tasks-top-bar" style="margin-bottom: 14px;">
           <div>
-            <h2>🧰 Extras y Herramientas</h2>
-            <p class="subtitle-text">Elegí la herramienta que querés abrir:</p>
+            <h2>ðŸ§° Elementos Diarios</h2>
+            <p class="subtitle-text">ElegÃ­ el mÃ³dulo que querÃ©s abrir:</p>
+          </div>
+        </div>
+        <div class="home-grid">
+          <button type="button" id="card-daily-casa" class="big-card card-primary">
+            <div class="card-icon">ðŸ </div>
+            <div class="card-title">1. Casa</div>
+            <div class="card-desc">Espacio compartido con convivientes: Supermercado colaborativo y Heladera de la casa.</div>
+            <div class="card-badge" id="daily-casa-counter">Abrir Casa</div>
+          </button>
+
+          <button type="button" id="card-daily-uso" class="big-card card-agenda">
+            <div class="card-icon">âš¡</div>
+            <div class="card-title">2. Uso Diario</div>
+            <div class="card-desc">Tus herramientas personales: Gemini IA, Entrenamiento fÃ­sico y Listas y Presupuestos.</div>
+            <div class="card-badge badge-agenda" id="daily-uso-counter">Abrir Uso Diario</div>
+          </button>
+        </div>
+      </div>
+
+      <!-- NIVEL 2A: PANTALLA DE CASA (SUPERMERCADO Y HELADERA) -->
+      <div id="daily-casa-section" class="hidden">
+        <div class="tasks-top-bar" style="margin-bottom: 14px;">
+          <div>
+            <button type="button" id="btn-back-casa-to-daily" class="btn-back" style="margin-bottom: 8px;">
+              â† Volver a Elementos Diarios
+            </button>
+            <h2>ðŸ  Casa (Convivientes)</h2>
+            <p class="subtitle-text">MÃ³dulo compartido con quienes vivÃ­s en la misma casa:</p>
           </div>
         </div>
         <div class="home-grid">
           <button type="button" id="card-extra-super" class="big-card card-primary">
-            <div class="card-icon">🛒</div>
+            <div class="card-icon">ðŸ›’</div>
             <div class="card-title">1. Supermercado</div>
-            <div class="card-desc">Lista colaborativa compartida con quienes vivís. Los comestibles pasan a tu Heladera al comprar.</div>
+            <div class="card-desc">Lista colaborativa compartida con quienes vivÃ­s. Los comestibles pasan a tu Heladera al comprar.</div>
             <div class="card-badge" id="extra-super-counter">Abrir lista</div>
           </button>
 
-          <button type="button" id="card-extra-gemini" class="big-card card-assistant">
-            <div class="card-icon">✨</div>
-            <div class="card-title">2. Gemini IA</div>
-            <div class="card-desc">Asistente de inteligencia artificial para preguntas de cualquier tema, redacción, ideas y recetas.</div>
-            <div class="card-badge badge-agenda">Consultar IA</div>
-          </button>
-
           <button type="button" id="card-extra-fridge" class="big-card card-agenda">
-            <div class="card-icon">🧊</div>
-            <div class="card-title">3. Heladera</div>
-            <div class="card-desc">Cargá qué tenés disponible y generá recetas paso a paso con lo que hay en casa.</div>
+            <div class="card-icon">ðŸ§Š</div>
+            <div class="card-title">2. Heladera</div>
+            <div class="card-desc">CargÃ¡ quÃ© tenÃ©s disponible y generÃ¡ recetas paso a paso con lo que hay en casa.</div>
             <div class="card-badge" id="extra-fridge-counter">Ver ingredientes</div>
-          </button>
-
-          <button type="button" id="card-extra-workout" class="big-card card-primary" style="background: linear-gradient(135deg, rgba(6, 78, 59, 0.9), rgba(15, 23, 42, 0.9)); border-color: #34d399;">
-            <div class="card-icon">💪</div>
-            <div class="card-title">4. Entrenamiento</div>
-            <div class="card-desc">Rutinas de gimnasio y multigym divididas en 2 grupos musculares por día con paso a paso.</div>
-            <div class="card-badge" style="border-color: #34d399; color: #a7f3d0;">Ver rutina</div>
-          </button>
-
-          <button type="button" id="card-extra-lists" class="big-card card-primary" style="background: linear-gradient(135deg, rgba(30, 58, 138, 0.9), rgba(15, 23, 42, 0.9)); border-color: #38bdf8;">
-            <div class="card-icon">📋</div>
-            <div class="card-title">5. Listas y Presupuestos</div>
-            <div class="card-desc">Creá listas personalizadas (materiales, compras) con cálculo automático de valor unitario y presupuesto total.</div>
-            <div class="card-badge" id="extra-lists-counter" style="border-color: #38bdf8; color: #7dd3fc;">Ver listas</div>
-          </button>
-
-          <button type="button" id="card-extra-vincular" class="big-card card-primary" style="background: linear-gradient(135deg, rgba(30, 58, 138, 0.9), rgba(15, 23, 42, 0.9)); border-color: #3b82f6;">
-            <div class="card-icon">🤝</div>
-            <div class="card-title">6. Vincular Contactos</div>
-            <div class="card-desc">Invitá amigos o convivientes por DNI para hacer tareas conjuntas o compartir la casa.</div>
-            <div class="card-badge" id="extra-vincular-counter" style="border-color: #3b82f6; color: #93c5fd;">Vincular</div>
-          </button>
-
-          <button type="button" id="card-extra-settings" class="big-card" style="background: linear-gradient(135deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.9)); border: 1.5px solid #64748b;">
-            <div class="card-icon">⚙️</div>
-            <div class="card-title">7. Configuración</div>
-            <div class="card-desc">Tiempo de bloqueo de sesión, huella digital, notificaciones, compartir y administración.</div>
-            <div class="card-badge" style="border-color: #94a3b8; color: #cbd5e1;">Ajustes</div>
           </button>
         </div>
       </div>
 
-      <!-- BARRA DE NAVEGACIÓN CUANDO SE ESTÁ ADENTRO DE UNA HERRAMIENTA -->
-      <div id="extras-subview-nav" class="extras-subview-nav hidden">
-        <button type="button" id="btn-back-to-extras-menu" class="btn-back" style="width: fit-content; margin-bottom: 8px;">
-          ← Volver al menú Extras
-        </button>
+      <!-- NIVEL 2B: PANTALLA DE USO DIARIO (IA, ENTRENAMIENTO, LISTAS) -->
+      <div id="daily-uso-section" class="hidden">
+        <div class="tasks-top-bar" style="margin-bottom: 14px;">
+          <div>
+            <button type="button" id="btn-back-uso-to-daily" class="btn-back" style="margin-bottom: 8px;">
+              â† Volver a Elementos Diarios
+            </button>
+            <h2>âš¡ Uso Diario Personal</h2>
+            <p class="subtitle-text">Herramientas y asistentes personales para tu dÃ­a a dÃ­a:</p>
+          </div>
+        </div>
+        <div class="home-grid">
+          <button type="button" id="card-extra-gemini" class="big-card card-assistant">
+            <div class="card-icon">âœ¨</div>
+            <div class="card-title">1. Gemini IA</div>
+            <div class="card-desc">Asistente de inteligencia artificial para preguntas de cualquier tema, redacciÃ³n, ideas y recetas.</div>
+            <div class="card-badge badge-agenda">Consultar IA</div>
+          </button>
+
+          <button type="button" id="card-extra-workout" class="big-card card-primary" style="background: linear-gradient(135deg, rgba(6, 78, 59, 0.9), rgba(15, 23, 42, 0.9)); border-color: #34d399;">
+            <div class="card-icon">ðŸ’ª</div>
+            <div class="card-title">2. Entrenamiento</div>
+            <div class="card-desc">Rutinas de gimnasio y multigym divididas en 2 grupos musculares por dÃ­a con paso a paso.</div>
+            <div class="card-badge" style="border-color: #34d399; color: #a7f3d0;">Ver rutina</div>
+          </button>
+
+          <button type="button" id="card-extra-lists" class="big-card card-primary" style="background: linear-gradient(135deg, rgba(30, 58, 138, 0.9), rgba(15, 23, 42, 0.9)); border-color: #38bdf8;">
+            <div class="card-icon">ðŸ“‹</div>
+            <div class="card-title">3. Listas y Presupuestos</div>
+            <div class="card-desc">CreÃ¡ listas personalizadas (materiales, compras) con cÃ¡lculo automÃ¡tico de valor unitario y presupuesto total.</div>
+            <div class="card-badge" id="extra-lists-counter" style="border-color: #38bdf8; color: #7dd3fc;">Ver listas</div>
+          </button>
+        </div>
       </div>
 
-      <!-- SUB-SECCIÓN 1: LISTA DE SUPERMERCADO -->
+      <!-- SUBVISTAS DE ELEMENTOS DIARIOS -->
+            <!-- SUB-SECCIÓN 1: LISTA DE SUPERMERCADO -->
       <div id="subview-super" class="hidden">
+        <button type="button" id="btn-back-super-to-casa" class="btn-back" style="margin-bottom: 10px;">â† Volver a Casa</button>
         <div class="tasks-top-bar">
           <div>
             <h2>1. Lista de Supermercado</h2>
@@ -1521,8 +1545,10 @@
         <div id="super-items-list" class="tasks-list"></div>
       </div>
 
-      <!-- SUB-SECCIÓN 2: GEMINI IA (CHAT GENERAL PARA TODO) -->
+
+            <!-- SUB-SECCIÓN 2: GEMINI IA (CHAT GENERAL PARA TODO) -->
       <div id="subview-gemini" class="hidden">
+        <button type="button" id="btn-back-gemini-to-uso" class="btn-back" style="margin-bottom: 10px;">â† Volver a Uso Diario</button>
         <div class="tasks-top-bar">
           <div>
             <h2>✨ 2. Gemini IA</h2>
@@ -1540,8 +1566,10 @@
         </div>
       </div>
 
-      <!-- SUB-SECCIÓN 3: HELADERA (INGREDIENTES DISPONIBLES + GENERAR RECETA CON IA) -->
+
+            <!-- SUB-SECCIÓN 3: HELADERA (INGREDIENTES DISPONIBLES + GENERAR RECETA CON IA) -->
       <div id="subview-fridge" class="hidden">
+        <button type="button" id="btn-back-fridge-to-casa" class="btn-back" style="margin-bottom: 10px;">â† Volver a Casa</button>
         <div class="tasks-top-bar">
           <div>
             <h2>🧊 3. Heladera — ¿Qué cocinamos hoy?</h2>
@@ -1582,8 +1610,10 @@
         </div>
       </div>
 
-      <!-- SUB-SECCIÓN 4: ENTRENAMIENTO (ZONAS + DÍAS + TIEMPO + DURACIÓN + IA CON MANCUERNAS Y MULTIGYM) -->
+
+            <!-- SUB-SECCIÓN 4: ENTRENAMIENTO (ZONAS + DÍAS + TIEMPO + DURACIÓN + IA CON MANCUERNAS Y MULTIGYM) -->
       <div id="subview-workout" class="hidden">
+        <button type="button" id="btn-back-workout-to-uso" class="btn-back" style="margin-bottom: 10px;">â† Volver a Uso Diario</button>
         <div class="tasks-top-bar">
           <div>
             <h2>💪 4. Entrenamiento — Rutina Paso a Paso</h2>
@@ -1671,244 +1701,10 @@
         </div>
       </div>
 
-      <!-- SUB-SECCIÓN 5: CONFIGURACIÓN -->
-      <div id="subview-settings" class="hidden">
-        <div class="tasks-top-bar">
-          <div>
-            <h2>⚙️ Configuración y Seguridad</h2>
-            <p class="subtitle-text">Personalizá tu tiempo de bloqueo, huella digital, notificaciones y opciones de tu cuenta</p>
-          </div>
-        </div>
 
-        <!-- SELECTOR DE PESTAÑAS (PARA ADMIN: NORMAL VS DESARROLLADOR) -->
-        <div id="settings-tabs-header" class="hidden" style="display: none; gap: 8px; margin-bottom: 18px; border-bottom: 1px solid #334155; padding-bottom: 10px;">
-          <button type="button" id="tab-btn-settings-normal" class="btn-primary" style="flex: 1; padding: 10px 14px; font-weight: 700; font-size: 0.92rem; border-radius: 8px;">
-            ⚙️ 1. Configuración Normal
-          </button>
-          <button type="button" id="tab-btn-settings-dev" class="btn-secondary hidden" style="display: none; flex: 1; padding: 10px 14px; font-weight: 700; font-size: 0.92rem; border-radius: 8px; border-color: #f59e0b; color: #fbbf24;">
-            🛠️ 2. Panel Desarrollador / Admin
-          </button>
-        </div>
-
-        <!-- CONTENEDOR 1: CONFIGURACIÓN NORMAL (TODOS LOS USUARIOS) -->
-        <div id="box-settings-normal" class="settings-container">
-          <!-- 1. TIEMPO DE BLOQUEO POR INACTIVIDAD -->
-          <div class="settings-card">
-            <div class="settings-card-header">
-              <span class="settings-icon">⏱️</span>
-              <div>
-                <h3>Tiempo de bloqueo por inactividad</h3>
-                <p class="subtitle-text">Elegí cada cuánto tiempo debe cerrarse tu sesión automáticamente si no usás la app:</p>
-              </div>
-            </div>
-            <div class="settings-options-row" id="timeout-selector-group">
-              <button type="button" class="btn-setting-pill" data-minutes="1">1 min</button>
-              <button type="button" class="btn-setting-pill" data-minutes="15">15 min</button>
-              <button type="button" class="btn-setting-pill" data-minutes="60">60 min (1 hora)</button>
-              <button type="button" class="btn-setting-pill" data-minutes="240">4 horas</button>
-            </div>
-            <div id="timeout-saved-msg" class="share-copied-msg hidden" style="margin-top: 10px;">✓ Tiempo de bloqueo actualizado</div>
-          </div>
-
-          <!-- 2. HUELLA DIGITAL / BIOMETRÍA -->
-          <div class="settings-card">
-            <div class="settings-card-header">
-              <span class="settings-icon">👆</span>
-              <div>
-                <h3>Desbloqueo con Huella Digital</h3>
-                <p class="subtitle-text">Desbloqueá tu propio usuario en 1 segundo con tu huella sin ingresar contraseña cada vez:</p>
-              </div>
-            </div>
-            <div id="settings-bio-status" class="settings-status-box" style="margin-bottom: 12px;"></div>
-            <div id="settings-bio-actions"></div>
-          </div>
-
-          <!-- 2.1. CONTRASEÑA Y PREGUNTA CLAVE DE SEGURIDAD -->
-          <div class="settings-card" id="card-password-security">
-            <div class="settings-card-header">
-              <span class="settings-icon">🔐</span>
-              <div>
-                <h3>Contraseña y Pregunta Clave</h3>
-                <p class="subtitle-text">Cambiá tu contraseña cuando quieras o configurá tu pregunta clave para recuperar el acceso</p>
-              </div>
-            </div>
-
-            <div id="settings-sec-q-badge" style="margin-bottom: 12px;"></div>
-
-            <!-- BOTONES DE ACCIÓN: CAMBIAR CONTRASEÑA Y PREGUNTA CLAVE -->
-            <div style="display:flex; flex-wrap:wrap; gap:10px; margin-top:10px;">
-              <button type="button" id="btn-toggle-change-pass" class="btn-primary" style="flex:1; min-width:180px; padding:10px 14px; font-weight:600; font-size:0.9rem; background:#2563eb; border-color:#1d4ed8;">
-                🔑 Cambiar contraseña
-              </button>
-              <button type="button" id="btn-toggle-security-q" class="btn-secondary" style="flex:1; min-width:180px; padding:10px 14px; font-weight:600; font-size:0.9rem; border-color:#38bdf8; color:#7dd3fc;">
-                ❓ Pregunta clave de recuperación
-              </button>
-            </div>
-
-            <!-- FORMULARIO CAMBIAR CONTRASEÑA (DESPLEGABLE) -->
-            <div id="box-change-password-form" class="hidden" style="margin-top:14px; padding:14px; background:rgba(15,23,42,0.65); border:1px solid #334155; border-radius:10px;">
-              <h4 style="color:#60a5fa; margin-bottom:8px; font-size:0.95rem;">🔑 Cambiar mi contraseña</h4>
-              <p class="subtitle-text" style="font-size:0.82rem; margin-bottom:12px;">Ingresá tu contraseña anterior y dos veces la nueva contraseña:</p>
-              <div class="form-group" style="margin-bottom:10px;">
-                <label for="input-change-pass-current">Contraseña anterior (actual)</label>
-                <div class="password-wrapper">
-                  <input type="password" id="input-change-pass-current" placeholder="Tu contraseña actual..." autocomplete="current-password">
-                  <button type="button" id="btn-toggle-chg-cur" class="btn-eye" title="Ver contraseña">👁️</button>
-                </div>
-              </div>
-              <div class="form-group" style="margin-bottom:10px;">
-                <label for="input-change-pass-new">Nueva contraseña</label>
-                <div class="password-wrapper">
-                  <input type="password" id="input-change-pass-new" placeholder="Tu nueva contraseña..." autocomplete="new-password">
-                  <button type="button" id="btn-toggle-chg-new" class="btn-eye" title="Ver contraseña">👁️</button>
-                </div>
-              </div>
-              <div class="form-group" style="margin-bottom:12px;">
-                <label for="input-change-pass-repeat">Repetir nueva contraseña</label>
-                <div class="password-wrapper">
-                  <input type="password" id="input-change-pass-repeat" placeholder="Repetí tu nueva contraseña..." autocomplete="new-password">
-                  <button type="button" id="btn-toggle-chg-rep" class="btn-eye" title="Ver contraseña">👁️</button>
-                </div>
-              </div>
-              <div id="change-pass-error" class="login-error hidden" style="margin-bottom:10px;"></div>
-              <div id="change-pass-success" class="share-copied-msg hidden" style="margin-bottom:10px;">✓ ¡Contraseña actualizada con éxito!</div>
-              <div class="form-actions" style="margin-top:10px;">
-                <button type="button" id="btn-cancel-change-pass" class="btn-secondary">Cancelar</button>
-                <button type="button" id="btn-submit-change-pass" class="btn-primary" style="background:#10b981; border-color:#059669; font-weight:700;">Guardar contraseña</button>
-              </div>
-            </div>
-
-            <!-- FORMULARIO PREGUNTA CLAVE DE RECUPERACIÓN (DESPLEGABLE) -->
-            <div id="box-security-question-form" class="hidden" style="margin-top:14px; padding:14px; background:rgba(15,23,42,0.65); border:1px solid #334155; border-radius:10px;">
-              <h4 style="color:#fbbf24; margin-bottom:6px; font-size:0.95rem;">❓ Pregunta clave de recuperación</h4>
-              <p class="subtitle-text" style="font-size:0.82rem; margin-bottom:12px;">Esta pregunta te servirá para recuperar o restablecer tu clave con tu DNI si la olvidás o si el administrador te la blanquea:</p>
-              
-              <div class="form-group" style="margin-bottom:10px;">
-                <label for="select-security-q">Elegí tu pregunta de seguridad</label>
-                <select id="select-security-q" style="width:100%; padding:10px; border-radius:8px; background:#1e293b; color:#fff; border:1px solid #475569;">
-                  <option value="¿Cuál es tu comida favorita?">¿Cuál es tu comida favorita?</option>
-                  <option value="¿Nombre de tu primera mascota?">¿Nombre de tu primera mascota?</option>
-                  <option value="¿Nombre de tu escuela primaria?">¿Nombre de tu escuela primaria?</option>
-                  <option value="¿Lugar o ciudad de vacaciones preferido?">¿Lugar o ciudad de vacaciones preferido?</option>
-                  <option value="¿Cuál es tu equipo o deporte favorito?">¿Cuál es tu equipo o deporte favorito?</option>
-                  <option value="otra">Escribir mi propia pregunta personalizada...</option>
-                </select>
-              </div>
-              <div class="form-group hidden" id="box-custom-security-q" style="margin-bottom:10px;">
-                <label for="input-custom-security-q">Tu pregunta personalizada</label>
-                <input type="text" id="input-custom-security-q" placeholder="Ej: ¿En qué calle vivías de chico?">
-              </div>
-              <div class="form-group" style="margin-bottom:10px;">
-                <label for="input-security-a">Tu respuesta secreta (pregunta clave)</label>
-                <input type="text" id="input-security-a" placeholder="Escribí tu respuesta..." autocomplete="off">
-              </div>
-              <div class="form-group" style="margin-bottom:12px;">
-                <label for="input-security-confirm-pass">Confirmá con tu contraseña actual</label>
-                <div class="password-wrapper">
-                  <input type="password" id="input-security-confirm-pass" placeholder="Tu contraseña..." autocomplete="current-password">
-                  <button type="button" id="btn-toggle-sec-pass" class="btn-eye" title="Ver contraseña">👁️</button>
-                </div>
-              </div>
-              <div id="security-q-error" class="login-error hidden" style="margin-bottom:10px;"></div>
-              <div id="security-q-success" class="share-copied-msg hidden" style="margin-bottom:10px;">✓ ¡Pregunta clave guardada con éxito!</div>
-              <div class="form-actions" style="margin-top:10px;">
-                <button type="button" id="btn-cancel-security-q" class="btn-secondary">Cancelar</button>
-                <button type="button" id="btn-submit-security-q" class="btn-primary" style="background:#0284c7; border-color:#0369a1; font-weight:700;">Guardar pregunta clave</button>
-              </div>
-            </div>
-          </div>
-
-          <!-- 3. NOTIFICACIONES DEL CELULAR -->
-          <div class="settings-card">
-            <div class="settings-card-header">
-              <span class="settings-icon">🔔</span>
-              <div>
-                <h3>Notificaciones en el Celular</h3>
-                <p class="subtitle-text">Avisos de tareas pedidas por otros, respuestas y recordatorios de la agenda:</p>
-              </div>
-            </div>
-            <div id="settings-push-status" class="settings-status-box" style="margin-bottom: 12px;"></div>
-            <div id="settings-push-actions" style="display: flex; gap: 10px; flex-wrap: wrap;">
-              <button type="button" id="btn-settings-enable-push" class="btn-primary" style="background: #059669; font-weight:700;">
-                🔔 Activar notificaciones
-              </button>
-              <button type="button" id="btn-settings-test-push" class="btn-secondary">
-                🧪 Probar notificación
-              </button>
-            </div>
-          </div>
-
-          <!-- 4. COMPARTIR LINK EXTERNO -->
-          <div class="settings-card">
-            <div class="settings-card-header">
-              <span class="settings-icon">🔗</span>
-              <div>
-                <h3>Compartir link para pedirte tareas</h3>
-                <p class="subtitle-text">Cualquier persona que entre a este link podrá enviarte una tarea poniendo su nombre, sin ver tu agenda:</p>
-              </div>
-            </div>
-            <div class="share-url-row" style="margin-top: 12px;">
-              <input type="text" id="input-settings-share-url" readonly>
-              <button type="button" id="btn-settings-copy-share" class="btn-primary">Copiar link</button>
-              <button type="button" id="btn-settings-whatsapp-share" class="btn-whatsapp">Enviar por WhatsApp</button>
-            </div>
-            <div id="settings-share-copied" class="share-copied-msg hidden" style="margin-top: 10px;">✓ ¡Link copiado al portapapeles!</div>
-          </div>
-        </div>
-
-        <!-- CONTENEDOR 2: PANEL DESARROLLADOR / ADMIN (SOLO ALEJANDRO) -->
-        <div id="box-settings-dev" class="settings-container hidden" style="display: none;">
-          <!-- 1. TASAS TNA OFICIALES (GLOBALES) -->
-          <div class="settings-card" style="border-color: #f59e0b; background: rgba(120, 53, 15, 0.12);">
-            <div class="settings-card-header">
-              <span class="settings-icon">📈</span>
-              <div>
-                <h3 style="color: #fbbf24;">Tasas TNA Oficiales (Billeteras Virtuales)</h3>
-                <p class="subtitle-text">Modificá las tasas oficiales de Mercado Pago y Ualá. Se sincronizan para todos los usuarios de la familia:</p>
-              </div>
-            </div>
-            <div style="display: flex; gap: 14px; flex-wrap: wrap; margin-top: 14px;">
-              <div class="form-group" style="flex: 1; min-width: 150px; margin-bottom: 0;">
-                <label for="input-dev-tna-mp" style="font-weight: 700; color: #93c5fd;">💙 Mercado Pago TNA (%)</label>
-                <div style="display: flex; align-items: center; gap: 6px; margin-top: 4px;">
-                  <input type="number" id="input-dev-tna-mp" step="0.1" value="31.5" style="padding: 10px; font-size: 1.05rem; font-weight: 700; color: #38bdf8; background: #1e293b; border: 1px solid #475569; border-radius: 8px; width: 100%;">
-                  <span style="font-weight: 700; color: #94a3b8;">%</span>
-                </div>
-              </div>
-              <div class="form-group" style="flex: 1; min-width: 150px; margin-bottom: 0;">
-                <label for="input-dev-tna-uala" style="font-weight: 700; color: #93c5fd;">💳 Ualá TNA (%)</label>
-                <div style="display: flex; align-items: center; gap: 6px; margin-top: 4px;">
-                  <input type="number" id="input-dev-tna-uala" step="0.1" value="19.0" style="padding: 10px; font-size: 1.05rem; font-weight: 700; color: #38bdf8; background: #1e293b; border: 1px solid #475569; border-radius: 8px; width: 100%;">
-                  <span style="font-weight: 700; color: #94a3b8;">%</span>
-                </div>
-              </div>
-            </div>
-            <div class="form-actions" style="margin-top: 14px;">
-              <button type="button" id="btn-dev-save-tna" class="btn-primary" style="background: #d97706; border-color: #b45309; font-weight: 700; width: 100%; padding: 12px;">
-                💾 Guardar tasas oficiales para toda la familia
-              </button>
-            </div>
-            <div id="dev-tna-saved-msg" class="share-copied-msg hidden" style="margin-top: 10px; background: rgba(34, 197, 94, 0.2); color: #86efac; border-color: #22c55e;">
-              ✓ ¡Tasas actualizadas y sincronizadas con éxito!
-            </div>
-          </div>
-
-          <!-- 2. ADMINISTRACIÓN DE USUARIOS -->
-          <div class="settings-card admin-box" id="settings-admin-card" style="display: block;">
-            <div class="settings-card-header">
-              <span class="settings-icon">🛡️</span>
-              <div>
-                <h3 style="color: #f87171;">Administración de Usuarios</h3>
-                <p class="subtitle-text">Blanqueá contraseñas de usuarios para que las recuperen con su DNI, o eliminalos definitivamente:</p>
-              </div>
-            </div>
-            <div id="settings-admin-users-list" class="tasks-list" style="margin-top: 14px;"></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- SUB-SECCIÓN 5: LISTAS DE COMPRAS Y PRESUPUESTOS (NUEVO) -->
+            <!-- SUB-SECCIÓN 5: LISTAS DE COMPRAS Y PRESUPUESTOS (NUEVO) -->
       <div id="subview-lists" class="hidden">
+        <button type="button" id="btn-back-lists-to-uso" class="btn-back" style="margin-bottom: 10px;">â† Volver a Uso Diario</button>
         <div class="tasks-top-bar">
           <div>
             <h2>📋 Listas y Presupuestos</h2>
@@ -2036,8 +1832,289 @@
         </div>
       </div>
 
-      <!-- SUB-SECCIÓN 6: VINCULAR CONTACTOS (AMIGOS Y CONVIVIENTES POR DNI) -->
-      <div id="subview-vincular" class="hidden">
+    </section>
+
+    <!-- MÃ“DULO 5: CONFIGURACIÃ“N -->
+    <section id="view-settings" class="view hidden">
+      <!-- MENÃš PRINCIPAL DE CONFIGURACIÃ“N -->
+      <div id="settings-menu-list">
+        <div class="tasks-top-bar" style="margin-bottom: 14px;">
+          <div>
+            <button type="button" id="btn-back-settings-to-home" class="btn-back" style="margin-bottom: 8px;">
+              â† Volver al Inicio
+            </button>
+            <h2>âš™ï¸ ConfiguraciÃ³n</h2>
+            <p class="subtitle-text">ElegÃ­ la opciÃ³n que querÃ©s administrar:</p>
+          </div>
+        </div>
+
+        <div class="home-grid">
+          <!-- 1. CONTRASEÃ‘AS Y PREGUNTA CLAVE -->
+          <button type="button" id="card-cfg-passwords" class="big-card card-primary">
+            <div class="card-icon">ðŸ”</div>
+            <div class="card-title">1. ContraseÃ±as y Pregunta Clave</div>
+            <div class="card-desc">CambiÃ¡ tu contraseÃ±a o configurÃ¡ tu pregunta clave para recuperar el acceso si la olvidÃ¡s.</div>
+            <div class="card-badge">Modificar clave</div>
+          </button>
+
+          <!-- 2. NOTIFICACIONES -->
+          <button type="button" id="card-cfg-notifications" class="big-card card-agenda">
+            <div class="card-icon">ðŸ””</div>
+            <div class="card-title">2. Notificaciones</div>
+            <div class="card-desc">ActivÃ¡ o desactivÃ¡ los avisos en tu celular de tareas pedidas y recordatorios de la agenda.</div>
+            <div class="card-badge badge-agenda" id="cfg-badge-notif">Configurar</div>
+          </button>
+
+          <!-- 3. HUELLA DACTILAR -->
+          <button type="button" id="card-cfg-biometrics" class="big-card card-primary" style="background: linear-gradient(135deg, rgba(6, 78, 59, 0.9), rgba(15, 23, 42, 0.9)); border-color: #34d399;">
+            <div class="card-icon">ðŸ‘†</div>
+            <div class="card-title">3. Huella Dactilar</div>
+            <div class="card-desc">ActivÃ¡ o eliminÃ¡ el acceso biomÃ©trico rÃ¡pido con tu dedo en este telÃ©fono celular.</div>
+            <div class="card-badge" id="cfg-badge-bio" style="border-color: #34d399; color: #a7f3d0;">Huella</div>
+          </button>
+
+          <!-- 4. TIEMPO DE BLOQUEO -->
+          <button type="button" id="card-cfg-timeout" class="big-card card-primary" style="background: linear-gradient(135deg, rgba(30, 58, 138, 0.9), rgba(15, 23, 42, 0.9)); border-color: #38bdf8;">
+            <div class="card-icon">â±ï¸</div>
+            <div class="card-title">4. Tiempo de Bloqueo</div>
+            <div class="card-desc">ElegÃ­ el tiempo de inactividad antes de que la aplicaciÃ³n vuelva a bloquearse automÃ¡ticamente.</div>
+            <div class="card-badge" id="cfg-badge-timeout" style="border-color: #38bdf8; color: #7dd3fc;">15 min</div>
+          </button>
+
+          <!-- 5. VINCULACIÃ“N DE CONTACTOS -->
+          <button type="button" id="card-cfg-vincular" class="big-card card-primary" style="background: linear-gradient(135deg, rgba(30, 58, 138, 0.9), rgba(15, 23, 42, 0.9)); border-color: #3b82f6;">
+            <div class="card-icon">ðŸ¤</div>
+            <div class="card-title">5. VinculaciÃ³n de Contactos</div>
+            <div class="card-desc">InvitÃ¡ amigos o convivientes por su DNI para compartir tareas, agendas o la casa.</div>
+            <div class="card-badge" id="cfg-badge-vincular" style="border-color: #3b82f6; color: #93c5fd;">Contactos</div>
+          </button>
+
+          <!-- 6. DNI, NOMBRE DE USUARIO Y AVATAR -->
+          <button type="button" id="card-cfg-profile" class="big-card card-primary" style="background: linear-gradient(135deg, rgba(88, 28, 135, 0.9), rgba(15, 23, 42, 0.9)); border-color: #a855f7;">
+            <div class="card-icon">ðŸ‘¤</div>
+            <div class="card-title">6. DNI, Nombre y Avatar</div>
+            <div class="card-desc">ModificÃ¡ tu DNI, tu nombre de usuario y tu foto o avatar representativo.</div>
+            <div class="card-badge" style="border-color: #a855f7; color: #d8b4fe;">Editar perfil</div>
+          </button>
+
+          <!-- 7. PANEL DESARROLLADOR / ADMIN (SOLO ALEJANDRO DNI 40218898) -->
+          <button type="button" id="card-cfg-dev" class="big-card hidden" style="display: none; background: linear-gradient(135deg, rgba(120, 53, 15, 0.9), rgba(15, 23, 42, 0.9)); border-color: #f59e0b;">
+            <div class="card-icon">ðŸ› ï¸</div>
+            <div class="card-title">7. Panel Desarrollador / Admin</div>
+            <div class="card-desc">Tasas oficiales TNA de billeteras y blanqueo/gestiÃ³n de usuarios familiares.</div>
+            <div class="card-badge" style="border-color: #f59e0b; color: #fde68a;">Exclusivo Alejandro</div>
+          </button>
+        </div>
+
+              <div class="task-form-box" style="margin-top: 30px; border-color: #ef4444; background: rgba(239, 68, 68, 0.08);">
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom: 8px;">
+          <span style="font-size: 24px;">🚪</span>
+          <div>
+            <h3 style="color: #f87171; margin-bottom: 2px;">Cerrar sesión en este dispositivo</h3>
+            <p class="subtitle-text" style="color: #fca5a5; font-size: 0.88rem;">Cierra completamente tu agenda. Para volver a ingresar deberás escribir tu DNI y tu contraseña.</p>
+          </div>
+        </div>
+        <button type="button" id="btn-logout-device" class="btn-secondary" style="border-color: #ef4444; color: #f87171; font-weight: 700; width: 100%; margin-top: 10px; padding: 12px; font-size: 0.95rem;">
+          🚪 Cerrar mi sesión
+        </button>
+      </div>
+      </div>
+
+      <!-- PANEL 1: CONTRASEÃ‘AS Y PREGUNTA CLAVE -->
+      <div id="panel-cfg-passwords" class="hidden">
+        <button type="button" class="btn-back btn-back-to-settings-menu" style="margin-bottom: 12px;">â† Volver a ConfiguraciÃ³n</button>
+        <div class="settings-container">
+                    <!-- 2.1. CONTRASEÑA Y PREGUNTA CLAVE DE SEGURIDAD -->
+          <div class="settings-card" id="card-password-security">
+            <div class="settings-card-header">
+              <span class="settings-icon">🔐</span>
+              <div>
+                <h3>Contraseña y Pregunta Clave</h3>
+                <p class="subtitle-text">Cambiá tu contraseña cuando quieras o configurá tu pregunta clave para recuperar el acceso</p>
+              </div>
+            </div>
+
+            <div id="settings-sec-q-badge" style="margin-bottom: 12px;"></div>
+
+            <!-- BOTONES DE ACCIÓN: CAMBIAR CONTRASEÑA Y PREGUNTA CLAVE -->
+            <div style="display:flex; flex-wrap:wrap; gap:10px; margin-top:10px;">
+              <button type="button" id="btn-toggle-change-pass" class="btn-primary" style="flex:1; min-width:180px; padding:10px 14px; font-weight:600; font-size:0.9rem; background:#2563eb; border-color:#1d4ed8;">
+                🔑 Cambiar contraseña
+              </button>
+              <button type="button" id="btn-toggle-security-q" class="btn-secondary" style="flex:1; min-width:180px; padding:10px 14px; font-weight:600; font-size:0.9rem; border-color:#38bdf8; color:#7dd3fc;">
+                ❓ Pregunta clave de recuperación
+              </button>
+            </div>
+
+            <!-- FORMULARIO CAMBIAR CONTRASEÑA (DESPLEGABLE) -->
+            <div id="box-change-password-form" class="hidden" style="margin-top:14px; padding:14px; background:rgba(15,23,42,0.65); border:1px solid #334155; border-radius:10px;">
+              <h4 style="color:#60a5fa; margin-bottom:8px; font-size:0.95rem;">🔑 Cambiar mi contraseña</h4>
+              <p class="subtitle-text" style="font-size:0.82rem; margin-bottom:12px;">Ingresá tu contraseña anterior y dos veces la nueva contraseña:</p>
+              <div class="form-group" style="margin-bottom:10px;">
+                <label for="input-change-pass-current">Contraseña anterior (actual)</label>
+                <div class="password-wrapper">
+                  <input type="password" id="input-change-pass-current" placeholder="Tu contraseña actual..." autocomplete="current-password">
+                  <button type="button" id="btn-toggle-chg-cur" class="btn-eye" title="Ver contraseña">👁️</button>
+                </div>
+              </div>
+              <div class="form-group" style="margin-bottom:10px;">
+                <label for="input-change-pass-new">Nueva contraseña</label>
+                <div class="password-wrapper">
+                  <input type="password" id="input-change-pass-new" placeholder="Tu nueva contraseña..." autocomplete="new-password">
+                  <button type="button" id="btn-toggle-chg-new" class="btn-eye" title="Ver contraseña">👁️</button>
+                </div>
+              </div>
+              <div class="form-group" style="margin-bottom:12px;">
+                <label for="input-change-pass-repeat">Repetir nueva contraseña</label>
+                <div class="password-wrapper">
+                  <input type="password" id="input-change-pass-repeat" placeholder="Repetí tu nueva contraseña..." autocomplete="new-password">
+                  <button type="button" id="btn-toggle-chg-rep" class="btn-eye" title="Ver contraseña">👁️</button>
+                </div>
+              </div>
+              <div id="change-pass-error" class="login-error hidden" style="margin-bottom:10px;"></div>
+              <div id="change-pass-success" class="share-copied-msg hidden" style="margin-bottom:10px;">✓ ¡Contraseña actualizada con éxito!</div>
+              <div class="form-actions" style="margin-top:10px;">
+                <button type="button" id="btn-cancel-change-pass" class="btn-secondary">Cancelar</button>
+                <button type="button" id="btn-submit-change-pass" class="btn-primary" style="background:#10b981; border-color:#059669; font-weight:700;">Guardar contraseña</button>
+              </div>
+            </div>
+
+            <!-- FORMULARIO PREGUNTA CLAVE DE RECUPERACIÓN (DESPLEGABLE) -->
+            <div id="box-security-question-form" class="hidden" style="margin-top:14px; padding:14px; background:rgba(15,23,42,0.65); border:1px solid #334155; border-radius:10px;">
+              <h4 style="color:#fbbf24; margin-bottom:6px; font-size:0.95rem;">❓ Pregunta clave de recuperación</h4>
+              <p class="subtitle-text" style="font-size:0.82rem; margin-bottom:12px;">Esta pregunta te servirá para recuperar o restablecer tu clave con tu DNI si la olvidás o si el administrador te la blanquea:</p>
+              
+              <div class="form-group" style="margin-bottom:10px;">
+                <label for="select-security-q">Elegí tu pregunta de seguridad</label>
+                <select id="select-security-q" style="width:100%; padding:10px; border-radius:8px; background:#1e293b; color:#fff; border:1px solid #475569;">
+                  <option value="¿Cuál es tu comida favorita?">¿Cuál es tu comida favorita?</option>
+                  <option value="¿Nombre de tu primera mascota?">¿Nombre de tu primera mascota?</option>
+                  <option value="¿Nombre de tu escuela primaria?">¿Nombre de tu escuela primaria?</option>
+                  <option value="¿Lugar o ciudad de vacaciones preferido?">¿Lugar o ciudad de vacaciones preferido?</option>
+                  <option value="¿Cuál es tu equipo o deporte favorito?">¿Cuál es tu equipo o deporte favorito?</option>
+                  <option value="otra">Escribir mi propia pregunta personalizada...</option>
+                </select>
+              </div>
+              <div class="form-group hidden" id="box-custom-security-q" style="margin-bottom:10px;">
+                <label for="input-custom-security-q">Tu pregunta personalizada</label>
+                <input type="text" id="input-custom-security-q" placeholder="Ej: ¿En qué calle vivías de chico?">
+              </div>
+              <div class="form-group" style="margin-bottom:10px;">
+                <label for="input-security-a">Tu respuesta secreta (pregunta clave)</label>
+                <input type="text" id="input-security-a" placeholder="Escribí tu respuesta..." autocomplete="off">
+              </div>
+              <div class="form-group" style="margin-bottom:12px;">
+                <label for="input-security-confirm-pass">Confirmá con tu contraseña actual</label>
+                <div class="password-wrapper">
+                  <input type="password" id="input-security-confirm-pass" placeholder="Tu contraseña..." autocomplete="current-password">
+                  <button type="button" id="btn-toggle-sec-pass" class="btn-eye" title="Ver contraseña">👁️</button>
+                </div>
+              </div>
+              <div id="security-q-error" class="login-error hidden" style="margin-bottom:10px;"></div>
+              <div id="security-q-success" class="share-copied-msg hidden" style="margin-bottom:10px;">✓ ¡Pregunta clave guardada con éxito!</div>
+              <div class="form-actions" style="margin-top:10px;">
+                <button type="button" id="btn-cancel-security-q" class="btn-secondary">Cancelar</button>
+                <button type="button" id="btn-submit-security-q" class="btn-primary" style="background:#0284c7; border-color:#0369a1; font-weight:700;">Guardar pregunta clave</button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- PANEL 2: NOTIFICACIONES -->
+      <div id="panel-cfg-notifications" class="hidden">
+        <button type="button" class="btn-back btn-back-to-settings-menu" style="margin-bottom: 12px;">â† Volver a ConfiguraciÃ³n</button>
+        <div class="settings-container">
+                    <!-- 3. NOTIFICACIONES DEL CELULAR -->
+          <div class="settings-card">
+            <div class="settings-card-header">
+              <span class="settings-icon">🔔</span>
+              <div>
+                <h3>Notificaciones en el Celular</h3>
+                <p class="subtitle-text">Avisos de tareas pedidas por otros, respuestas y recordatorios de la agenda:</p>
+              </div>
+            </div>
+            <div id="settings-push-status" class="settings-status-box" style="margin-bottom: 12px;"></div>
+            <div id="settings-push-actions" style="display: flex; gap: 10px; flex-wrap: wrap;">
+              <button type="button" id="btn-settings-enable-push" class="btn-primary" style="background: #059669; font-weight:700;">
+                🔔 Activar notificaciones
+              </button>
+              <button type="button" id="btn-settings-test-push" class="btn-secondary">
+                🧪 Probar notificación
+              </button>
+            </div>
+          </div>
+
+          <!-- 4. COMPARTIR LINK EXTERNO -->
+          <div class="settings-card">
+            <div class="settings-card-header">
+              <span class="settings-icon">🔗</span>
+              <div>
+                <h3>Compartir link para pedirte tareas</h3>
+                <p class="subtitle-text">Cualquier persona que entre a este link podrá enviarte una tarea poniendo su nombre, sin ver tu agenda:</p>
+              </div>
+            </div>
+            <div class="share-url-row" style="margin-top: 12px;">
+              <input type="text" id="input-settings-share-url" readonly>
+              <button type="button" id="btn-settings-copy-share" class="btn-primary">Copiar link</button>
+              <button type="button" id="btn-settings-whatsapp-share" class="btn-whatsapp">Enviar por WhatsApp</button>
+            </div>
+            <div id="settings-share-copied" class="share-copied-msg hidden" style="margin-top: 10px;">✓ ¡Link copiado al portapapeles!</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PANEL 3: HUELLA DACTILAR -->
+      <div id="panel-cfg-biometrics" class="hidden">
+        <button type="button" class="btn-back btn-back-to-settings-menu" style="margin-bottom: 12px;">â† Volver a ConfiguraciÃ³n</button>
+        <div class="settings-container">
+                    <!-- 2. HUELLA DIGITAL / BIOMETRÍA -->
+          <div class="settings-card">
+            <div class="settings-card-header">
+              <span class="settings-icon">👆</span>
+              <div>
+                <h3>Desbloqueo con Huella Digital</h3>
+                <p class="subtitle-text">Desbloqueá tu propio usuario en 1 segundo con tu huella sin ingresar contraseña cada vez:</p>
+              </div>
+            </div>
+            <div id="settings-bio-status" class="settings-status-box" style="margin-bottom: 12px;"></div>
+            <div id="settings-bio-actions"></div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- PANEL 4: TIEMPO DE BLOQUEO -->
+      <div id="panel-cfg-timeout" class="hidden">
+        <button type="button" class="btn-back btn-back-to-settings-menu" style="margin-bottom: 12px;">â† Volver a ConfiguraciÃ³n</button>
+        <div class="settings-container">
+                    <!-- 1. TIEMPO DE BLOQUEO POR INACTIVIDAD -->
+          <div class="settings-card">
+            <div class="settings-card-header">
+              <span class="settings-icon">⏱️</span>
+              <div>
+                <h3>Tiempo de bloqueo por inactividad</h3>
+                <p class="subtitle-text">Elegí cada cuánto tiempo debe cerrarse tu sesión automáticamente si no usás la app:</p>
+              </div>
+            </div>
+            <div class="settings-options-row" id="timeout-selector-group">
+              <button type="button" class="btn-setting-pill" data-minutes="1">1 min</button>
+              <button type="button" class="btn-setting-pill" data-minutes="15">15 min</button>
+              <button type="button" class="btn-setting-pill" data-minutes="60">60 min (1 hora)</button>
+              <button type="button" class="btn-setting-pill" data-minutes="240">4 horas</button>
+            </div>
+            <div id="timeout-saved-msg" class="share-copied-msg hidden" style="margin-top: 10px;">✓ Tiempo de bloqueo actualizado</div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- PANEL 5: VINCULACIÃ“N DE CONTACTOS -->
+      <div id="panel-cfg-vincular" class="hidden">
+        <button type="button" class="btn-back btn-back-to-settings-menu" style="margin-bottom: 12px;">â† Volver a ConfiguraciÃ³n</button>
+        <div class="settings-container">
+                <div id="subview-vincular" class="hidden">
         <div class="tasks-top-bar">
           <div>
             <h2>🤝 Vincular Contactos</h2>
@@ -2120,22 +2197,115 @@
           </div>
         </div>
       </div>
+        </div>
+      </div>
 
-      <!-- BOTÓN DE CERRAR SESIÓN EN ESTE DISPOSITIVO -->
-      <div class="task-form-box" style="margin-top: 30px; border-color: #ef4444; background: rgba(239, 68, 68, 0.08);">
-        <div style="display:flex; align-items:center; gap:10px; margin-bottom: 8px;">
-          <span style="font-size: 24px;">🚪</span>
-          <div>
-            <h3 style="color: #f87171; margin-bottom: 2px;">Cerrar sesión en este dispositivo</h3>
-            <p class="subtitle-text" style="color: #fca5a5; font-size: 0.88rem;">Cierra completamente tu agenda. Para volver a ingresar deberás escribir tu DNI y tu contraseña.</p>
+      <!-- PANEL 6: DNI, NOMBRE DE USUARIO Y AVATAR -->
+      <div id="panel-cfg-profile" class="hidden">
+        <button type="button" class="btn-back btn-back-to-settings-menu" style="margin-bottom: 12px;">â† Volver a ConfiguraciÃ³n</button>
+        <div class="settings-container">
+          <div class="settings-card" style="border-color: #a855f7; background: rgba(88, 28, 135, 0.12);">
+            <div class="settings-card-header">
+              <span class="settings-icon">ðŸ‘¤</span>
+              <div>
+                <h3 style="color: #d8b4fe;">Mis Datos de Perfil</h3>
+                <p class="subtitle-text">ModificÃ¡ tu nÃºmero de DNI, tu nombre visible y tu avatar en la agenda:</p>
+              </div>
+            </div>
+
+            <!-- PrevisualizaciÃ³n Avatar Actual -->
+            <div style="display:flex; align-items:center; gap:16px; margin: 16px 0; padding:12px; background:rgba(15,23,42,0.6); border-radius:12px; border:1px solid #334155;">
+              <div id="profile-current-avatar" style="font-size: 42px; width:64px; height:64px; display:flex; align-items:center; justify-content:center; background:#1e293b; border-radius:50%; border:2px solid #a855f7;">
+                ðŸ‘¤
+              </div>
+              <div>
+                <strong id="profile-preview-name" style="color:#fff; font-size:1.1rem; display:block;">Usuario</strong>
+                <span id="profile-preview-dni" style="color:#94a3b8; font-size:0.85rem;">DNI: -</span>
+              </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 12px;">
+              <label for="input-profile-dni">NÃºmero de DNI</label>
+              <input type="text" id="input-profile-dni" placeholder="Ej: 40218898 (solo nÃºmeros)" inputmode="numeric">
+            </div>
+
+            <div class="form-group" style="margin-bottom: 16px;">
+              <label for="input-profile-name">Nombre de usuario</label>
+              <input type="text" id="input-profile-name" placeholder="Tu nombre en la agenda...">
+            </div>
+
+            <div class="form-group" style="margin-bottom: 16px;">
+              <label style="margin-bottom: 8px; display:block;">ElegÃ­ tu avatar o emoji representativo:</label>
+              <div id="profile-avatar-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); gap: 8px; max-height: 200px; overflow-y: auto; padding: 10px; background: #0f172a; border-radius: 10px; border: 1px solid #334155;">
+                <!-- DinÃ¡mico con AVATARES_USUARIOS -->
+              </div>
+            </div>
+
+            <div id="profile-error-msg" class="login-error-msg hidden" style="margin-bottom: 12px;"></div>
+            <div id="profile-success-msg" class="share-copied-msg hidden" style="margin-bottom: 12px; color: #4ade80;">âœ“ Â¡Perfil actualizado con Ã©xito!</div>
+
+            <div class="form-actions" style="margin-top: 14px;">
+              <button type="button" id="btn-save-profile" class="btn-primary" style="width: 100%; justify-content: center; padding: 12px; font-weight: 700; background: #9333ea; border-color: #7e22ce;">
+                ðŸ’¾ Guardar cambios de perfil
+              </button>
+            </div>
           </div>
         </div>
-        <button type="button" id="btn-logout-device" class="btn-secondary" style="border-color: #ef4444; color: #f87171; font-weight: 700; width: 100%; margin-top: 10px; padding: 12px; font-size: 0.95rem;">
-          🚪 Cerrar mi sesión
-        </button>
       </div>
-    </div>
-  </section>
+
+      <!-- PANEL 7: PANEL DESARROLLADOR / ADMIN (SOLO ALEJANDRO) -->
+      <div id="panel-cfg-dev" class="hidden">
+        <button type="button" class="btn-back btn-back-to-settings-menu" style="margin-bottom: 12px;">â† Volver a ConfiguraciÃ³n</button>
+        <div class="settings-container">
+                    <!-- 1. TASAS TNA OFICIALES (GLOBALES) -->
+          <div class="settings-card" style="border-color: #f59e0b; background: rgba(120, 53, 15, 0.12);">
+            <div class="settings-card-header">
+              <span class="settings-icon">📈</span>
+              <div>
+                <h3 style="color: #fbbf24;">Tasas TNA Oficiales (Billeteras Virtuales)</h3>
+                <p class="subtitle-text">Modificá las tasas oficiales de Mercado Pago y Ualá. Se sincronizan para todos los usuarios de la familia:</p>
+              </div>
+            </div>
+            <div style="display: flex; gap: 14px; flex-wrap: wrap; margin-top: 14px;">
+              <div class="form-group" style="flex: 1; min-width: 150px; margin-bottom: 0;">
+                <label for="input-dev-tna-mp" style="font-weight: 700; color: #93c5fd;">💙 Mercado Pago TNA (%)</label>
+                <div style="display: flex; align-items: center; gap: 6px; margin-top: 4px;">
+                  <input type="number" id="input-dev-tna-mp" step="0.1" value="31.5" style="padding: 10px; font-size: 1.05rem; font-weight: 700; color: #38bdf8; background: #1e293b; border: 1px solid #475569; border-radius: 8px; width: 100%;">
+                  <span style="font-weight: 700; color: #94a3b8;">%</span>
+                </div>
+              </div>
+              <div class="form-group" style="flex: 1; min-width: 150px; margin-bottom: 0;">
+                <label for="input-dev-tna-uala" style="font-weight: 700; color: #93c5fd;">💳 Ualá TNA (%)</label>
+                <div style="display: flex; align-items: center; gap: 6px; margin-top: 4px;">
+                  <input type="number" id="input-dev-tna-uala" step="0.1" value="19.0" style="padding: 10px; font-size: 1.05rem; font-weight: 700; color: #38bdf8; background: #1e293b; border: 1px solid #475569; border-radius: 8px; width: 100%;">
+                  <span style="font-weight: 700; color: #94a3b8;">%</span>
+                </div>
+              </div>
+            </div>
+            <div class="form-actions" style="margin-top: 14px;">
+              <button type="button" id="btn-dev-save-tna" class="btn-primary" style="background: #d97706; border-color: #b45309; font-weight: 700; width: 100%; padding: 12px;">
+                💾 Guardar tasas oficiales para toda la familia
+              </button>
+            </div>
+            <div id="dev-tna-saved-msg" class="share-copied-msg hidden" style="margin-top: 10px; background: rgba(34, 197, 94, 0.2); color: #86efac; border-color: #22c55e;">
+              ✓ ¡Tasas actualizadas y sincronizadas con éxito!
+            </div>
+          </div>
+
+          <!-- 2. ADMINISTRACIÓN DE USUARIOS -->
+          <div class="settings-card admin-box" id="settings-admin-card" style="display: block;">
+            <div class="settings-card-header">
+              <span class="settings-icon">🛡️</span>
+              <div>
+                <h3 style="color: #f87171;">Administración de Usuarios</h3>
+                <p class="subtitle-text">Blanqueá contraseñas de usuarios para que las recuperen con su DNI, o eliminalos definitivamente:</p>
+              </div>
+            </div>
+            <div id="settings-admin-users-list" class="tasks-list" style="margin-top: 14px;"></div>
+          </div>
+        </div>
+      </div>
+    </section>
 
     <!-- PANTALLA PÚBLICA PARA PERSONAS EXTERNAS (?modo=externo) -->
     <section id="view-external" class="view hidden">
@@ -2287,9 +2457,10 @@
           <h4 style="color: #60a5fa; margin-bottom: 10px;">⏳ Pagos informados pendientes de aceptación:</h4>
           <div id="statement-pending-list" style="display: flex; flex-direction: column; gap: 8px;"></div>
         </div>
+      </div>
     </section>
   </main>
 
-  <script src="app.js?v=20261104_03"></script>
+  <script src="app.js?v=20261104_04"></script>
 </body>
 </html>
