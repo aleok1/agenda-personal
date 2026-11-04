@@ -11,11 +11,11 @@
   <link rel="icon" type="image/svg+xml" href="logo.svg">
   <link rel="apple-touch-icon" href="logo.svg">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="styles.css?v=20261103_03">
+  <link rel="stylesheet" href="styles.css?v=20261103_04">
   <!-- ESCUDO DE DIAGNÓSTICO TEMPRANO Y CAPTURA DE ERRORES PÚBLICOS -->
   <script>
     (function() {
-      window.__APP_VERSION = '20261103_03';
+      window.__APP_VERSION = '20261103_04';
       window.__ERRORES_APP = [];
 
       function copiarTexto(texto) {
@@ -1454,9 +1454,16 @@
             <div class="card-badge" id="extra-lists-counter" style="border-color: #38bdf8; color: #7dd3fc;">Ver listas</div>
           </button>
 
+          <button type="button" id="card-extra-vincular" class="big-card card-primary" style="background: linear-gradient(135deg, rgba(30, 58, 138, 0.9), rgba(15, 23, 42, 0.9)); border-color: #3b82f6;">
+            <div class="card-icon">🤝</div>
+            <div class="card-title">6. Vincular Contactos</div>
+            <div class="card-desc">Invitá amigos o convivientes por DNI para hacer tareas conjuntas o compartir la casa.</div>
+            <div class="card-badge" id="extra-vincular-counter" style="border-color: #3b82f6; color: #93c5fd;">Vincular</div>
+          </button>
+
           <button type="button" id="card-extra-settings" class="big-card" style="background: linear-gradient(135deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.9)); border: 1.5px solid #64748b;">
             <div class="card-icon">⚙️</div>
-            <div class="card-title">6. Configuración</div>
+            <div class="card-title">7. Configuración</div>
             <div class="card-desc">Tiempo de bloqueo de sesión, huella digital, notificaciones, compartir y administración.</div>
             <div class="card-badge" style="border-color: #94a3b8; color: #cbd5e1;">Ajustes</div>
           </button>
@@ -2023,6 +2030,91 @@
         </div>
       </div>
 
+      <!-- SUB-SECCIÓN 6: VINCULAR CONTACTOS (AMIGOS Y CONVIVIENTES POR DNI) -->
+      <div id="subview-vincular" class="hidden">
+        <div class="tasks-top-bar">
+          <div>
+            <h2>🤝 Vincular Contactos</h2>
+            <p class="subtitle-text">Buscá a otro usuario por su DNI para invitarlo como amigo o conviviente de casa</p>
+          </div>
+        </div>
+
+        <!-- FORMULARIO PARA ENVIAR SOLICITUD -->
+        <div class="task-form-box" style="margin-bottom: 22px; border-color: #3b82f6; background: rgba(30, 58, 138, 0.08);">
+          <h3 style="display:flex; align-items:center; gap:8px; margin-bottom: 6px; color: #60a5fa;">
+            <span>📨</span> Invitar usuario por DNI
+          </h3>
+          <p class="subtitle-text" style="margin-bottom: 14px;">Ingresá el número de DNI de la persona registrada para enviarle una solicitud de vinculación:</p>
+
+          <div class="form-group" style="margin-bottom: 14px;">
+            <label for="input-vincular-dni">DNI de la persona</label>
+            <input type="text" id="input-vincular-dni" placeholder="Ej: 40218898 (solo números)" inputmode="numeric">
+          </div>
+
+          <div class="form-group" style="margin-bottom: 16px;">
+            <label style="margin-bottom: 8px; display:block;">Elegí el tipo de vínculo:</label>
+            <div style="display: flex; gap: 10px; flex-direction: column;">
+              <label style="display: flex; align-items: flex-start; gap: 10px; padding: 12px; background: rgba(59, 130, 246, 0.1); border: 1.5px solid #3b82f6; border-radius: 10px; cursor: pointer;">
+                <input type="radio" name="radio-tipo-vinculo" value="amigos" checked style="margin-top: 3px; accent-color: #3b82f6;">
+                <div>
+                  <strong style="color: #bfdbfe; font-size: 0.95rem;">👥 1- Amigos</strong>
+                  <p class="subtitle-text" style="font-size: 0.82rem; margin-top: 2px; color: #94a3b8;">Para realizar tareas compartidas en equipo y coordinar eventos programados en conjunto.</p>
+                </div>
+              </label>
+
+              <label style="display: flex; align-items: flex-start; gap: 10px; padding: 12px; background: rgba(16, 185, 129, 0.1); border: 1.5px solid #10b981; border-radius: 10px; cursor: pointer;">
+                <input type="radio" name="radio-tipo-vinculo" value="convivientes" style="margin-top: 3px; accent-color: #10b981;">
+                <div>
+                  <strong style="color: #a7f3d0; font-size: 0.95rem;">🏠 2- Convivientes (Misma casa)</strong>
+                  <p class="subtitle-text" style="font-size: 0.82rem; margin-top: 2px; color: #94a3b8;">Viven juntos: además de tareas y eventos, tienen la lista del Supermercado y la Heladera compartida.</p>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <div id="vincular-error-msg" class="login-error-msg hidden" style="margin-bottom: 12px;"></div>
+          <div id="vincular-success-msg" class="share-copied-msg hidden" style="margin-bottom: 12px; color:#4ade80;"></div>
+
+          <div class="form-actions">
+            <button type="button" id="btn-submit-vincular" class="btn-primary" style="width: 100%; justify-content: center; padding: 12px; font-size: 1rem; font-weight:700;">
+              📨 Enviar solicitud de vinculación
+            </button>
+          </div>
+        </div>
+
+        <!-- SOLICITUDES RECIBIDAS PENDIENTES -->
+        <div id="box-vincular-recibidas" class="task-form-box hidden" style="margin-bottom: 22px; border-color: #f59e0b; background: rgba(245, 158, 11, 0.08);">
+          <h3 style="display:flex; align-items:center; gap:8px; margin-bottom: 6px; color:#fbbf24;">
+            <span>📬</span> Solicitudes recibidas
+          </h3>
+          <p class="subtitle-text" style="margin-bottom: 12px;">Personas que te enviaron una invitación para vincularse:</p>
+          <div id="vincular-lista-recibidas" style="display: flex; flex-direction: column; gap: 10px;">
+            <!-- Dinámico -->
+          </div>
+        </div>
+
+        <!-- VÍNCULOS ACTIVOS (CONTACTOS) -->
+        <div class="task-form-box" style="margin-bottom: 22px;">
+          <h3 style="display:flex; align-items:center; gap:8px; margin-bottom: 6px;">
+            <span>👥</span> Mis contactos y vínculos activos
+          </h3>
+          <p class="subtitle-text" style="margin-bottom: 14px;">Solo con estas personas podés compartir tareas, agendas o la casa:</p>
+          <div id="vincular-lista-activos" style="display: flex; flex-direction: column; gap: 10px;">
+            <!-- Dinámico -->
+          </div>
+        </div>
+
+        <!-- SOLICITUDES ENVIADAS PENDIENTES -->
+        <div id="box-vincular-enviadas" class="task-form-box hidden" style="margin-bottom: 22px; opacity: 0.95;">
+          <h3 style="display:flex; align-items:center; gap:8px; margin-bottom: 6px;">
+            <span>⏳</span> Solicitudes enviadas (esperando respuesta)
+          </h3>
+          <div id="vincular-lista-enviadas" style="display: flex; flex-direction: column; gap: 8px;">
+            <!-- Dinámico -->
+          </div>
+        </div>
+      </div>
+
       <!-- BOTÓN DE CERRAR SESIÓN EN ESTE DISPOSITIVO -->
       <div class="task-form-box" style="margin-top: 30px; border-color: #ef4444; background: rgba(239, 68, 68, 0.08);">
         <div style="display:flex; align-items:center; gap:10px; margin-bottom: 8px;">
@@ -2192,6 +2284,6 @@
     </section>
   </main>
 
-  <script src="app.js?v=20261103_03"></script>
+  <script src="app.js?v=20261103_04"></script>
 </body>
 </html>
