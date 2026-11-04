@@ -82,7 +82,105 @@ export default async function handler(req, res) {
       if (u.dni === undefined) u.dni = null;
     });
 
+    sincronizarDeudasConYoDebo(raw);
+
     return { sha, db: raw };
+  }
+
+  function sincronizarDeudasConYoDebo(db) {
+    if (!db || !db.usuarios) return;
+    const todosUsuarios = Object.values(db.usuarios);
+
+    todosUsuarios.forEach(uAcreedor => {
+      if (!Array.isArray(uAcreedor.deudores)) uAcreedor.deudores = [];
+
+      uAcreedor.deudores.forEach(deudor => {
+        if (!Array.isArray(deudor.conceptos)) deudor.conceptos = [];
+        if (!Array.isArray(deudor.pagosPendientes)) deudor.pagosPendientes = [];
+
+        // 1. Resolver usuarioId si no lo tiene o si no tiene DNI
+        if (!deudor.usuarioId || !deudor.dni) {
+          const dniDeudorLimpio = String(deudor.dni || '').replace(/\D/g, '').trim();
+          const nombreDigitos = String(deudor.nombre || '').replace(/\D/g, '').trim();
+          const targetDni = (dniDeudorLimpio && dniDeudorLimpio.length >= 7) ? dniDeudorLimpio : ((nombreDigitos.length >= 7 && nombreDigitos.length <= 9) ? nombreDigitos : null);
+
+          const uTarget = todosUsuarios.find(u => {
+            if (u.id === uAcreedor.id) return false;
+            const uDniLimpio = String(u.dni || '').replace(/\D/g, '').trim();
+            if (targetDni && uDniLimpio && uDniLimpio === targetDni) return true;
+            if (targetDni && u.id.startsWith(targetDni)) return true;
+            if (String(u.nombre || '').trim().toLowerCase() === String(deudor.nombre || '').trim().toLowerCase()) return true;
+            return false;
+          });
+
+          if (uTarget) {
+            deudor.usuarioId = uTarget.id;
+            deudor.dni = uTarget.dni || targetDni || deudor.dni;
+          }
+        }
+
+        // 2. Si este deudor está vinculado a un usuario de la app, sincronizar bidireccionalmente sus deudas en uTarget.yoDebo
+        if (deudor.usuarioId && db.usuarios[deudor.usuarioId]) {
+          const uDeudor = db.usuarios[deudor.usuarioId];
+          if (!Array.isArray(uDeudor.yoDebo)) uDeudor.yoDebo = [];
+
+          // Sincronizar conceptos activos del deudor hacia yoDebo del usuario
+          deudor.conceptos.forEach(c => {
+            const sumPagos = Array.isArray(c.pagos) ? c.pagos.reduce((a, p) => a + (Number(p.monto) || 0), 0) : 0;
+            const saldoRestante = Math.max(0, (Number(c.monto) || 0) - sumPagos);
+            const estaPagado = Boolean(c.pagado) || (saldoRestante === 0 && Number(c.monto) > 0);
+
+            let itemYoDebo = uDeudor.yoDebo.find(x => x.vinculadoConceptoId === c.id || x.id === 'yodebo_' + c.id);
+            if (!itemYoDebo) {
+              itemYoDebo = {
+                id: 'yodebo_' + c.id,
+                vinculadoAcreedorId: uAcreedor.id,
+                vinculadoDeudorId: deudor.id,
+                vinculadoConceptoId: c.id,
+                concepto: c.concepto,
+                acreedor: uAcreedor.nombre,
+                montoTotal: Number(c.monto) || 0,
+                cuotasTotal: Number(c.cuotasTotal) || 1,
+                valorCuota: Number(c.valorCuota) || (Number(c.monto) / (Number(c.cuotasTotal) || 1)),
+                cuotasPagadas: Array.isArray(c.pagos) ? c.pagos.length : 0,
+                montoPagado: sumPagos,
+                saldoPendiente: saldoRestante,
+                pagado: estaPagado,
+                fechaVencimiento: c.fechaVencimiento || new Date().toISOString().split('T')[0],
+                hora: '09:00',
+                recordatorio: '1d',
+                pagos: Array.isArray(c.pagos) ? c.pagos : [],
+                pagosPendientes: (deudor.pagosPendientes || []).filter(p => p.conceptoId === c.id)
+              };
+              uDeudor.yoDebo.unshift(itemYoDebo);
+            } else {
+              itemYoDebo.acreedor = uAcreedor.nombre;
+              itemYoDebo.vinculadoAcreedorId = uAcreedor.id;
+              itemYoDebo.vinculadoDeudorId = deudor.id;
+              itemYoDebo.concepto = c.concepto;
+              itemYoDebo.montoTotal = Number(c.monto) || 0;
+              itemYoDebo.cuotasTotal = Number(c.cuotasTotal) || 1;
+              itemYoDebo.valorCuota = Number(c.valorCuota) || (Number(c.monto) / (Number(c.cuotasTotal) || 1));
+              itemYoDebo.montoPagado = sumPagos;
+              itemYoDebo.saldoPendiente = saldoRestante;
+              itemYoDebo.pagado = estaPagado;
+              itemYoDebo.pagos = Array.isArray(c.pagos) ? c.pagos : [];
+              itemYoDebo.pagosPendientes = (deudor.pagosPendientes || []).filter(p => p.conceptoId === c.id);
+            }
+          });
+
+          // Quitar de yoDebo las deudas de este acreedor/deudor que hayan sido eliminadas
+          const idsConceptosActivos = new Set(deudor.conceptos.map(c => c.id));
+          uDeudor.yoDebo = uDeudor.yoDebo.filter(item => {
+            if (item.vinculadoAcreedorId === uAcreedor.id && item.vinculadoDeudorId === deudor.id) {
+              return idsConceptosActivos.has(item.vinculadoConceptoId);
+            }
+            return true;
+          });
+        }
+      });
+    });
+  }
   }
 
   async function guardarBaseDeDatos(db, sha, mensajeCommit) {
@@ -1353,20 +1451,30 @@ export default async function handler(req, res) {
         if (!u) return res.status(404).json({ error: 'Usuario no encontrado' });
         const nombre = String(body.nombre || '').trim();
         if (!nombre) return res.status(400).json({ error: 'Ingresá el nombre del deudor' });
-        const dniLimpio = String(body.dni || '').replace(/\D/g, '').trim();
+        let dniLimpio = String(body.dni || '').replace(/\D/g, '').trim();
+        if (!dniLimpio) {
+          const digitosNombre = nombre.replace(/\D/g, '').trim();
+          if (digitosNombre.length >= 7 && digitosNombre.length <= 9) {
+            dniLimpio = digitosNombre;
+          }
+        }
 
         if (!Array.isArray(u.deudores)) u.deudores = [];
 
         // Buscar si coincide con algún usuario de la aplicación
-        let usuarioVinculado = null;
-        if (dniLimpio) {
-          usuarioVinculado = Object.values(db.usuarios).find(otro => otro.id !== u.id && String(otro.dni || '').replace(/\D/g, '') === dniLimpio);
-        }
+        let usuarioVinculado = Object.values(db.usuarios).find(otro => {
+          if (otro.id === u.id) return false;
+          const otroDni = String(otro.dni || '').replace(/\D/g, '');
+          if (dniLimpio && otroDni && otroDni === dniLimpio) return true;
+          if (dniLimpio && otro.id.startsWith(dniLimpio)) return true;
+          if (String(otro.nombre || '').trim().toLowerCase() === nombre.toLowerCase()) return true;
+          return false;
+        });
 
         const nuevoDeudor = {
           id: 'deudor_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
           nombre: nombre,
-          dni: dniLimpio || null,
+          dni: dniLimpio || (usuarioVinculado ? usuarioVinculado.dni : null),
           usuarioId: usuarioVinculado ? usuarioVinculado.id : null,
           conceptos: [],
           pagosPendientes: [],
@@ -1375,6 +1483,7 @@ export default async function handler(req, res) {
         };
 
         u.deudores.push(nuevoDeudor);
+        sincronizarDeudasConYoDebo(db);
         await guardarBaseDeDatos(db, sha, `Crear deudor ${nombre} en ${u.nombre}`);
 
         return res.status(200).json({
@@ -1417,32 +1526,31 @@ export default async function handler(req, res) {
         deudor.conceptos.push(nuevoConcepto);
         deudor.updatedAt = Date.now();
 
-        // Si el deudor está vinculado a un usuario de la app, agregarlo a su "Yo debo"
+        // 1. Si no tiene usuarioId, intentar resolverlo por DNI o por dígitos del nombre
+        if (!deudor.usuarioId || !deudor.dni) {
+          const dniD = String(deudor.dni || '').replace(/\D/g, '');
+          const nomD = String(deudor.nombre || '').replace(/\D/g, '');
+          const targetDni = (dniD && dniD.length >= 7) ? dniD : ((nomD.length >= 7 && nomD.length <= 9) ? nomD : null);
+          const uTarget = Object.values(db.usuarios).find(otro => {
+            if (otro.id === u.id) return false;
+            const otroDni = String(otro.dni || '').replace(/\D/g, '');
+            if (targetDni && otroDni && otroDni === targetDni) return true;
+            if (targetDni && otro.id.startsWith(targetDni)) return true;
+            if (String(otro.nombre || '').trim().toLowerCase() === String(deudor.nombre || '').trim().toLowerCase()) return true;
+            return false;
+          });
+          if (uTarget) {
+            deudor.usuarioId = uTarget.id;
+            deudor.dni = uTarget.dni || targetDni || deudor.dni;
+          }
+        }
+
+        // 2. Sincronizar deudas con Yo debo
+        sincronizarDeudasConYoDebo(db);
+
+        // 3. Notificación Push al socio si corresponde
         if (deudor.usuarioId && db.usuarios[deudor.usuarioId]) {
           const uSocio = db.usuarios[deudor.usuarioId];
-          if (!Array.isArray(uSocio.yoDebo)) uSocio.yoDebo = [];
-          
-          const deudaYoDebo = {
-            id: 'yodebo_' + nuevoConcepto.id,
-            vinculadoAcreedorId: u.id,
-            vinculadoDeudorId: deudor.id,
-            vinculadoConceptoId: nuevoConcepto.id,
-            concepto: nuevoConcepto.concepto,
-            acreedor: u.nombre,
-            montoTotal: nuevoConcepto.monto,
-            cuotasTotal: nuevoConcepto.cuotasTotal,
-            valorCuota: nuevoConcepto.valorCuota,
-            cuotasPagadas: 0,
-            montoPagado: 0,
-            saldoPendiente: nuevoConcepto.monto,
-            fechaVencimiento: body.fechaVencimiento || new Date().toISOString().split('T')[0],
-            hora: '09:00',
-            recordatorio: '1d',
-            pagos: [],
-            pagosPendientes: []
-          };
-          uSocio.yoDebo.unshift(deudaYoDebo);
-
           if (Array.isArray(uSocio.pushSubscriptions) && uSocio.pushSubscriptions.length > 0) {
             const payload = {
               title: `💸 ${u.nombre} te cargó una deuda`,
@@ -1457,7 +1565,7 @@ export default async function handler(req, res) {
         }
 
         await guardarBaseDeDatos(db, sha, `Nueva deuda en deudor ${deudor.nombre}: ${nuevoConcepto.concepto}`);
-        return res.status(200).json({ ok: true, deudor, deudores: u.deudores, concepto: nuevoConcepto });
+        return res.status(200).json({ ok: true, deudor, deudores: u.deudores, concepto: nuevoConcepto, vinculadoAUsuario: Boolean(deudor.usuarioId) });
       }
 
       if (accion === 'informar_pago_deudor_app') {
@@ -1661,6 +1769,7 @@ export default async function handler(req, res) {
       if (Array.isArray(body.yoDebo)) {
         u.yoDebo = body.yoDebo;
       }
+      sincronizarDeudasConYoDebo(db);
       if (body.tiempoBloqueoMin !== undefined) {
         u.tiempoBloqueoMin = Number(body.tiempoBloqueoMin) || 60;
       }
