@@ -228,8 +228,11 @@ const btnCancelSharedTask = document.getElementById('btn-cancel-shared-task');
 const btnSaveSharedTask = document.getElementById('btn-save-shared-task');
 const sharedTasksList = document.getElementById('shared-tasks-list');
 
-// Ingreso con DNI y Registro de DNI
+// Ingreso con DNI, Huella y Registro
 const dniLoginBox = document.getElementById('dni-login-box');
+const dniFingerprintBox = document.getElementById('dni-fingerprint-box');
+const btnDniFingerprint = document.getElementById('btn-dni-fingerprint');
+const btnDniFingerprintTitle = document.getElementById('btn-dni-fingerprint-title');
 const inputLoginDni = document.getElementById('input-login-dni');
 const inputLoginDniPass = document.getElementById('input-login-dni-pass');
 const btnToggleDniPass = document.getElementById('btn-toggle-dni-pass');
@@ -240,6 +243,16 @@ const inputUserDni = document.getElementById('input-user-dni');
 const registerDniError = document.getElementById('register-dni-error');
 const btnSaveUserDni = document.getElementById('btn-save-user-dni');
 const btnLogoutDevice = document.getElementById('btn-logout-device');
+
+// Pestañas Configuración Normal vs Desarrollador
+const tabBtnSettingsNormal = document.getElementById('tab-btn-settings-normal');
+const tabBtnSettingsDev = document.getElementById('tab-btn-settings-dev');
+const boxSettingsNormal = document.getElementById('box-settings-normal');
+const boxSettingsDev = document.getElementById('box-settings-dev');
+const inputDevTnaMp = document.getElementById('input-dev-tna-mp');
+const inputDevTnaUala = document.getElementById('input-dev-tna-uala');
+const btnDevSaveTna = document.getElementById('btn-dev-save-tna');
+const devTnaSavedMsg = document.getElementById('dev-tna-saved-msg');
 
 // Elementos de Registro directo con DNI
 const btnToggleDniRegister = document.getElementById('btn-toggle-dni-register');
@@ -435,14 +448,31 @@ function obtenerPasswordSesionVigente(usuarioId) {
 }
 
 // Actualizar marca de actividad cuando el usuario toca o usa la app
-window.addEventListener('click', () => {
-  if (usuarioActivo) {
-    const passVigente = obtenerPasswordSesionVigente(usuarioActivo.id);
-    if (!passVigente) {
-      // Pasó más de 1 hora de inactividad: volver a pantalla de usuarios y pedir contraseña
-      volverAPantallaUsuarios();
-    } else {
-      registrarActividadSesion();
+['click', 'touchstart', 'keydown', 'scroll'].forEach(evt => {
+  window.addEventListener(evt, () => {
+    if (usuarioActivo) {
+      const passVigente = obtenerPasswordSesionVigente(usuarioActivo.id);
+      if (!passVigente) {
+        // Pasó el tiempo de inactividad: volver a pantalla de usuarios y pedir contraseña
+        volverAPantallaUsuarios();
+      } else {
+        registrarActividadSesion();
+      }
+    }
+  }, { passive: true });
+});
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    if (usuarioActivo) {
+      const passVigente = obtenerPasswordSesionVigente(usuarioActivo.id);
+      if (!passVigente) {
+        volverAPantallaUsuarios();
+      } else {
+        registrarActividadSesion();
+      }
+    } else if (typeof actualizarVisibilidadHuellaDni === 'function') {
+      actualizarVisibilidadHuellaDni(false);
     }
   }
 });
@@ -453,14 +483,10 @@ window.addEventListener('click', () => {
 async function cargarListaDeUsuarios() {
   const recordadoId = localStorage.getItem('agenda_usuario_recordado');
 
-  if (usersGrid) usersGrid.classList.add('hidden');
-  if (loginPasswordBox) loginPasswordBox.classList.add('hidden');
-  if (createUserBox) createUserBox.classList.add('hidden');
-
-  // dniLoginBox SIEMPRE está visible en la pantalla inicial para cualquier computadora o celular
-  if (dniLoginBox) {
-    dniLoginBox.classList.remove('hidden');
-    if (recordadoId && inputLoginDni && !inputLoginDni.value) {
+  // Si el usuario ya tenía una sesión activa de menos de 1 hora (o su tiempo configurado), entrar directamente
+  if (recordadoId) {
+    const passSesion = obtenerPasswordSesionVigente(recordadoId);
+    if (passSesion) {
       let u = listaUsuariosPublica.find(x => x.id === recordadoId);
       if (!u) {
         try {
@@ -468,12 +494,41 @@ async function cargarListaDeUsuarios() {
           u = cache.find(x => x.id === recordadoId);
         } catch (e) {}
       }
-      if (u) {
-        inputLoginDni.value = u.dni || u.nombre;
-        if (inputLoginDniPass) inputLoginDniPass.focus();
+      if (!u) u = { id: recordadoId, nombre: 'Alejandro', tienePassword: true };
+      intentarIngresoConPassword(u, passSesion, true);
+      return;
+    }
+  }
+
+  if (usersGrid) usersGrid.classList.add('hidden');
+  if (loginPasswordBox) loginPasswordBox.classList.add('hidden');
+  if (createUserBox) createUserBox.classList.add('hidden');
+
+  // dniLoginBox SIEMPRE está visible en la pantalla inicial para cualquier computadora o celular
+  if (dniLoginBox) {
+    dniLoginBox.classList.remove('hidden');
+    let u = null;
+    if (recordadoId) {
+      u = listaUsuariosPublica.find(x => x.id === recordadoId);
+      if (!u) {
+        try {
+          const cache = JSON.parse(localStorage.getItem('agenda_usuarios_cache') || '[]');
+          u = cache.find(x => x.id === recordadoId);
+        } catch (e) {}
       }
-    } else if (inputLoginDni && !inputLoginDni.value) {
-      inputLoginDni.focus();
+      if (u && inputLoginDni && !inputLoginDni.value) {
+        inputLoginDni.value = u.dni || u.nombre;
+      }
+    }
+
+    // Verificar si tiene huella configurada en este celular y lanzar sensor
+    actualizarVisibilidadHuellaDni(true);
+    if (!obtenerUsuarioParaHuella()) {
+      if (inputLoginDniPass && inputLoginDni && inputLoginDni.value) {
+        inputLoginDniPass.focus();
+      } else if (inputLoginDni) {
+        inputLoginDni.focus();
+      }
     }
   }
 
@@ -501,10 +556,15 @@ async function cargarListaDeUsuarios() {
           const uRec = listaUsuariosPublica.find(x => x.id === recId);
           if (uRec) {
             inputLoginDni.value = uRec.dni || uRec.nombre;
-            if (inputLoginDniPass) inputLoginDniPass.focus();
           }
         }
       }
+
+      if (data.configTna) {
+        if (data.configTna.mercadopago) TNA_BILLETERAS_INFO.mercadopago.tnaDefault = Number(data.configTna.mercadopago);
+        if (data.configTna.uala) TNA_BILLETERAS_INFO.uala.tnaDefault = Number(data.configTna.uala);
+      }
+
       window.__LAST_SYNC_ERROR = null;
       actualizarEstadoSync('☁️ En línea', 'verde');
     } else {
@@ -715,6 +775,7 @@ async function intentarIngresoConPassword(u, pass, eraAutomatico) {
 
     registrarActividadSesion();
     loginPasswordBox.classList.add('hidden');
+    if (dniLoginBox) dniLoginBox.classList.add('hidden');
     entrarAMenuDeUsuarioActivo();
   } catch (e) {
     loginErrorMsg.textContent = 'Error de conexión. Intentá nuevamente.';
@@ -987,6 +1048,7 @@ async function activarHuellaParaUsuario(u, password) {
       };
 
       localStorage.setItem('agenda_bio_' + u.id, JSON.stringify(infoBio));
+      localStorage.setItem('agenda_usuario_recordado', u.id);
       actualizarEstadoBotonHuella();
       renderizarGrillaUsuarios();
       alert(`¡Huella digital activada para ${u.nombre}! En los próximos ingresos podrás entrar apoyando tu dedo.`);
@@ -1003,7 +1065,61 @@ async function activarHuellaParaUsuario(u, password) {
   return false;
 }
 
+function obtenerUsuarioParaHuella() {
+  const val = (inputLoginDni ? inputLoginDni.value.trim() : '');
+  if (val && Array.isArray(listaUsuariosPublica)) {
+    const uMatch = listaUsuariosPublica.find(x => 
+      (x.dni && String(x.dni).trim() === val) || 
+      (x.nombre && x.nombre.toLowerCase().trim() === val.toLowerCase()) ||
+      (x.id && x.id.toLowerCase() === val.toLowerCase())
+    );
+    if (uMatch && tieneHuellaGuardada(uMatch.id)) {
+      return uMatch;
+    }
+  }
+  const recId = localStorage.getItem('agenda_usuario_recordado');
+  if (recId && tieneHuellaGuardada(recId)) {
+    const uRec = (Array.isArray(listaUsuariosPublica) && listaUsuariosPublica.find(x => x.id === recId)) || { id: recId, nombre: (recId === 'alejandro' ? 'Alejandro' : 'Usuario') };
+    return uRec;
+  }
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('agenda_bio_')) {
+        const uId = key.replace('agenda_bio_', '');
+        if (tieneHuellaGuardada(uId)) {
+          const uFound = (Array.isArray(listaUsuariosPublica) && listaUsuariosPublica.find(x => x.id === uId)) || { id: uId, nombre: (uId === 'alejandro' ? 'Alejandro' : 'Usuario') };
+          return uFound;
+        }
+      }
+    }
+  } catch (e) {}
+  return null;
+}
+
+function actualizarVisibilidadHuellaDni(autoLanzar = false) {
+  if (!dniFingerprintBox) return;
+  const uBio = obtenerUsuarioParaHuella();
+  if (uBio) {
+    dniFingerprintBox.classList.remove('hidden');
+    if (btnDniFingerprintTitle) {
+      btnDniFingerprintTitle.textContent = `Desbloquear a ${uBio.nombre || 'mi usuario'} con huella`;
+    }
+    if (inputLoginDni && !inputLoginDni.value) {
+      inputLoginDni.value = uBio.dni || uBio.nombre || '';
+    }
+    if (autoLanzar) {
+      setTimeout(() => {
+        solicitarDesbloqueoConHuella(uBio);
+      }, 350);
+    }
+  } else {
+    dniFingerprintBox.classList.add('hidden');
+  }
+}
+
 async function solicitarDesbloqueoConHuella(u) {
+  if (!u || !u.id) return false;
   const raw = localStorage.getItem('agenda_bio_' + u.id);
   if (!raw) return false;
   let infoBio;
@@ -1016,6 +1132,13 @@ async function solicitarDesbloqueoConHuella(u) {
   if (!infoBio.credId || !infoBio.pass) return false;
 
   try {
+    if (btnDniFingerprint) {
+      btnDniFingerprint.disabled = true;
+      btnDniFingerprint.style.opacity = '0.7';
+    }
+    if (btnDniFingerprintTitle) {
+      btnDniFingerprintTitle.textContent = 'Apoyá tu huella en el sensor...';
+    }
     if (btnLoginFingerprint) {
       btnLoginFingerprint.disabled = true;
       btnLoginFingerprint.style.opacity = '0.7';
@@ -1039,8 +1162,7 @@ async function solicitarDesbloqueoConHuella(u) {
         rpId: window.location.hostname,
         allowCredentials: [{
           type: 'public-key',
-          id: credBytes,
-          transports: ['internal']
+          id: credBytes
         }],
         userVerification: 'required',
         timeout: 60000
@@ -1054,21 +1176,54 @@ async function solicitarDesbloqueoConHuella(u) {
     }
   } catch (err) {
     console.warn('Lectura de huella no completada:', err);
-    if (err.name !== 'NotAllowedError' && loginErrorMsg) {
-      loginErrorMsg.textContent = 'No se reconoció la huella. Podés ingresar tu contraseña.';
-      loginErrorMsg.classList.remove('hidden');
+    if (err.name !== 'NotAllowedError') {
+      if (dniLoginError) {
+        dniLoginError.textContent = 'No se reconoció la huella. Podés ingresar tu contraseña.';
+        dniLoginError.classList.remove('hidden');
+      } else if (loginErrorMsg) {
+        loginErrorMsg.textContent = 'No se reconoció la huella. Podés ingresar tu contraseña.';
+        loginErrorMsg.classList.remove('hidden');
+      }
     }
-    if (inputLoginPassword) inputLoginPassword.focus();
+    if (inputLoginDniPass) inputLoginDniPass.focus();
+    else if (inputLoginPassword) inputLoginPassword.focus();
   } finally {
+    if (btnDniFingerprint) {
+      btnDniFingerprint.disabled = false;
+      btnDniFingerprint.style.opacity = '1';
+    }
+    if (btnDniFingerprintTitle) {
+      btnDniFingerprintTitle.textContent = `Desbloquear a ${u.nombre || 'mi usuario'} con huella`;
+    }
     if (btnLoginFingerprint) {
       btnLoginFingerprint.disabled = false;
       btnLoginFingerprint.style.opacity = '1';
     }
     if (btnLoginFingerprintTitle) {
-      btnLoginFingerprintTitle.textContent = `Desbloquear a ${u.nombre} con huella`;
+      btnLoginFingerprintTitle.textContent = `Desbloquear a ${u.nombre || 'mi usuario'} con huella`;
     }
   }
   return false;
+}
+
+if (btnDniFingerprint) {
+  btnDniFingerprint.addEventListener('click', () => {
+    const u = obtenerUsuarioParaHuella();
+    if (u) {
+      solicitarDesbloqueoConHuella(u);
+    } else {
+      alert('No hay huella configurada en este dispositivo para este usuario.');
+    }
+  });
+}
+
+if (inputLoginDni) {
+  inputLoginDni.addEventListener('input', () => {
+    actualizarVisibilidadHuellaDni(false);
+  });
+  inputLoginDni.addEventListener('blur', () => {
+    actualizarVisibilidadHuellaDni(false);
+  });
 }
 
 async function actualizarEstadoBotonHuella() {
@@ -2986,31 +3141,25 @@ btnSaveWallet.addEventListener('click', guardarMovimientoBilletera);
 const TNA_BILLETERAS_INFO = {
   mercadopago: {
     nombre: 'Mercado Pago',
-    tnaDefault: 37.0,
+    tnaDefault: 31.5,
     icono: '💙',
     tipo: 'Fondo Money Market'
   },
-  naranjax: {
-    nombre: 'Naranja X',
-    tnaDefault: 42.0,
-    icono: '🧡',
-    tipo: 'Cuenta Remunerada'
-  },
   uala: {
     nombre: 'Ualá',
-    tnaDefault: 38.0,
+    tnaDefault: 19.0,
     icono: '💳',
     tipo: 'Cuenta Remunerada'
   }
 };
 
 function obtenerTNAConfigUsuario() {
-  if (!usuarioActivo) return { habilitada: false, billetera: 'mercadopago', tna: 37.0, ultimaFecha: null };
+  if (!usuarioActivo) return { habilitada: false, billetera: 'mercadopago', tna: 31.5, ultimaFecha: null };
   if (!usuarioActivo.tnaConfig) {
     usuarioActivo.tnaConfig = {
       habilitada: false,
       billetera: 'mercadopago',
-      tna: 37.0,
+      tna: 31.5,
       ultimaFecha: null
     };
   }
@@ -3650,16 +3799,104 @@ async function renderizarConfiguracion() {
     };
   }
 
-  // 5. ADMINISTRACIÓN DE USUARIOS (SOLO ADMINISTRADOR / ALEJANDRO)
-  const settingsAdminCard = document.getElementById('settings-admin-card');
+  // 5. PESTAÑAS: CONFIGURACIÓN NORMAL VS PANEL DESARROLLADOR / ADMIN
   const settingsAdminUsersList = document.getElementById('settings-admin-users-list');
-  if (settingsAdminCard && settingsAdminUsersList) {
-    if (usuarioActivo.esAdmin) {
-      settingsAdminCard.style.display = 'block';
-      renderizarListaAdminEnSettings(settingsAdminUsersList);
+  function cambiarTabSettings(tab) {
+    if (tab === 'dev') {
+      if (boxSettingsNormal) boxSettingsNormal.classList.add('hidden');
+      if (boxSettingsDev) boxSettingsDev.classList.remove('hidden');
+      if (tabBtnSettingsDev) {
+        tabBtnSettingsDev.className = 'btn-primary';
+        tabBtnSettingsDev.style.borderColor = '#f59e0b';
+        tabBtnSettingsDev.style.background = '#f59e0b';
+        tabBtnSettingsDev.style.color = '#000';
+      }
+      if (tabBtnSettingsNormal) {
+        tabBtnSettingsNormal.className = 'btn-secondary';
+        tabBtnSettingsNormal.style.borderColor = '#334155';
+        tabBtnSettingsNormal.style.background = 'transparent';
+        tabBtnSettingsNormal.style.color = '#94a3b8';
+      }
+      if (inputDevTnaMp) inputDevTnaMp.value = TNA_BILLETERAS_INFO.mercadopago.tnaDefault;
+      if (inputDevTnaUala) inputDevTnaUala.value = TNA_BILLETERAS_INFO.uala.tnaDefault;
+      if (settingsAdminUsersList) renderizarListaAdminEnSettings(settingsAdminUsersList);
     } else {
-      settingsAdminCard.style.display = 'none';
+      if (boxSettingsNormal) boxSettingsNormal.classList.remove('hidden');
+      if (boxSettingsDev) boxSettingsDev.classList.add('hidden');
+      if (tabBtnSettingsNormal) {
+        tabBtnSettingsNormal.className = 'btn-primary';
+        tabBtnSettingsNormal.style.background = '';
+        tabBtnSettingsNormal.style.color = '';
+      }
+      if (tabBtnSettingsDev) {
+        tabBtnSettingsDev.className = 'btn-secondary';
+        tabBtnSettingsDev.style.borderColor = '#f59e0b';
+        tabBtnSettingsDev.style.background = 'transparent';
+        tabBtnSettingsDev.style.color = '#fbbf24';
+      }
     }
+  }
+
+  if (tabBtnSettingsDev) {
+    if (usuarioActivo.esAdmin) {
+      tabBtnSettingsDev.classList.remove('hidden');
+    } else {
+      tabBtnSettingsDev.classList.add('hidden');
+      cambiarTabSettings('normal');
+    }
+  }
+
+  if (tabBtnSettingsNormal) tabBtnSettingsNormal.onclick = () => cambiarTabSettings('normal');
+  if (tabBtnSettingsDev) tabBtnSettingsDev.onclick = () => cambiarTabSettings('dev');
+
+  if (btnDevSaveTna) {
+    btnDevSaveTna.onclick = async () => {
+      const valMp = inputDevTnaMp ? parseFloat(inputDevTnaMp.value) : 31.5;
+      const valUala = inputDevTnaUala ? parseFloat(inputDevTnaUala.value) : 19.0;
+      if (isNaN(valMp) || valMp <= 0 || isNaN(valUala) || valUala <= 0) {
+        alert('Por favor ingresá porcentajes válidos mayores a cero.');
+        return;
+      }
+      let passAdmin = obtenerPasswordAdminParaAcciones();
+      if (!passAdmin) {
+        passAdmin = prompt('Ingresá tu contraseña de administrador Alejandro para guardar:') || '';
+        if (!passAdmin) return;
+      }
+      try {
+        btnDevSaveTna.disabled = true;
+        btnDevSaveTna.textContent = 'Guardando...';
+        const res = await fetch(API_SYNC_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            accion: 'guardar_tasas_globales',
+            usuarioId: 'alejandro',
+            adminPassword: passAdmin,
+            configTna: {
+              mercadopago: valMp,
+              uala: valUala
+            }
+          })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          TNA_BILLETERAS_INFO.mercadopago.tnaDefault = valMp;
+          TNA_BILLETERAS_INFO.uala.tnaDefault = valUala;
+          if (devTnaSavedMsg) {
+            devTnaSavedMsg.textContent = '✓ ¡Tasas globales actualizadas con éxito!';
+            devTnaSavedMsg.classList.remove('hidden');
+            setTimeout(() => devTnaSavedMsg.classList.add('hidden'), 3500);
+          }
+        } else {
+          alert(data.error || 'No se pudieron guardar las tasas');
+        }
+      } catch (err) {
+        alert('Error de conexión al guardar tasas.');
+      } finally {
+        btnDevSaveTna.disabled = false;
+        btnDevSaveTna.textContent = '✓ Guardar tasas para todos';
+      }
+    };
   }
 }
 
