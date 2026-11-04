@@ -1,4 +1,4 @@
-﻿// Global error handler para visibilidad inmediata en pantalla si algo falla
+// Global error handler para visibilidad inmediata en pantalla si algo falla
 window.onerror = function(msg, url, lineNo, colNo, error) {
   console.error('ERROR GLOBAL:', msg, lineNo, error);
   const syncEl = document.getElementById('sync-status');
@@ -1664,6 +1664,7 @@ function entrarAMenuDeUsuarioActivo() {
   if (viewDebts) viewDebts.classList.add('hidden');
   if (viewAssistant) viewAssistant.classList.add('hidden');
   if (viewExtras) viewExtras.classList.add('hidden');
+  if (viewSettings) viewSettings.classList.add('hidden');
   viewHome.classList.remove('hidden');
 
   btnSwitchUser.textContent = '🔒 Bloquear';
@@ -1735,6 +1736,7 @@ function volverAPantallaUsuarios(forzarDni) {
   if (viewDebts) viewDebts.classList.add('hidden');
   if (viewAssistant) viewAssistant.classList.add('hidden');
   if (viewExtras) viewExtras.classList.add('hidden');
+  if (viewSettings) viewSettings.classList.add('hidden');
   const hp = document.getElementById('housemates-prompt-box');
   if (hp) hp.classList.add('hidden');
   if (modalRegisterDni) modalRegisterDni.classList.add('hidden');
@@ -2448,6 +2450,7 @@ function irAInicio() {
   if (viewDebts) viewDebts.classList.add('hidden');
   if (viewAssistant) viewAssistant.classList.add('hidden');
   if (viewExtras) viewExtras.classList.add('hidden');
+  if (viewSettings) viewSettings.classList.add('hidden');
   viewHome.classList.remove('hidden');
   btnHome.classList.add('hidden');
   actualizarContadoresYAlertas();
@@ -2463,6 +2466,7 @@ function irAMenuTareasAgenda() {
   viewWallet.classList.add('hidden');
   if (viewAssistant) viewAssistant.classList.add('hidden');
   if (viewExtras) viewExtras.classList.add('hidden');
+  if (viewSettings) viewSettings.classList.add('hidden');
   if (viewTasksAgendaMenu) viewTasksAgendaMenu.classList.remove('hidden');
   btnHome.classList.remove('hidden');
   actualizarContadoresTareasAgendaMenu();
@@ -2478,6 +2482,7 @@ function irATareas() {
   viewWallet.classList.add('hidden');
   if (viewAssistant) viewAssistant.classList.add('hidden');
   if (viewExtras) viewExtras.classList.add('hidden');
+  if (viewSettings) viewSettings.classList.add('hidden');
   viewTasks.classList.remove('hidden');
   btnHome.classList.remove('hidden');
   limpiarTareasVencidas();
@@ -2499,6 +2504,7 @@ function irAAgenda(fechaISO) {
   viewWallet.classList.add('hidden');
   if (viewAssistant) viewAssistant.classList.add('hidden');
   if (viewExtras) viewExtras.classList.add('hidden');
+  if (viewSettings) viewSettings.classList.add('hidden');
   viewAgenda.classList.remove('hidden');
   btnHome.classList.remove('hidden');
   renderizarCalendario();
@@ -2514,6 +2520,7 @@ function irATareasCompartidas() {
   viewWallet.classList.add('hidden');
   if (viewAssistant) viewAssistant.classList.add('hidden');
   if (viewExtras) viewExtras.classList.add('hidden');
+  if (viewSettings) viewSettings.classList.add('hidden');
   if (viewSharedTasks) viewSharedTasks.classList.remove('hidden');
   btnHome.classList.remove('hidden');
   renderizarTareasCompartidas();
@@ -2531,6 +2538,7 @@ function irAMenuEconomia() {
   if (viewDebts) viewDebts.classList.add('hidden');
   if (viewAssistant) viewAssistant.classList.add('hidden');
   if (viewExtras) viewExtras.classList.add('hidden');
+  if (viewSettings) viewSettings.classList.add('hidden');
   if (viewEconomyMenu) viewEconomyMenu.classList.remove('hidden');
   btnHome.classList.remove('hidden');
   actualizarContadoresEconomiaMenu();
@@ -2547,6 +2555,7 @@ function irABilletera() {
   if (viewDebts) viewDebts.classList.add('hidden');
   if (viewAssistant) viewAssistant.classList.add('hidden');
   if (viewExtras) viewExtras.classList.add('hidden');
+  if (viewSettings) viewSettings.classList.add('hidden');
   viewWallet.classList.remove('hidden');
   btnHome.classList.remove('hidden');
   renderizarBilletera();
@@ -2563,6 +2572,7 @@ function irADeudas(subtabDeseada) {
   viewWallet.classList.add('hidden');
   if (viewAssistant) viewAssistant.classList.add('hidden');
   if (viewExtras) viewExtras.classList.add('hidden');
+  if (viewSettings) viewSettings.classList.add('hidden');
   if (viewDebts) viewDebts.classList.remove('hidden');
   btnHome.classList.remove('hidden');
   cambiarSubtabDeudas(subtabDeseada || subtabDeudaActiva || 'me-deben');
@@ -2579,6 +2589,7 @@ function irAAsistente() {
   viewWallet.classList.add('hidden');
   if (viewDebts) viewDebts.classList.add('hidden');
   if (viewExtras) viewExtras.classList.add('hidden');
+  if (viewSettings) viewSettings.classList.add('hidden');
   if (viewAssistant) viewAssistant.classList.remove('hidden');
   btnHome.classList.remove('hidden');
   const inp = document.getElementById('input-chat-msg');
@@ -2596,11 +2607,30 @@ function irAExtras() {
   viewWallet.classList.add('hidden');
   if (viewDebts) viewDebts.classList.add('hidden');
   if (viewAssistant) viewAssistant.classList.add('hidden');
+  if (viewSettings) viewSettings.classList.add('hidden');
   viewExtras.classList.remove('hidden');
   btnHome.classList.remove('hidden');
 
   // Solo mostrar el menú de opciones (sin abrir Supermercado ni ninguna otra herramienta automáticamente)
   mostrarMenuExtras();
+}
+
+function irAConfiguracion() {
+  registrarPasoHistorial('settings');
+  viewHome.classList.add('hidden');
+  if (viewEconomyMenu) viewEconomyMenu.classList.add('hidden');
+  if (viewTasksAgendaMenu) viewTasksAgendaMenu.classList.add('hidden');
+  viewTasks.classList.add('hidden');
+  viewAgenda.classList.add('hidden');
+  if (viewSharedTasks) viewSharedTasks.classList.add('hidden');
+  viewWallet.classList.add('hidden');
+  if (viewDebts) viewDebts.classList.add('hidden');
+  if (viewAssistant) viewAssistant.classList.add('hidden');
+  if (viewExtras) viewExtras.classList.add('hidden');
+  if (viewSettings) viewSettings.classList.remove('hidden');
+  btnHome.classList.remove('hidden');
+
+  mostrarMenuConfiguracion();
 }
 
 // Manejar el botón físico/gesto "Atrás" del celular para que navegue adentro de la app sin salirse
@@ -2632,10 +2662,33 @@ window.addEventListener('popstate', () => {
       return;
     }
 
-    // Si está adentro de una herramienta de Extras, volver al menú de opciones de Extras
-    if (viewExtras && !viewExtras.classList.contains('hidden') && extrasSubviewNav && !extrasSubviewNav.classList.contains('hidden')) {
-      mostrarMenuExtras();
-      history.pushState({ vista: 'extras' }, '');
+    // Si está adentro de una subvistas de Elementos Diarios, volver a Casa o Uso Diario
+    if (viewExtras && !viewExtras.classList.contains('hidden')) {
+      if ((subviewSuper && !subviewSuper.classList.contains('hidden')) ||
+          (subviewFridge && !subviewFridge.classList.contains('hidden'))) {
+        mostrarCasa();
+        history.pushState({ vista: 'casa' }, '');
+        return;
+      }
+      if ((subviewGemini && !subviewGemini.classList.contains('hidden')) ||
+          (subviewWorkout && !subviewWorkout.classList.contains('hidden')) ||
+          (subviewLists && !subviewLists.classList.contains('hidden'))) {
+        mostrarUsoDiario();
+        history.pushState({ vista: 'uso-diario' }, '');
+        return;
+      }
+      if ((dailyCasaSection && !dailyCasaSection.classList.contains('hidden')) ||
+          (dailyUsoSection && !dailyUsoSection.classList.contains('hidden'))) {
+        mostrarMenuExtras();
+        history.pushState({ vista: 'extras' }, '');
+        return;
+      }
+    }
+
+    // Si está adentro de un panel de Configuración, volver al menú principal de Configuración
+    if (viewSettings && !viewSettings.classList.contains('hidden') && settingsMenuList && settingsMenuList.classList.contains('hidden')) {
+      mostrarMenuConfiguracion();
+      history.pushState({ vista: 'settings' }, '');
       return;
     }
 
@@ -2667,7 +2720,8 @@ window.addEventListener('popstate', () => {
       (viewTasksAgendaMenu && !viewTasksAgendaMenu.classList.contains('hidden')) ||
       (viewEconomyMenu && !viewEconomyMenu.classList.contains('hidden')) ||
       (viewAssistant && !viewAssistant.classList.contains('hidden')) ||
-      (viewExtras && !viewExtras.classList.contains('hidden'));
+      (viewExtras && !viewExtras.classList.contains('hidden')) ||
+      (viewSettings && !viewSettings.classList.contains('hidden'));
 
     if (enSubModulo && usuarioActivo) {
       irAInicio();
@@ -3848,6 +3902,8 @@ if (cardCfgProfile) cardCfgProfile.addEventListener('click', () => abrirPanelCon
 if (cardCfgDev) cardCfgDev.addEventListener('click', () => abrirPanelConfiguracion('dev'));
 
 if (btnBackSettingsToHome) btnBackSettingsToHome.addEventListener('click', irAInicio);
+const btnLogoutSettings = document.getElementById('btn-logout-settings');
+if (btnLogoutSettings) btnLogoutSettings.addEventListener('click', cerrarSesion);
 
 function renderizarEditorPerfil() {
   if (!usuarioActivo) return;
