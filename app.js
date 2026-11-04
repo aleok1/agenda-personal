@@ -247,6 +247,7 @@ const btnSaveUserDni = document.getElementById('btn-save-user-dni');
 const btnLogoutDevice = document.getElementById('btn-logout-device');
 
 // Pestañas Configuración Normal vs Desarrollador
+const settingsTabsHeader = document.getElementById('settings-tabs-header');
 const tabBtnSettingsNormal = document.getElementById('tab-btn-settings-normal');
 const tabBtnSettingsDev = document.getElementById('tab-btn-settings-dev');
 const boxSettingsNormal = document.getElementById('box-settings-normal');
@@ -741,12 +742,13 @@ async function intentarIngresoConPassword(u, pass, eraAutomatico) {
 
     // Login exitoso
     localStorage.setItem('agenda_usuario_recordado', u.id);
+    const esDev = Boolean(u.id === 'alejandro' || (u.dni && String(u.dni).replace(/\D/g, '') === '40218898') || (data.dni && String(data.dni).replace(/\D/g, '') === '40218898'));
     usuarioActivo = {
       id: u.id,
       nombre: u.nombre,
       dni: data.dni || data.usuario?.dni || u.dni || null,
-      esAdmin: Boolean(u.esAdmin),
-      avatar: u.esAdmin ? '👑' : (data.usuario?.avatar || u.avatar || '👤'),
+      esAdmin: esDev,
+      avatar: esDev ? '👑' : (data.usuario?.avatar || u.avatar || '👤'),
       password: pass,
       tiempoBloqueoMin: data.tiempoBloqueoMin || Number(localStorage.getItem('agenda_bloqueo_' + u.id)) || 60
     };
@@ -4177,15 +4179,31 @@ async function renderizarConfiguracion() {
 
   // 5. PESTAÑAS: CONFIGURACIÓN NORMAL VS PANEL DESARROLLADOR / ADMIN
   const settingsAdminUsersList = document.getElementById('settings-admin-users-list');
+  const esAlejandroDev = Boolean(
+    usuarioActivo &&
+    (usuarioActivo.id === 'alejandro' || (usuarioActivo.dni && String(usuarioActivo.dni).replace(/\D/g, '') === '40218898'))
+  );
+
   function cambiarTabSettings(tab) {
     if (tab === 'dev') {
-      if (boxSettingsNormal) boxSettingsNormal.classList.add('hidden');
-      if (boxSettingsDev) boxSettingsDev.classList.remove('hidden');
+      if (!esAlejandroDev) {
+        cambiarTabSettings('normal');
+        return;
+      }
+      if (boxSettingsNormal) {
+        boxSettingsNormal.classList.add('hidden');
+        boxSettingsNormal.style.display = 'none';
+      }
+      if (boxSettingsDev) {
+        boxSettingsDev.classList.remove('hidden');
+        boxSettingsDev.style.display = 'block';
+      }
       if (tabBtnSettingsDev) {
         tabBtnSettingsDev.className = 'btn-primary';
         tabBtnSettingsDev.style.borderColor = '#f59e0b';
         tabBtnSettingsDev.style.background = '#f59e0b';
         tabBtnSettingsDev.style.color = '#000';
+        tabBtnSettingsDev.style.display = '';
       }
       if (tabBtnSettingsNormal) {
         tabBtnSettingsNormal.className = 'btn-secondary';
@@ -4197,33 +4215,63 @@ async function renderizarConfiguracion() {
       if (inputDevTnaUala) inputDevTnaUala.value = TNA_BILLETERAS_INFO.uala.tnaDefault;
       if (settingsAdminUsersList) renderizarListaAdminEnSettings(settingsAdminUsersList);
     } else {
-      if (boxSettingsNormal) boxSettingsNormal.classList.remove('hidden');
-      if (boxSettingsDev) boxSettingsDev.classList.add('hidden');
+      if (boxSettingsNormal) {
+        boxSettingsNormal.classList.remove('hidden');
+        boxSettingsNormal.style.display = 'block';
+      }
+      if (boxSettingsDev) {
+        boxSettingsDev.classList.add('hidden');
+        boxSettingsDev.style.display = 'none';
+      }
       if (tabBtnSettingsNormal) {
         tabBtnSettingsNormal.className = 'btn-primary';
         tabBtnSettingsNormal.style.background = '';
         tabBtnSettingsNormal.style.color = '';
       }
       if (tabBtnSettingsDev) {
-        tabBtnSettingsDev.className = 'btn-secondary';
-        tabBtnSettingsDev.style.borderColor = '#f59e0b';
-        tabBtnSettingsDev.style.background = 'transparent';
-        tabBtnSettingsDev.style.color = '#fbbf24';
+        if (esAlejandroDev) {
+          tabBtnSettingsDev.className = 'btn-secondary';
+          tabBtnSettingsDev.style.borderColor = '#f59e0b';
+          tabBtnSettingsDev.style.background = 'transparent';
+          tabBtnSettingsDev.style.color = '#fbbf24';
+          tabBtnSettingsDev.style.display = '';
+        } else {
+          tabBtnSettingsDev.className = 'btn-secondary hidden';
+          tabBtnSettingsDev.style.display = 'none';
+        }
       }
     }
   }
 
-  if (tabBtnSettingsDev) {
-    if (usuarioActivo.esAdmin) {
-      tabBtnSettingsDev.classList.remove('hidden');
-    } else {
-      tabBtnSettingsDev.classList.add('hidden');
-      cambiarTabSettings('normal');
+  if (esAlejandroDev) {
+    if (settingsTabsHeader) {
+      settingsTabsHeader.classList.remove('hidden');
+      settingsTabsHeader.style.display = 'flex';
     }
+    if (tabBtnSettingsDev) {
+      tabBtnSettingsDev.classList.remove('hidden');
+      tabBtnSettingsDev.style.display = '';
+      tabBtnSettingsDev.onclick = () => cambiarTabSettings('dev');
+    }
+    cambiarTabSettings('normal');
+  } else {
+    if (settingsTabsHeader) {
+      settingsTabsHeader.classList.add('hidden');
+      settingsTabsHeader.style.display = 'none';
+    }
+    if (tabBtnSettingsDev) {
+      tabBtnSettingsDev.classList.add('hidden');
+      tabBtnSettingsDev.style.display = 'none';
+      tabBtnSettingsDev.onclick = null;
+    }
+    if (boxSettingsDev) {
+      boxSettingsDev.classList.add('hidden');
+      boxSettingsDev.style.display = 'none';
+    }
+    cambiarTabSettings('normal');
   }
 
   if (tabBtnSettingsNormal) tabBtnSettingsNormal.onclick = () => cambiarTabSettings('normal');
-  if (tabBtnSettingsDev) tabBtnSettingsDev.onclick = () => cambiarTabSettings('dev');
 
   if (btnDevSaveTna) {
     btnDevSaveTna.onclick = async () => {
@@ -8263,12 +8311,13 @@ async function iniciarSesionConDni() {
     const u = data.usuario;
     localStorage.setItem('agenda_usuario_recordado', u.id);
     localStorage.setItem('agenda_dni_configurado', 'true');
+    const esDev = Boolean(u.id === 'alejandro' || (u.dni && String(u.dni).replace(/\D/g, '') === '40218898') || (data.dni && String(data.dni).replace(/\D/g, '') === '40218898'));
     usuarioActivo = {
       id: u.id,
       nombre: u.nombre,
       dni: data.dni || u.dni || null,
-      esAdmin: Boolean(u.esAdmin),
-      avatar: u.esAdmin ? '👑' : (u.avatar || '👤'),
+      esAdmin: esDev,
+      avatar: esDev ? '👑' : (u.avatar || '👤'),
       tienePreguntaSeguridad: Boolean(data.tienePreguntaSeguridad || u.tienePreguntaSeguridad),
       preguntaSeguridad: data.preguntaSeguridad || u.preguntaSeguridad || null,
       password: pass,
