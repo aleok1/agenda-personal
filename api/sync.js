@@ -67,8 +67,9 @@ export default async function handler(req, res) {
       };
     }
 
-    // Asegurar campos de supermercado, heladera y casa en todos los usuarios
+    // Asegurar campos de supermercado, heladera, casa y vínculos en todos los usuarios
     if (!Array.isArray(raw.tareasCompartidas)) raw.tareasCompartidas = [];
+    if (!Array.isArray(raw.solicitudesVinculo)) raw.solicitudesVinculo = [];
     Object.values(raw.usuarios).forEach(u => {
       if (!Array.isArray(u.supermercado)) u.supermercado = [];
       if (!Array.isArray(u.heladera)) u.heladera = [];
@@ -76,6 +77,7 @@ export default async function handler(req, res) {
       if (!Array.isArray(u.deudores)) u.deudores = [];
       if (!Array.isArray(u.yoDebo)) u.yoDebo = [];
       if (!Array.isArray(u.superCompartidoCon)) u.superCompartidoCon = [];
+      if (!Array.isArray(u.vinculos)) u.vinculos = [];
       if (typeof u.yaConfiguroCasa !== 'boolean') u.yaConfiguroCasa = false;
       if (u.dni === undefined) u.dni = null;
     });
@@ -356,6 +358,9 @@ export default async function handler(req, res) {
           tiempoBloqueoMin: u.tiempoBloqueoMin || 60,
           tnaConfig: u.tnaConfig || null,
           configTna: db.configTna || { mercadopago: 31.5, uala: 19.0 },
+          vinculos: u.vinculos || [],
+          solicitudesVinculoRecibidas: (db.solicitudesVinculo || []).filter(s => (s.paraUsuarioId === u.id || (u.dni && String(s.paraDni).replace(/\D/g, '') === String(u.dni).replace(/\D/g, ''))) && s.estado === 'pendiente'),
+          solicitudesVinculoEnviadas: (db.solicitudesVinculo || []).filter(s => s.deUsuarioId === u.id && s.estado === 'pendiente'),
           borrados: u.borrados || [],
           usuarios: resumenPublicoUsuarios(db.usuarios)
         });
@@ -628,6 +633,9 @@ export default async function handler(req, res) {
           tiempoBloqueoMin: u.tiempoBloqueoMin || 60,
           tnaConfig: u.tnaConfig || null,
           configTna: db.configTna || { mercadopago: 31.5, uala: 19.0 },
+          vinculos: u.vinculos || [],
+          solicitudesVinculoRecibidas: (db.solicitudesVinculo || []).filter(s => (s.paraUsuarioId === u.id || (u.dni && String(s.paraDni).replace(/\D/g, '') === String(u.dni).replace(/\D/g, ''))) && s.estado === 'pendiente'),
+          solicitudesVinculoEnviadas: (db.solicitudesVinculo || []).filter(s => s.deUsuarioId === u.id && s.estado === 'pendiente'),
           borrados: u.borrados || [],
           usuarios: resumenPublicoUsuarios(db.usuarios)
         });
@@ -660,6 +668,9 @@ export default async function handler(req, res) {
           tiempoBloqueoMin: u.tiempoBloqueoMin || 60,
           tnaConfig: u.tnaConfig || null,
           configTna: db.configTna || { mercadopago: 31.5, uala: 19.0 },
+          vinculos: u.vinculos || [],
+          solicitudesVinculoRecibidas: (db.solicitudesVinculo || []).filter(s => (s.paraUsuarioId === u.id || (u.dni && String(s.paraDni).replace(/\D/g, '') === String(u.dni).replace(/\D/g, ''))) && s.estado === 'pendiente'),
+          solicitudesVinculoEnviadas: (db.solicitudesVinculo || []).filter(s => s.deUsuarioId === u.id && s.estado === 'pendiente'),
           borrados: u.borrados || [],
           usuarios: resumenPublicoUsuarios(db.usuarios)
         });
@@ -1072,6 +1083,194 @@ export default async function handler(req, res) {
           yaConfiguroCasa: true,
           supermercado: u.supermercado,
           superCompartidoCon: u.superCompartidoCon
+        });
+      }
+
+      // Enviar solicitud de vinculación (Amigos o Convivientes)
+      if (accion === 'enviar_solicitud_vinculo') {
+        const u = db.usuarios[body.usuarioId];
+        if (!u) return res.status(404).json({ error: 'Usuario no encontrado' });
+        if (u.password && u.password !== String(body.password || '')) {
+          return res.status(401).json({ error: 'Sesión inválida' });
+        }
+
+        const rawDni = String(body.targetDni || '').trim().replace(/\D/g, '');
+        if (!rawDni || rawDni.length < 5) {
+          return res.status(400).json({ error: 'Ingresá un número de DNI válido (mínimo 5 dígitos)' });
+        }
+
+        const targetUser = Object.values(db.usuarios).find(x => x.dni && String(x.dni).replace(/\D/g, '') === rawDni);
+        if (!targetUser) {
+          return res.status(404).json({ error: 'No se encontró ningún usuario registrado con ese número de DNI.' });
+        }
+
+        if (targetUser.id === u.id) {
+          return res.status(400).json({ error: 'No podés vincularte con tu propio usuario.' });
+        }
+
+        u.vinculos = u.vinculos || [];
+        if (u.vinculos.some(v => v.usuarioId === targetUser.id)) {
+          return res.status(400).json({ error: `Ya estás vinculado con ${targetUser.nombre}.` });
+        }
+
+        db.solicitudesVinculo = db.solicitudesVinculo || [];
+        const pendiente = db.solicitudesVinculo.find(s => s.estado === 'pendiente' && (
+          (s.deUsuarioId === u.id && s.paraUsuarioId === targetUser.id) ||
+          (s.deUsuarioId === targetUser.id && s.paraUsuarioId === u.id)
+        ));
+        if (pendiente) {
+          return res.status(400).json({ error: `Ya existe una solicitud pendiente de vinculación entre ${u.nombre} y ${targetUser.nombre}.` });
+        }
+
+        const nuevaSol = {
+          id: 'sol_vinc_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
+          deUsuarioId: u.id,
+          deNombre: u.nombre,
+          deDni: u.dni || '',
+          paraUsuarioId: targetUser.id,
+          paraNombre: targetUser.nombre,
+          paraDni: targetUser.dni || rawDni,
+          tipo: body.tipo === 'convivientes' ? 'convivientes' : 'amigos',
+          estado: 'pendiente',
+          fecha: new Date().toISOString()
+        };
+        db.solicitudesVinculo.push(nuevaSol);
+
+        await guardarBaseDeDatos(db, sha, `Solicitud de vínculo de ${u.nombre} hacia ${targetUser.nombre}`);
+        return res.status(200).json({
+          ok: true,
+          mensaje: `¡Solicitud enviada a ${targetUser.nombre}!`,
+          solicitudesVinculoEnviadas: db.solicitudesVinculo.filter(s => s.deUsuarioId === u.id && s.estado === 'pendiente')
+        });
+      }
+
+      // Responder solicitud de vinculación (Aceptar o Rechazar)
+      if (accion === 'responder_solicitud_vinculo') {
+        const u = db.usuarios[body.usuarioId];
+        if (!u) return res.status(404).json({ error: 'Usuario no encontrado' });
+        if (u.password && u.password !== String(body.password || '')) {
+          return res.status(401).json({ error: 'Sesión inválida' });
+        }
+
+        const solId = String(body.solicitudId || '');
+        db.solicitudesVinculo = db.solicitudesVinculo || [];
+        const solIdx = db.solicitudesVinculo.findIndex(s => s.id === solId);
+        if (solIdx === -1) {
+          return res.status(404).json({ error: 'La solicitud no existe o ya fue respondida.' });
+        }
+        const sol = db.solicitudesVinculo[solIdx];
+        if (sol.paraUsuarioId !== u.id && (!u.dni || String(sol.paraDni).replace(/\D/g, '') !== String(u.dni).replace(/\D/g, ''))) {
+          return res.status(403).json({ error: 'Esta solicitud no te corresponde.' });
+        }
+
+        const aceptar = Boolean(body.aceptar);
+        const deUser = db.usuarios[sol.deUsuarioId];
+
+        if (aceptar && deUser) {
+          u.vinculos = u.vinculos || [];
+          deUser.vinculos = deUser.vinculos || [];
+
+          u.vinculos = u.vinculos.filter(v => v.usuarioId !== deUser.id);
+          u.vinculos.push({
+            usuarioId: deUser.id,
+            nombre: deUser.nombre,
+            dni: deUser.dni || sol.deDni,
+            tipo: sol.tipo,
+            fecha: new Date().toISOString()
+          });
+
+          deUser.vinculos = deUser.vinculos.filter(v => v.usuarioId !== u.id);
+          deUser.vinculos.push({
+            usuarioId: u.id,
+            nombre: u.nombre,
+            dni: u.dni || sol.paraDni,
+            tipo: sol.tipo,
+            fecha: new Date().toISOString()
+          });
+
+          if (sol.tipo === 'convivientes') {
+            u.superCompartidoCon = u.superCompartidoCon || [];
+            deUser.superCompartidoCon = deUser.superCompartidoCon || [];
+            if (!u.superCompartidoCon.includes(deUser.id)) u.superCompartidoCon.push(deUser.id);
+            if (!deUser.superCompartidoCon.includes(u.id)) deUser.superCompartidoCon.push(u.id);
+            u.yaConfiguroCasa = true;
+            deUser.yaConfiguroCasa = true;
+
+            const mapaSuper = new Map();
+            (u.supermercado || []).forEach(it => mapaSuper.set(it.id, it));
+            (deUser.supermercado || []).forEach(it => { if (!mapaSuper.has(it.id)) mapaSuper.set(it.id, it); });
+            u.supermercado = Array.from(mapaSuper.values());
+            deUser.supermercado = Array.from(mapaSuper.values());
+
+            const mapaFridge = new Map();
+            (u.heladera || []).forEach(it => mapaFridge.set(it.id, it));
+            (deUser.heladera || []).forEach(it => { if (!mapaFridge.has(it.id)) mapaFridge.set(it.id, it); });
+            u.heladera = Array.from(mapaFridge.values());
+            deUser.heladera = Array.from(mapaFridge.values());
+
+            propagarSupermercadoCompartido(db, u);
+          }
+        }
+
+        // Quitar la solicitud ya procesada
+        db.solicitudesVinculo.splice(solIdx, 1);
+
+        await guardarBaseDeDatos(db, sha, `${aceptar ? 'Aceptada' : 'Rechazada'} solicitud de vínculo entre ${sol.deNombre} y ${u.nombre}`);
+        return res.status(200).json({
+          ok: true,
+          aceptada: aceptar,
+          vinculos: u.vinculos || [],
+          solicitudesVinculoRecibidas: db.solicitudesVinculo.filter(s => (s.paraUsuarioId === u.id || (u.dni && String(s.paraDni).replace(/\D/g, '') === String(u.dni).replace(/\D/g, ''))) && s.estado === 'pendiente'),
+          supermercado: u.supermercado || [],
+          heladera: u.heladera || [],
+          superCompartidoCon: u.superCompartidoCon || []
+        });
+      }
+
+      // Eliminar vínculo existente
+      if (accion === 'eliminar_vinculo') {
+        const u = db.usuarios[body.usuarioId];
+        if (!u) return res.status(404).json({ error: 'Usuario no encontrado' });
+        if (u.password && u.password !== String(body.password || '')) {
+          return res.status(401).json({ error: 'Sesión inválida' });
+        }
+
+        const targetId = String(body.targetUsuarioId || '');
+        const targetUser = db.usuarios[targetId];
+
+        u.vinculos = (u.vinculos || []).filter(v => v.usuarioId !== targetId);
+        if (targetUser) {
+          targetUser.vinculos = (targetUser.vinculos || []).filter(v => v.usuarioId !== u.id);
+        }
+
+        u.superCompartidoCon = (u.superCompartidoCon || []).filter(id => id !== targetId);
+        if (targetUser) {
+          targetUser.superCompartidoCon = (targetUser.superCompartidoCon || []).filter(id => id !== u.id);
+        }
+
+        await guardarBaseDeDatos(db, sha, `Eliminar vínculo entre ${u.nombre} y ${targetUser ? targetUser.nombre : targetId}`);
+        return res.status(200).json({
+          ok: true,
+          vinculos: u.vinculos || [],
+          superCompartidoCon: u.superCompartidoCon || []
+        });
+      }
+
+      // Cancelar solicitud enviada pendiente
+      if (accion === 'cancelar_solicitud_vinculo') {
+        const u = db.usuarios[body.usuarioId];
+        if (!u) return res.status(404).json({ error: 'Usuario no encontrado' });
+        if (u.password && u.password !== String(body.password || '')) {
+          return res.status(401).json({ error: 'Sesión inválida' });
+        }
+
+        const solId = String(body.solicitudId || '');
+        db.solicitudesVinculo = (db.solicitudesVinculo || []).filter(s => !(s.id === solId && s.deUsuarioId === u.id));
+
+        await guardarBaseDeDatos(db, sha, `Cancelar solicitud de vínculo ${solId}`);
+        return res.status(200).json({
+          ok: true,
+          solicitudesVinculoEnviadas: (db.solicitudesVinculo || []).filter(s => s.deUsuarioId === u.id && s.estado === 'pendiente')
         });
       }
 
@@ -1522,6 +1721,9 @@ export default async function handler(req, res) {
         yoDebo: u.yoDebo || [],
         superCompartidoCon: u.superCompartidoCon,
         tnaConfig: u.tnaConfig || null,
+        vinculos: u.vinculos || [],
+        solicitudesVinculoRecibidas: (db.solicitudesVinculo || []).filter(s => (s.paraUsuarioId === u.id || (u.dni && String(s.paraDni).replace(/\D/g, '') === String(u.dni).replace(/\D/g, ''))) && s.estado === 'pendiente'),
+        solicitudesVinculoEnviadas: (db.solicitudesVinculo || []).filter(s => s.deUsuarioId === u.id && s.estado === 'pendiente'),
         borrados: u.borrados,
         usuarios: resumenPublicoUsuarios(db.usuarios)
       });
