@@ -3564,6 +3564,8 @@ function renderizarBilletera() {
 // ==========================================
 // MÃ“DULO 4: ELEMENTOS DIARIOS (CASA VS USO DIARIO)
 // ==========================================
+// MÓDULO 4: ELEMENTOS DIARIOS (CASA VS USO DIARIO)
+// ==========================================
 const dailyMenuSection = document.getElementById('daily-menu-section');
 const dailyCasaSection = document.getElementById('daily-casa-section');
 const dailyUsoSection = document.getElementById('daily-uso-section');
@@ -3608,12 +3610,12 @@ function mostrarMenuExtras() {
   if (dailyCasaCounter) {
     const cantSuper = Array.isArray(supermercado) ? supermercado.length : 0;
     const cantF = Array.isArray(heladera) ? heladera.length : 0;
-    dailyCasaCounter.textContent = ${cantSuper} en super Â·  en heladera;
+    dailyCasaCounter.textContent = `${cantSuper} en super · ${cantF} en heladera`;
   }
   const dailyUsoCounter = document.getElementById('daily-uso-counter');
   if (dailyUsoCounter) {
     const cantL = Array.isArray(listasPresupuestos) ? listasPresupuestos.length : 0;
-    dailyUsoCounter.textContent = ${cantL} listas Â· Asistente IA Â· Rutinas;
+    dailyUsoCounter.textContent = `${cantL} listas · Asistente IA · Rutinas`;
   }
 }
 
@@ -3626,12 +3628,12 @@ function mostrarCasa() {
   const extraSuperCounter = document.getElementById('extra-super-counter');
   if (extraSuperCounter) {
     const cantSuper = Array.isArray(supermercado) ? supermercado.length : 0;
-    extraSuperCounter.textContent = cantSuper === 1 ? '1 producto en lista' : ${cantSuper} productos en lista;
+    extraSuperCounter.textContent = cantSuper === 1 ? '1 producto en lista' : `${cantSuper} productos en lista`;
   }
   const extraFridgeCounter = document.getElementById('extra-fridge-counter');
   if (extraFridgeCounter) {
     const cantF = Array.isArray(heladera) ? heladera.length : 0;
-    extraFridgeCounter.textContent = cantF === 1 ? '1 ingrediente' : ${cantF} ingredientes;
+    extraFridgeCounter.textContent = cantF === 1 ? '1 ingrediente' : `${cantF} ingredientes`;
   }
 }
 
@@ -3644,7 +3646,7 @@ function mostrarUsoDiario() {
   const extraListsCounter = document.getElementById('extra-lists-counter');
   if (extraListsCounter) {
     const cantL = Array.isArray(listasPresupuestos) ? listasPresupuestos.length : 0;
-    extraListsCounter.textContent = cantL === 1 ? '1 lista creada' : ${cantL} listas creadas;
+    extraListsCounter.textContent = cantL === 1 ? '1 lista creada' : `${cantL} listas creadas`;
   }
 }
 
@@ -3696,7 +3698,7 @@ if (btnBackWorkoutToUso) btnBackWorkoutToUso.addEventListener('click', mostrarUs
 if (btnBackListsToUso) btnBackListsToUso.addEventListener('click', mostrarUsoDiario);
 
 // ==========================================
-// MÃ“DULO 5: CONFIGURACIÃ“N Y SEGURIDAD
+// MÓDULO 5: CONFIGURACIÓN Y SEGURIDAD
 // ==========================================
 const settingsMenuList = document.getElementById('settings-menu-list');
 const btnBackSettingsToHome = document.getElementById('btn-back-settings-to-home');
@@ -3717,7 +3719,7 @@ const panelCfgVincular = document.getElementById('panel-cfg-vincular');
 const panelCfgProfile = document.getElementById('panel-cfg-profile');
 const panelCfgDev = document.getElementById('panel-cfg-dev');
 
-// Elementos de Vincular (dentro de ConfiguraciÃ³n)
+// Elementos de Vincular (dentro de Configuración)
 const inputVincularDni = document.getElementById('input-vincular-dni');
 const btnSubmitVincular = document.getElementById('btn-submit-vincular');
 const vincularErrorMsg = document.getElementById('vincular-error-msg');
@@ -3728,7 +3730,7 @@ const vincularListaActivos = document.getElementById('vincular-lista-activos');
 const boxVincularEnviadas = document.getElementById('box-vincular-enviadas');
 const vincularListaEnviadas = document.getElementById('vincular-lista-enviadas');
 
-// Elementos de EdiciÃ³n de Perfil (DNI, Nombre, Avatar)
+// Elementos de Edición de Perfil (DNI, Nombre, Avatar)
 const inputProfileDni = document.getElementById('input-profile-dni');
 const inputProfileName = document.getElementById('input-profile-name');
 const profileCurrentAvatar = document.getElementById('profile-current-avatar');
@@ -3768,23 +3770,23 @@ function mostrarMenuConfiguracion() {
   const cfgBadgeBio = document.getElementById('cfg-badge-bio');
   if (cfgBadgeBio && usuarioActivo) {
     const tieneBio = tieneHuellaGuardada(usuarioActivo.id);
-    cfgBadgeBio.textContent = tieneBio ? 'ðŸ‘† Huella activa' : 'Sin huella';
+    cfgBadgeBio.textContent = tieneBio ? '👆 Huella activa' : 'Sin huella';
   }
   const cfgBadgeTimeout = document.getElementById('cfg-badge-timeout');
   if (cfgBadgeTimeout && usuarioActivo) {
     const t = Number(usuarioActivo.tiempoBloqueoMin) || Number(localStorage.getItem('agenda_bloqueo_' + usuarioActivo.id)) || 15;
-    cfgBadgeTimeout.textContent = ${t} min;
+    cfgBadgeTimeout.textContent = `${t} min`;
   }
   const cfgBadgeVincular = document.getElementById('cfg-badge-vincular');
   if (cfgBadgeVincular && usuarioActivo) {
     const cantRec = (solicitudesVinculoRecibidas || []).length;
     const cantVinc = (usuarioActivo.vinculos || []).length;
     if (cantRec > 0) {
-      cfgBadgeVincular.textContent = ðŸ””  nueva(s);
+      cfgBadgeVincular.textContent = `🔔 ${cantRec} nueva(s)`;
       cfgBadgeVincular.style.borderColor = '#f59e0b';
       cfgBadgeVincular.style.color = '#fbbf24';
     } else {
-      cfgBadgeVincular.textContent = cantVinc === 1 ? '1 contacto' : ${cantVinc} contactos;
+      cfgBadgeVincular.textContent = cantVinc === 1 ? '1 contacto' : `${cantVinc} contactos`;
       cfgBadgeVincular.style.borderColor = '#3b82f6';
       cfgBadgeVincular.style.color = '#93c5fd';
     }
@@ -3795,7 +3797,7 @@ function abrirPanelConfiguracion(cual) {
   if (settingsMenuList) settingsMenuList.classList.add('hidden');
   ocultarTodosLosPanelesConfiguracion();
 
-  // Renderizar la configuraciÃ³n activa
+  // Renderizar la configuración activa
   renderizarConfiguracion();
 
   if (cual === 'passwords') {
@@ -3806,7 +3808,7 @@ function abrirPanelConfiguracion(cual) {
     actualizarEstadoPushUI();
     const urlInput = document.getElementById('input-settings-share-url');
     if (urlInput && usuarioActivo) {
-      urlInput.value = ${window.location.origin}?para=&modo=externo;
+      urlInput.value = `${window.location.origin}${window.location.pathname}?para=${encodeURIComponent(usuarioActivo.id)}&modo=externo`;
     }
   } else if (cual === 'biometrics') {
     if (panelCfgBiometrics) panelCfgBiometrics.classList.remove('hidden');
@@ -3832,7 +3834,7 @@ function abrirPanelConfiguracion(cual) {
   }
 }
 
-// Botones volver de los paneles al menÃº de ConfiguraciÃ³n
+// Botones volver de los paneles al menú de Configuración
 document.querySelectorAll('.btn-back-to-settings-menu').forEach(b => {
   b.addEventListener('click', mostrarMenuConfiguracion);
 });
@@ -3849,7 +3851,7 @@ if (btnBackSettingsToHome) btnBackSettingsToHome.addEventListener('click', irAIn
 
 function renderizarEditorPerfil() {
   if (!usuarioActivo) return;
-  avatarSeleccionadoPerfil = usuarioActivo.avatar || (usuarioActivo.esAdmin ? 'ðŸ‘‘' : 'ðŸ‘¤');
+  avatarSeleccionadoPerfil = usuarioActivo.avatar || (usuarioActivo.esAdmin ? '👑' : '👤');
   if (inputProfileDni) inputProfileDni.value = usuarioActivo.dni || '';
   if (inputProfileName) inputProfileName.value = usuarioActivo.nombre || '';
   if (profilePreviewName) profilePreviewName.textContent = usuarioActivo.nombre || 'Usuario';
@@ -3900,7 +3902,7 @@ if (btnSaveProfile) {
     }
     if (!nuevoDni || nuevoDni.length < 5) {
       if (profileErrorMsg) {
-        profileErrorMsg.textContent = 'El DNI debe tener al menos 5 nÃºmeros';
+        profileErrorMsg.textContent = 'El DNI debe tener al menos 5 números';
         profileErrorMsg.classList.remove('hidden');
       }
       return;
@@ -3942,12 +3944,12 @@ if (btnSaveProfile) {
 
       guardarUsuarioRecordado(usuarioActivo);
       
-      if (activeUserBadge) activeUserBadge.textContent = ${usuarioActivo.avatar} ;
+      if (activeUserBadge) activeUserBadge.textContent = `${usuarioActivo.avatar} ${usuarioActivo.nombre}`;
       if (profilePreviewName) profilePreviewName.textContent = nuevoNombre;
       if (profilePreviewDni) profilePreviewDni.textContent = 'DNI: ' + nuevoDni;
 
       if (profileSuccessMsg) {
-        profileSuccessMsg.textContent = 'âœ“ Â¡Perfil actualizado y sincronizado con Ã©xito!';
+        profileSuccessMsg.textContent = '✓ ¡Perfil actualizado y sincronizado con éxito!';
         profileSuccessMsg.classList.remove('hidden');
       }
     } catch (err) {
@@ -3957,11 +3959,10 @@ if (btnSaveProfile) {
       }
     } finally {
       btnSaveProfile.disabled = false;
-      btnSaveProfile.textContent = 'ðŸ’¾ Guardar cambios de perfil';
+      btnSaveProfile.textContent = '💾 Guardar cambios de perfil';
     }
   });
 }
-
 
 function renderizarVincular() {
   if (!usuarioActivo) return;
