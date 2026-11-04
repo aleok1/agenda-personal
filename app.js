@@ -1,4 +1,4 @@
-// Global error handler para visibilidad inmediata en pantalla si algo falla
+﻿// Global error handler para visibilidad inmediata en pantalla si algo falla
 window.onerror = function(msg, url, lineNo, colNo, error) {
   console.error('ERROR GLOBAL:', msg, lineNo, error);
   const syncEl = document.getElementById('sync-status');
@@ -119,6 +119,8 @@ const viewAgenda = document.getElementById('view-agenda');
 const viewWallet = document.getElementById('view-wallet');
 const viewAssistant = document.getElementById('view-assistant');
 const viewExtras = document.getElementById('view-extras');
+const viewSettings = document.getElementById('view-settings');
+const btnOpenSettings = document.getElementById('btn-open-settings');
 const viewExternal = document.getElementById('view-external');
 
 const btnSwitchUser = document.getElementById('btn-switch-user');
@@ -2712,6 +2714,7 @@ if (btnBackToEconomyFromDebts) btnBackToEconomyFromDebts.addEventListener('click
 if (btnOpenTasks) btnOpenTasks.addEventListener('click', irATareas);
 if (btnOpenAgenda) btnOpenAgenda.addEventListener('click', () => irAAgenda());
 if (btnOpenAssistant) btnOpenAssistant.addEventListener('click', irAAsistente);
+if (btnOpenSettings) btnOpenSettings.addEventListener('click', irAConfiguracion);
 if (btnOpenExtras) btnOpenExtras.addEventListener('click', irAExtras);
 btnAlertGoAgenda.addEventListener('click', () => irAAgenda(HOY_ISO));
 btnAlertClose.addEventListener('click', () => todayAlertBanner.classList.add('hidden'));
@@ -3558,35 +3561,163 @@ function renderizarBilletera() {
 // ==========================================
 // EXTRAS Y HERRAMIENTAS (1. SUPERMERCADO, 2. GEMINI IA, 3. HELADERA, 4. ENTRENAMIENTO, 5. CONFIGURACIÓN)
 // ==========================================
-const extrasMenuSection = document.getElementById('extras-menu-section');
-const extrasSubviewNav = document.getElementById('extras-subview-nav');
-const btnBackToExtrasMenu = document.getElementById('btn-back-to-extras-menu');
+// ==========================================
+// MÃ“DULO 4: ELEMENTOS DIARIOS (CASA VS USO DIARIO)
+// ==========================================
+const dailyMenuSection = document.getElementById('daily-menu-section');
+const dailyCasaSection = document.getElementById('daily-casa-section');
+const dailyUsoSection = document.getElementById('daily-uso-section');
+const btnBackCasaToDaily = document.getElementById('btn-back-casa-to-daily');
+const btnBackUsoToDaily = document.getElementById('btn-back-uso-to-daily');
+const btnBackSuperToCasa = document.getElementById('btn-back-super-to-casa');
+const btnBackFridgeToCasa = document.getElementById('btn-back-fridge-to-casa');
+const btnBackGeminiToUso = document.getElementById('btn-back-gemini-to-uso');
+const btnBackWorkoutToUso = document.getElementById('btn-back-workout-to-uso');
+const btnBackListsToUso = document.getElementById('btn-back-lists-to-uso');
 
+const cardDailyCasa = document.getElementById('card-daily-casa');
+const cardDailyUso = document.getElementById('card-daily-uso');
 const cardExtraSuper = document.getElementById('card-extra-super');
-const cardExtraGemini = document.getElementById('card-extra-gemini');
 const cardExtraFridge = document.getElementById('card-extra-fridge');
+const cardExtraGemini = document.getElementById('card-extra-gemini');
 const cardExtraWorkout = document.getElementById('card-extra-workout');
 const cardExtraLists = document.getElementById('card-extra-lists');
-const cardExtraDebts = document.getElementById('card-extra-debts');
-const cardExtraSettings = document.getElementById('card-extra-settings');
-
-const tabExtraSuper = document.getElementById('tab-extra-super');
-const tabExtraGemini = document.getElementById('tab-extra-gemini');
-const tabExtraFridge = document.getElementById('tab-extra-fridge');
-const tabExtraWorkout = document.getElementById('tab-extra-workout');
-const tabExtraLists = document.getElementById('tab-extra-lists');
-const tabExtraDebts = document.getElementById('tab-extra-debts');
-const tabExtraSettings = document.getElementById('tab-extra-settings');
 
 const subviewSuper = document.getElementById('subview-super');
-const subviewGemini = document.getElementById('subview-gemini');
 const subviewFridge = document.getElementById('subview-fridge');
+const subviewGemini = document.getElementById('subview-gemini');
 const subviewWorkout = document.getElementById('subview-workout');
 const subviewLists = document.getElementById('subview-lists');
-const subviewDebts = document.getElementById('subview-debts');
-const subviewSettings = document.getElementById('subview-settings');
-const cardExtraVincular = document.getElementById('card-extra-vincular');
-const subviewVincular = document.getElementById('subview-vincular');
+
+function ocultarTodasLasSubvistasDiarias() {
+  if (subviewSuper) subviewSuper.classList.add('hidden');
+  if (subviewFridge) subviewFridge.classList.add('hidden');
+  if (subviewGemini) subviewGemini.classList.add('hidden');
+  if (subviewWorkout) subviewWorkout.classList.add('hidden');
+  if (subviewLists) subviewLists.classList.add('hidden');
+}
+
+function mostrarMenuExtras() {
+  if (dailyMenuSection) dailyMenuSection.classList.remove('hidden');
+  if (dailyCasaSection) dailyCasaSection.classList.add('hidden');
+  if (dailyUsoSection) dailyUsoSection.classList.add('hidden');
+  ocultarTodasLasSubvistasDiarias();
+
+  // Actualizar contadores del nivel 1
+  const dailyCasaCounter = document.getElementById('daily-casa-counter');
+  if (dailyCasaCounter) {
+    const cantSuper = Array.isArray(supermercado) ? supermercado.length : 0;
+    const cantF = Array.isArray(heladera) ? heladera.length : 0;
+    dailyCasaCounter.textContent = ${cantSuper} en super Â·  en heladera;
+  }
+  const dailyUsoCounter = document.getElementById('daily-uso-counter');
+  if (dailyUsoCounter) {
+    const cantL = Array.isArray(listasPresupuestos) ? listasPresupuestos.length : 0;
+    dailyUsoCounter.textContent = ${cantL} listas Â· Asistente IA Â· Rutinas;
+  }
+}
+
+function mostrarCasa() {
+  if (dailyMenuSection) dailyMenuSection.classList.add('hidden');
+  if (dailyCasaSection) dailyCasaSection.classList.remove('hidden');
+  if (dailyUsoSection) dailyUsoSection.classList.add('hidden');
+  ocultarTodasLasSubvistasDiarias();
+
+  const extraSuperCounter = document.getElementById('extra-super-counter');
+  if (extraSuperCounter) {
+    const cantSuper = Array.isArray(supermercado) ? supermercado.length : 0;
+    extraSuperCounter.textContent = cantSuper === 1 ? '1 producto en lista' : ${cantSuper} productos en lista;
+  }
+  const extraFridgeCounter = document.getElementById('extra-fridge-counter');
+  if (extraFridgeCounter) {
+    const cantF = Array.isArray(heladera) ? heladera.length : 0;
+    extraFridgeCounter.textContent = cantF === 1 ? '1 ingrediente' : ${cantF} ingredientes;
+  }
+}
+
+function mostrarUsoDiario() {
+  if (dailyMenuSection) dailyMenuSection.classList.add('hidden');
+  if (dailyCasaSection) dailyCasaSection.classList.add('hidden');
+  if (dailyUsoSection) dailyUsoSection.classList.remove('hidden');
+  ocultarTodasLasSubvistasDiarias();
+
+  const extraListsCounter = document.getElementById('extra-lists-counter');
+  if (extraListsCounter) {
+    const cantL = Array.isArray(listasPresupuestos) ? listasPresupuestos.length : 0;
+    extraListsCounter.textContent = cantL === 1 ? '1 lista creada' : ${cantL} listas creadas;
+  }
+}
+
+function abrirHerramientaExtras(cual) {
+  if (dailyMenuSection) dailyMenuSection.classList.add('hidden');
+  if (dailyCasaSection) dailyCasaSection.classList.add('hidden');
+  if (dailyUsoSection) dailyUsoSection.classList.add('hidden');
+  ocultarTodasLasSubvistasDiarias();
+
+  if (cual === 'super') {
+    if (subviewSuper) subviewSuper.classList.remove('hidden');
+    renderizarSupermercado();
+    const inp = document.getElementById('input-super-item');
+    if (inp) inp.focus();
+  } else if (cual === 'fridge') {
+    if (subviewFridge) subviewFridge.classList.remove('hidden');
+    renderizarHeladera();
+    const fInput = document.getElementById('input-fridge-name');
+    if (fInput) fInput.focus();
+  } else if (cual === 'gemini') {
+    if (subviewGemini) subviewGemini.classList.remove('hidden');
+    if (inputChatMsg) inputChatMsg.focus();
+  } else if (cual === 'workout') {
+    if (subviewWorkout) subviewWorkout.classList.remove('hidden');
+    renderizarEntrenamiento();
+  } else if (cual === 'lists') {
+    if (subviewLists) subviewLists.classList.remove('hidden');
+    renderizarListasPresupuestos();
+    const mInput = document.getElementById('input-item-material');
+    if (mInput) mInput.focus();
+  }
+}
+
+if (cardDailyCasa) cardDailyCasa.addEventListener('click', mostrarCasa);
+if (cardDailyUso) cardDailyUso.addEventListener('click', mostrarUsoDiario);
+if (btnBackCasaToDaily) btnBackCasaToDaily.addEventListener('click', mostrarMenuExtras);
+if (btnBackUsoToDaily) btnBackUsoToDaily.addEventListener('click', mostrarMenuExtras);
+
+if (cardExtraSuper) cardExtraSuper.addEventListener('click', () => abrirHerramientaExtras('super'));
+if (cardExtraFridge) cardExtraFridge.addEventListener('click', () => abrirHerramientaExtras('fridge'));
+if (cardExtraGemini) cardExtraGemini.addEventListener('click', () => abrirHerramientaExtras('gemini'));
+if (cardExtraWorkout) cardExtraWorkout.addEventListener('click', () => abrirHerramientaExtras('workout'));
+if (cardExtraLists) cardExtraLists.addEventListener('click', () => abrirHerramientaExtras('lists'));
+
+if (btnBackSuperToCasa) btnBackSuperToCasa.addEventListener('click', mostrarCasa);
+if (btnBackFridgeToCasa) btnBackFridgeToCasa.addEventListener('click', mostrarCasa);
+if (btnBackGeminiToUso) btnBackGeminiToUso.addEventListener('click', mostrarUsoDiario);
+if (btnBackWorkoutToUso) btnBackWorkoutToUso.addEventListener('click', mostrarUsoDiario);
+if (btnBackListsToUso) btnBackListsToUso.addEventListener('click', mostrarUsoDiario);
+
+// ==========================================
+// MÃ“DULO 5: CONFIGURACIÃ“N Y SEGURIDAD
+// ==========================================
+const settingsMenuList = document.getElementById('settings-menu-list');
+const btnBackSettingsToHome = document.getElementById('btn-back-settings-to-home');
+
+const cardCfgPasswords = document.getElementById('card-cfg-passwords');
+const cardCfgNotifications = document.getElementById('card-cfg-notifications');
+const cardCfgBiometrics = document.getElementById('card-cfg-biometrics');
+const cardCfgTimeout = document.getElementById('card-cfg-timeout');
+const cardCfgVincular = document.getElementById('card-cfg-vincular');
+const cardCfgProfile = document.getElementById('card-cfg-profile');
+const cardCfgDev = document.getElementById('card-cfg-dev');
+
+const panelCfgPasswords = document.getElementById('panel-cfg-passwords');
+const panelCfgNotifications = document.getElementById('panel-cfg-notifications');
+const panelCfgBiometrics = document.getElementById('panel-cfg-biometrics');
+const panelCfgTimeout = document.getElementById('panel-cfg-timeout');
+const panelCfgVincular = document.getElementById('panel-cfg-vincular');
+const panelCfgProfile = document.getElementById('panel-cfg-profile');
+const panelCfgDev = document.getElementById('panel-cfg-dev');
+
+// Elementos de Vincular (dentro de ConfiguraciÃ³n)
 const inputVincularDni = document.getElementById('input-vincular-dni');
 const btnSubmitVincular = document.getElementById('btn-submit-vincular');
 const vincularErrorMsg = document.getElementById('vincular-error-msg');
@@ -3597,129 +3728,241 @@ const vincularListaActivos = document.getElementById('vincular-lista-activos');
 const boxVincularEnviadas = document.getElementById('box-vincular-enviadas');
 const vincularListaEnviadas = document.getElementById('vincular-lista-enviadas');
 
-function mostrarMenuExtras() {
-  if (extrasMenuSection) extrasMenuSection.classList.remove('hidden');
-  if (extrasSubviewNav) extrasSubviewNav.classList.add('hidden');
-  if (subviewSuper) subviewSuper.classList.add('hidden');
-  if (subviewGemini) subviewGemini.classList.add('hidden');
-  if (subviewFridge) subviewFridge.classList.add('hidden');
-  if (subviewWorkout) subviewWorkout.classList.add('hidden');
-  if (subviewLists) subviewLists.classList.add('hidden');
-  if (subviewDebts) subviewDebts.classList.add('hidden');
-  if (subviewSettings) subviewSettings.classList.add('hidden');
-  if (subviewVincular) subviewVincular.classList.add('hidden');
+// Elementos de EdiciÃ³n de Perfil (DNI, Nombre, Avatar)
+const inputProfileDni = document.getElementById('input-profile-dni');
+const inputProfileName = document.getElementById('input-profile-name');
+const profileCurrentAvatar = document.getElementById('profile-current-avatar');
+const profilePreviewName = document.getElementById('profile-preview-name');
+const profilePreviewDni = document.getElementById('profile-preview-dni');
+const profileAvatarGrid = document.getElementById('profile-avatar-grid');
+const profileErrorMsg = document.getElementById('profile-error-msg');
+const profileSuccessMsg = document.getElementById('profile-success-msg');
+const btnSaveProfile = document.getElementById('btn-save-profile');
+let avatarSeleccionadoPerfil = '';
 
-  const extraSuperCounter = document.getElementById('extra-super-counter');
-  if (extraSuperCounter) {
-    const cantSuper = Array.isArray(supermercado) ? supermercado.length : 0;
-    extraSuperCounter.textContent = cantSuper === 1 ? '1 producto en lista' : `${cantSuper} productos en lista`;
+function ocultarTodosLosPanelesConfiguracion() {
+  if (panelCfgPasswords) panelCfgPasswords.classList.add('hidden');
+  if (panelCfgNotifications) panelCfgNotifications.classList.add('hidden');
+  if (panelCfgBiometrics) panelCfgBiometrics.classList.add('hidden');
+  if (panelCfgTimeout) panelCfgTimeout.classList.add('hidden');
+  if (panelCfgVincular) panelCfgVincular.classList.add('hidden');
+  if (panelCfgProfile) panelCfgProfile.classList.add('hidden');
+  if (panelCfgDev) panelCfgDev.classList.add('hidden');
+}
+
+function mostrarMenuConfiguracion() {
+  if (settingsMenuList) settingsMenuList.classList.remove('hidden');
+  ocultarTodosLosPanelesConfiguracion();
+
+  // Control estricto del Panel Desarrollador: solo Alejandro (DNI 40218898)
+  const esAlejandroDev = Boolean(
+    usuarioActivo &&
+    (String(usuarioActivo.dni || '').replace(/\D/g, '') === '40218898' || usuarioActivo.id === 'alejandro')
+  );
+  if (cardCfgDev) {
+    cardCfgDev.classList.toggle('hidden', !esAlejandroDev);
+    cardCfgDev.style.display = esAlejandroDev ? 'flex' : 'none';
   }
-  const extraFridgeCounter = document.getElementById('extra-fridge-counter');
-  if (extraFridgeCounter) {
-    const cantF = Array.isArray(heladera) ? heladera.length : 0;
-    extraFridgeCounter.textContent = cantF === 1 ? '1 ingrediente' : `${cantF} ingredientes`;
+
+  // Actualizar badges
+  const cfgBadgeBio = document.getElementById('cfg-badge-bio');
+  if (cfgBadgeBio && usuarioActivo) {
+    const tieneBio = tieneHuellaGuardada(usuarioActivo.id);
+    cfgBadgeBio.textContent = tieneBio ? 'ðŸ‘† Huella activa' : 'Sin huella';
   }
-  const extraListsCounter = document.getElementById('extra-lists-counter');
-  if (extraListsCounter) {
-    const cantL = Array.isArray(listasPresupuestos) ? listasPresupuestos.length : 0;
-    extraListsCounter.textContent = cantL === 1 ? '1 lista creada' : `${cantL} listas creadas`;
+  const cfgBadgeTimeout = document.getElementById('cfg-badge-timeout');
+  if (cfgBadgeTimeout && usuarioActivo) {
+    const t = Number(usuarioActivo.tiempoBloqueoMin) || Number(localStorage.getItem('agenda_bloqueo_' + usuarioActivo.id)) || 15;
+    cfgBadgeTimeout.textContent = ${t} min;
   }
-  const extraDebtsCounter = document.getElementById('extra-debts-counter');
-  if (extraDebtsCounter) {
-    const cantD = Array.isArray(deudores) ? deudores.length : 0;
-    const totalPendiente = (deudores || []).reduce((acc, d) => {
-      const sumaD = (d.conceptos || []).filter(c => !c.pagado).reduce((a, c) => a + (Number(c.monto) || 0), 0);
-      return acc + sumaD;
-    }, 0);
-    if (extraDebtsCounter) {
-      extraDebtsCounter.textContent = cantD === 1 ? `1 deudor (${formatearPesos(totalPendiente)})` : `${cantD} deudores (${formatearPesos(totalPendiente)})`;
-    }
-  }
-  const extraVincularCounter = document.getElementById('extra-vincular-counter');
-  if (extraVincularCounter) {
+  const cfgBadgeVincular = document.getElementById('cfg-badge-vincular');
+  if (cfgBadgeVincular && usuarioActivo) {
     const cantRec = (solicitudesVinculoRecibidas || []).length;
-    const cantVinc = (usuarioActivo?.vinculos || []).length;
+    const cantVinc = (usuarioActivo.vinculos || []).length;
     if (cantRec > 0) {
-      extraVincularCounter.textContent = `🔔 ${cantRec} nueva(s)`;
-      extraVincularCounter.style.borderColor = '#f59e0b';
-      extraVincularCounter.style.color = '#fbbf24';
+      cfgBadgeVincular.textContent = ðŸ””  nueva(s);
+      cfgBadgeVincular.style.borderColor = '#f59e0b';
+      cfgBadgeVincular.style.color = '#fbbf24';
     } else {
-      extraVincularCounter.textContent = cantVinc === 1 ? '1 contacto' : `${cantVinc} contactos`;
-      extraVincularCounter.style.borderColor = '#3b82f6';
-      extraVincularCounter.style.color = '#93c5fd';
+      cfgBadgeVincular.textContent = cantVinc === 1 ? '1 contacto' : ${cantVinc} contactos;
+      cfgBadgeVincular.style.borderColor = '#3b82f6';
+      cfgBadgeVincular.style.color = '#93c5fd';
     }
   }
 }
 
-function abrirHerramientaExtras(cual) {
-  if (extrasMenuSection) extrasMenuSection.classList.add('hidden');
-  if (extrasSubviewNav) extrasSubviewNav.classList.remove('hidden');
+function abrirPanelConfiguracion(cual) {
+  if (settingsMenuList) settingsMenuList.classList.add('hidden');
+  ocultarTodosLosPanelesConfiguracion();
 
-  if (tabExtraSuper) tabExtraSuper.classList.toggle('active', cual === 'super');
-  if (tabExtraGemini) tabExtraGemini.classList.toggle('active', cual === 'gemini');
-  if (tabExtraFridge) tabExtraFridge.classList.toggle('active', cual === 'fridge');
-  if (tabExtraWorkout) tabExtraWorkout.classList.toggle('active', cual === 'workout');
-  if (tabExtraLists) tabExtraLists.classList.toggle('active', cual === 'lists');
-  if (tabExtraDebts) tabExtraDebts.classList.toggle('active', cual === 'debts');
-  if (tabExtraSettings) tabExtraSettings.classList.toggle('active', cual === 'settings');
+  // Renderizar la configuraciÃ³n activa
+  renderizarConfiguracion();
 
-  if (subviewSuper) subviewSuper.classList.toggle('hidden', cual !== 'super');
-  if (subviewGemini) subviewGemini.classList.toggle('hidden', cual !== 'gemini');
-  if (subviewFridge) subviewFridge.classList.toggle('hidden', cual !== 'fridge');
-  if (subviewWorkout) subviewWorkout.classList.toggle('hidden', cual !== 'workout');
-  if (subviewLists) subviewLists.classList.toggle('hidden', cual !== 'lists');
-  if (subviewDebts) subviewDebts.classList.toggle('hidden', cual !== 'debts');
-  if (subviewSettings) subviewSettings.classList.toggle('hidden', cual !== 'settings');
-  if (subviewVincular) subviewVincular.classList.toggle('hidden', cual !== 'vincular');
-
-  if (cual === 'super') {
-    renderizarSupermercado();
-    const inp = document.getElementById('input-super-item');
-    if (inp) inp.focus();
-  } else if (cual === 'gemini') {
-    if (inputChatMsg) inputChatMsg.focus();
-  } else if (cual === 'fridge') {
-    renderizarHeladera();
-    const fInput = document.getElementById('input-fridge-name');
-    if (fInput) fInput.focus();
-  } else if (cual === 'workout') {
-    renderizarEntrenamiento();
-  } else if (cual === 'lists') {
-    renderizarListasPresupuestos();
-    const mInput = document.getElementById('input-item-material');
-    if (mInput) mInput.focus();
-  } else if (cual === 'debts') {
-    idDeudorActivo = null;
-    renderizarDeudores();
-  } else if (cual === 'settings') {
-    renderizarConfiguracion();
+  if (cual === 'passwords') {
+    if (panelCfgPasswords) panelCfgPasswords.classList.remove('hidden');
+    actualizarBadgePreguntaSeguridad();
+  } else if (cual === 'notifications') {
+    if (panelCfgNotifications) panelCfgNotifications.classList.remove('hidden');
+    actualizarEstadoPushUI();
+    const urlInput = document.getElementById('input-settings-share-url');
+    if (urlInput && usuarioActivo) {
+      urlInput.value = ${window.location.origin}?para=&modo=externo;
+    }
+  } else if (cual === 'biometrics') {
+    if (panelCfgBiometrics) panelCfgBiometrics.classList.remove('hidden');
+  } else if (cual === 'timeout') {
+    if (panelCfgTimeout) panelCfgTimeout.classList.remove('hidden');
   } else if (cual === 'vincular') {
+    if (panelCfgVincular) panelCfgVincular.classList.remove('hidden');
     renderizarVincular();
     if (inputVincularDni) inputVincularDni.focus();
+  } else if (cual === 'profile') {
+    if (panelCfgProfile) panelCfgProfile.classList.remove('hidden');
+    renderizarEditorPerfil();
+  } else if (cual === 'dev') {
+    const esAlejandroDev = Boolean(
+      usuarioActivo &&
+      (String(usuarioActivo.dni || '').replace(/\D/g, '') === '40218898' || usuarioActivo.id === 'alejandro')
+    );
+    if (esAlejandroDev) {
+      if (panelCfgDev) panelCfgDev.classList.remove('hidden');
+    } else {
+      mostrarMenuConfiguracion();
+    }
   }
 }
 
-if (cardExtraSuper) cardExtraSuper.addEventListener('click', () => abrirHerramientaExtras('super'));
-if (cardExtraGemini) cardExtraGemini.addEventListener('click', () => abrirHerramientaExtras('gemini'));
-if (cardExtraFridge) cardExtraFridge.addEventListener('click', () => abrirHerramientaExtras('fridge'));
-if (cardExtraWorkout) cardExtraWorkout.addEventListener('click', () => abrirHerramientaExtras('workout'));
-if (cardExtraLists) cardExtraLists.addEventListener('click', () => abrirHerramientaExtras('lists'));
-if (cardExtraDebts) cardExtraDebts.addEventListener('click', () => abrirHerramientaExtras('debts'));
-if (cardExtraSettings) cardExtraSettings.addEventListener('click', () => abrirHerramientaExtras('settings'));
-if (cardExtraVincular) cardExtraVincular.addEventListener('click', () => abrirHerramientaExtras('vincular'));
+// Botones volver de los paneles al menÃº de ConfiguraciÃ³n
+document.querySelectorAll('.btn-back-to-settings-menu').forEach(b => {
+  b.addEventListener('click', mostrarMenuConfiguracion);
+});
 
-if (btnBackToExtrasMenu) btnBackToExtrasMenu.addEventListener('click', mostrarMenuExtras);
+if (cardCfgPasswords) cardCfgPasswords.addEventListener('click', () => abrirPanelConfiguracion('passwords'));
+if (cardCfgNotifications) cardCfgNotifications.addEventListener('click', () => abrirPanelConfiguracion('notifications'));
+if (cardCfgBiometrics) cardCfgBiometrics.addEventListener('click', () => abrirPanelConfiguracion('biometrics'));
+if (cardCfgTimeout) cardCfgTimeout.addEventListener('click', () => abrirPanelConfiguracion('timeout'));
+if (cardCfgVincular) cardCfgVincular.addEventListener('click', () => abrirPanelConfiguracion('vincular'));
+if (cardCfgProfile) cardCfgProfile.addEventListener('click', () => abrirPanelConfiguracion('profile'));
+if (cardCfgDev) cardCfgDev.addEventListener('click', () => abrirPanelConfiguracion('dev'));
 
-if (tabExtraSuper) tabExtraSuper.addEventListener('click', () => abrirHerramientaExtras('super'));
-if (tabExtraGemini) tabExtraGemini.addEventListener('click', () => abrirHerramientaExtras('gemini'));
-if (tabExtraFridge) tabExtraFridge.addEventListener('click', () => abrirHerramientaExtras('fridge'));
-if (tabExtraWorkout) tabExtraWorkout.addEventListener('click', () => abrirHerramientaExtras('workout'));
-if (tabExtraLists) tabExtraLists.addEventListener('click', () => abrirHerramientaExtras('lists'));
-if (tabExtraSettings) tabExtraSettings.addEventListener('click', () => abrirHerramientaExtras('settings'));
+if (btnBackSettingsToHome) btnBackSettingsToHome.addEventListener('click', irAInicio);
 
-// ==========================================
-// MÓDULO VINCULAR: AMIGOS Y CONVIVIENTES POR DNI
-// ==========================================
+function renderizarEditorPerfil() {
+  if (!usuarioActivo) return;
+  avatarSeleccionadoPerfil = usuarioActivo.avatar || (usuarioActivo.esAdmin ? 'ðŸ‘‘' : 'ðŸ‘¤');
+  if (inputProfileDni) inputProfileDni.value = usuarioActivo.dni || '';
+  if (inputProfileName) inputProfileName.value = usuarioActivo.nombre || '';
+  if (profilePreviewName) profilePreviewName.textContent = usuarioActivo.nombre || 'Usuario';
+  if (profilePreviewDni) profilePreviewDni.textContent = 'DNI: ' + (usuarioActivo.dni || 'Sin DNI');
+  if (profileCurrentAvatar) profileCurrentAvatar.textContent = avatarSeleccionadoPerfil;
+  if (profileErrorMsg) profileErrorMsg.classList.add('hidden');
+  if (profileSuccessMsg) profileSuccessMsg.classList.add('hidden');
+
+  if (profileAvatarGrid) {
+    profileAvatarGrid.innerHTML = '';
+    AVATARES_USUARIOS.forEach(av => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = av;
+      btn.style.fontSize = '24px';
+      btn.style.padding = '8px';
+      btn.style.borderRadius = '8px';
+      btn.style.border = av === avatarSeleccionadoPerfil ? '2px solid #a855f7' : '1px solid #334155';
+      btn.style.background = av === avatarSeleccionadoPerfil ? 'rgba(168, 85, 247, 0.3)' : 'rgba(30, 41, 59, 0.6)';
+      btn.style.cursor = 'pointer';
+      btn.addEventListener('click', () => {
+        avatarSeleccionadoPerfil = av;
+        if (profileCurrentAvatar) profileCurrentAvatar.textContent = av;
+        Array.from(profileAvatarGrid.children).forEach(c => {
+          c.style.border = '1px solid #334155';
+          c.style.background = 'rgba(30, 41, 59, 0.6)';
+        });
+        btn.style.border = '2px solid #a855f7';
+        btn.style.background = 'rgba(168, 85, 247, 0.3)';
+      });
+      profileAvatarGrid.appendChild(btn);
+    });
+  }
+}
+
+if (btnSaveProfile) {
+  btnSaveProfile.addEventListener('click', async () => {
+    if (!usuarioActivo) return;
+    const nuevoNombre = (inputProfileName ? inputProfileName.value : '').trim();
+    const nuevoDni = (inputProfileDni ? inputProfileDni.value : '').replace(/\D/g, '').trim();
+
+    if (!nuevoNombre || nuevoNombre.length < 2) {
+      if (profileErrorMsg) {
+        profileErrorMsg.textContent = 'El nombre de usuario debe tener al menos 2 letras';
+        profileErrorMsg.classList.remove('hidden');
+      }
+      return;
+    }
+    if (!nuevoDni || nuevoDni.length < 5) {
+      if (profileErrorMsg) {
+        profileErrorMsg.textContent = 'El DNI debe tener al menos 5 nÃºmeros';
+        profileErrorMsg.classList.remove('hidden');
+      }
+      return;
+    }
+
+    if (profileErrorMsg) profileErrorMsg.classList.add('hidden');
+    if (profileSuccessMsg) profileSuccessMsg.classList.add('hidden');
+    btnSaveProfile.disabled = true;
+    btnSaveProfile.textContent = 'Guardando cambios...';
+
+    try {
+      const res = await fetch('/api/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          accion: 'actualizar_perfil',
+          usuarioId: usuarioActivo.id,
+          password: usuarioActivo.password || '',
+          nombre: nuevoNombre,
+          dni: nuevoDni,
+          avatar: avatarSeleccionadoPerfil
+        })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) {
+        throw new Error(data.error || 'No se pudo actualizar el perfil');
+      }
+
+      usuarioActivo.nombre = nuevoNombre;
+      usuarioActivo.dni = nuevoDni;
+      usuarioActivo.avatar = avatarSeleccionadoPerfil;
+
+      const uEnLista = listaUsuariosPublica.find(u => u.id === usuarioActivo.id);
+      if (uEnLista) {
+        uEnLista.nombre = nuevoNombre;
+        uEnLista.dni = nuevoDni;
+        uEnLista.avatar = avatarSeleccionadoPerfil;
+      }
+
+      guardarUsuarioRecordado(usuarioActivo);
+      
+      if (activeUserBadge) activeUserBadge.textContent = ${usuarioActivo.avatar} ;
+      if (profilePreviewName) profilePreviewName.textContent = nuevoNombre;
+      if (profilePreviewDni) profilePreviewDni.textContent = 'DNI: ' + nuevoDni;
+
+      if (profileSuccessMsg) {
+        profileSuccessMsg.textContent = 'âœ“ Â¡Perfil actualizado y sincronizado con Ã©xito!';
+        profileSuccessMsg.classList.remove('hidden');
+      }
+    } catch (err) {
+      if (profileErrorMsg) {
+        profileErrorMsg.textContent = 'Error: ' + err.message;
+        profileErrorMsg.classList.remove('hidden');
+      }
+    } finally {
+      btnSaveProfile.disabled = false;
+      btnSaveProfile.textContent = 'ðŸ’¾ Guardar cambios de perfil';
+    }
+  });
+}
+
+
 function renderizarVincular() {
   if (!usuarioActivo) return;
 
