@@ -3903,7 +3903,13 @@ if (cardCfgDev) cardCfgDev.addEventListener('click', () => abrirPanelConfiguraci
 
 if (btnBackSettingsToHome) btnBackSettingsToHome.addEventListener('click', irAInicio);
 const btnLogoutSettings = document.getElementById('btn-logout-settings');
-if (btnLogoutSettings) btnLogoutSettings.addEventListener('click', cerrarSesion);
+if (btnLogoutSettings) {
+  btnLogoutSettings.addEventListener('click', () => {
+    if (confirm('¿Cerrar tu sesión por completo en este dispositivo? Para volver a ingresar tendrás que poner tu DNI y tu contraseña.')) {
+      volverAPantallaUsuarios(true);
+    }
+  });
+}
 
 function renderizarEditorPerfil() {
   if (!usuarioActivo) return;
