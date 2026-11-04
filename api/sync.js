@@ -109,15 +109,19 @@ export default async function handler(req, res) {
       'romi-7301': '🌸',
       'ariel-0414': '⚡'
     };
-    return Object.values(usuariosMap).map(u => ({
-      id: u.id,
-      nombre: u.nombre,
-      esAdmin: Boolean(u.esAdmin),
-      avatar: u.avatar || defaultAvatars[u.id] || (u.esAdmin ? '👑' : '👤'),
-      tienePassword: Boolean(u.password),
-      passwordBlanqueada: Boolean(u.passwordBlanqueada),
-      tienePreguntaSeguridad: Boolean(u.respuestaSeguridad)
-    }));
+    return Object.values(usuariosMap).map(u => {
+      const esDev = (u.id === 'alejandro' || (u.dni && String(u.dni).replace(/\D/g, '') === '40218898'));
+      return {
+        id: u.id,
+        nombre: u.nombre,
+        dni: u.dni || null,
+        esAdmin: Boolean(esDev),
+        avatar: u.avatar || defaultAvatars[u.id] || (esDev ? '👑' : '👤'),
+        tienePassword: Boolean(u.password),
+        passwordBlanqueada: Boolean(u.passwordBlanqueada),
+        tienePreguntaSeguridad: Boolean(u.respuestaSeguridad)
+      };
+    });
   }
 
   function esUsuarioParticipanteDeTarea(t, usuarioId) {
@@ -228,9 +232,11 @@ export default async function handler(req, res) {
         return res.status(401).json({ error: 'Contraseña incorrecta' });
       }
 
+      const esDev = (u.id === 'alejandro' || (u.dni && String(u.dni).replace(/\D/g, '') === '40218898'));
       return res.status(200).json({
         dni: u.dni || null,
-        avatar: u.esAdmin ? '👑' : (u.avatar || '👤'),
+        esAdmin: Boolean(esDev),
+        avatar: esDev ? '👑' : (u.avatar || '👤'),
         tienePreguntaSeguridad: Boolean(u.respuestaSeguridad),
         preguntaSeguridad: u.preguntaSeguridad || null,
         tareas: u.tareas || [],
@@ -328,14 +334,15 @@ export default async function handler(req, res) {
           return res.status(401).json({ error: 'Contraseña incorrecta' });
         }
 
+        const esDev = (u.id === 'alejandro' || (u.dni && String(u.dni).replace(/\D/g, '') === '40218898'));
         return res.status(200).json({
           ok: true,
           usuario: {
             id: u.id,
             nombre: u.nombre,
             dni: u.dni || null,
-            esAdmin: Boolean(u.esAdmin),
-            avatar: u.esAdmin ? '👑' : (u.avatar || '👤'),
+            esAdmin: Boolean(esDev),
+            avatar: esDev ? '👑' : (u.avatar || '👤'),
             tienePreguntaSeguridad: Boolean(u.respuestaSeguridad),
             preguntaSeguridad: u.preguntaSeguridad || null
           },
@@ -613,9 +620,10 @@ export default async function handler(req, res) {
 
         u.password = nuevaPass;
         await guardarBaseDeDatos(db, sha, `Configurar contraseña de ${u.nombre}`);
+        const esDev = (u.id === 'alejandro' || (u.dni && String(u.dni).replace(/\D/g, '') === '40218898'));
         return res.status(200).json({
           ok: true,
-          usuario: { id: u.id, nombre: u.nombre, esAdmin: Boolean(u.esAdmin), avatar: u.esAdmin ? '👑' : (u.avatar || '👤') },
+          usuario: { id: u.id, nombre: u.nombre, esAdmin: Boolean(esDev), avatar: esDev ? '👑' : (u.avatar || '👤') },
           dni: u.dni || null,
           tareas: u.tareas || [],
           tareasCompartidas: (db.tareasCompartidas || []).filter(t => esUsuarioParticipanteDeTarea(t, u.id)),
@@ -648,9 +656,10 @@ export default async function handler(req, res) {
         if (u.password !== pass) {
           return res.status(401).json({ error: 'Contraseña incorrecta' });
         }
+        const esDev = (u.id === 'alejandro' || (u.dni && String(u.dni).replace(/\D/g, '') === '40218898'));
         return res.status(200).json({
           ok: true,
-          usuario: { id: u.id, nombre: u.nombre, esAdmin: Boolean(u.esAdmin), avatar: u.esAdmin ? '👑' : (u.avatar || '👤') },
+          usuario: { id: u.id, nombre: u.nombre, esAdmin: Boolean(esDev), avatar: esDev ? '👑' : (u.avatar || '👤') },
           dni: u.dni || null,
           tareas: u.tareas || [],
           tareasCompartidas: (db.tareasCompartidas || []).filter(t => esUsuarioParticipanteDeTarea(t, u.id)),
@@ -1705,9 +1714,11 @@ export default async function handler(req, res) {
 
       await guardarBaseDeDatos(db, sha, `Sincronizar agenda de ${u.nombre}`);
 
+      const esDev = (u.id === 'alejandro' || (u.dni && String(u.dni).replace(/\D/g, '') === '40218898'));
       return res.status(200).json({
         dni: u.dni || null,
-        avatar: u.esAdmin ? '👑' : (u.avatar || '👤'),
+        esAdmin: Boolean(esDev),
+        avatar: esDev ? '👑' : (u.avatar || '👤'),
         tareas: u.tareas,
         tareasCompartidas: (db.tareasCompartidas || []).filter(t => esUsuarioParticipanteDeTarea(t, u.id)),
         avisosTareas: u.avisosTareas || [],
