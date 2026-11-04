@@ -11,11 +11,11 @@
   <link rel="icon" type="image/svg+xml" href="logo.svg">
   <link rel="apple-touch-icon" href="logo.svg">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="styles.css?v=20261104_02">
+  <link rel="stylesheet" href="styles.css?v=20261104_03">
   <!-- ESCUDO DE DIAGNÓSTICO TEMPRANO Y CAPTURA DE ERRORES PÚBLICOS -->
   <script>
     (function() {
-      window.__APP_VERSION = '20261104_02';
+      window.__APP_VERSION = '20261104_03';
       window.__ERRORES_APP = [];
 
       function copiarTexto(texto) {
@@ -232,13 +232,13 @@
           Ingresá tu número de DNI o tu nombre de usuario y tu contraseña privada:
         </p>
 
-        <!-- BOTÓN DE DESBLOQUEO RÁPIDO CON HUELLA DIGITAL (CUANDO ESTÁ ACTIVADA EN ESTE CELULAR) -->
-        <div id="dni-fingerprint-box" class="fingerprint-login-box hidden" style="margin-bottom: 16px;">
+        <!-- BOTÓN DE DESBLOQUEO RÁPIDO CON HUELLA DIGITAL -->
+        <div id="dni-fingerprint-box" class="fingerprint-login-box" style="margin-bottom: 16px;">
           <button type="button" id="btn-dni-fingerprint" class="btn-fingerprint-large" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 12px; padding: 14px; background: linear-gradient(135deg, #059669, #10b981); border: 1px solid #34d399; border-radius: 12px; color: #fff; font-weight: 700; font-size: 1.05rem; cursor: pointer; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);">
             <span style="font-size: 1.6rem;">👆</span>
             <span style="text-align: left;">
               <strong id="btn-dni-fingerprint-title" style="display: block; font-size: 1rem;">Desbloquear con huella digital</strong>
-              <small style="opacity: 0.9; font-weight: 400; font-size: 0.8rem;">Tocá acá para apoyar tu dedo en el sensor</small>
+              <small id="btn-dni-fingerprint-sub" style="opacity: 0.9; font-weight: 400; font-size: 0.8rem;">Tocá acá para apoyar tu dedo en el sensor</small>
             </span>
           </button>
           <div style="display: flex; align-items: center; margin: 14px 0 8px 0; color: #64748b; font-size: 0.8rem;">
@@ -252,12 +252,18 @@
           <label for="input-login-dni">Usuario o DNI</label>
           <input type="text" id="input-login-dni" placeholder="Ingresá tu DNI (o tu nombre)..." autocomplete="username">
         </div>
-        <div class="form-group" style="margin-bottom: 14px;">
+        <div class="form-group" style="margin-bottom: 10px;">
           <label for="input-login-dni-pass">Contraseña</label>
           <div class="password-wrapper">
             <input type="password" id="input-login-dni-pass" placeholder="Tu contraseña privada..." autocomplete="current-password">
             <button type="button" id="btn-toggle-dni-pass" class="btn-eye" title="Mostrar u ocultar contraseña">👁️</button>
           </div>
+        </div>
+        <div id="box-remember-biometric-option" style="margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
+          <input type="checkbox" id="check-enable-fingerprint-login" checked style="width: 18px; height: 18px; accent-color: #10b981; cursor: pointer;">
+          <label for="check-enable-fingerprint-login" style="margin: 0; font-size: 0.88rem; color: #cbd5e1; cursor: pointer; user-select: none;">
+            👆 Activar / usar huella digital en este celular
+          </label>
         </div>
         <div id="dni-login-error" class="login-error hidden" style="margin-bottom: 12px;"></div>
         <div class="form-actions" style="margin-top: 14px; display: flex; flex-direction: column; gap: 10px;">
@@ -2284,6 +2290,6 @@
     </section>
   </main>
 
-  <script src="app.js?v=20261104_02"></script>
+  <script src="app.js?v=20261104_03"></script>
 </body>
 </html>
