@@ -87,6 +87,8 @@ let usuariosSeleccionadosEdicionLista = new Set();
 let superCompartidoCon = [];
 let yaConfiguroCasa = false;
 let seleccionConvivientesTemp = new Set();
+let solicitudesVinculoRecibidas = [];
+let solicitudesVinculoEnviadas = [];
 
 let prioridadSeleccionada = 'simple';
 let prioridadExternaSeleccionada = 'simple';
@@ -772,6 +774,9 @@ async function intentarIngresoConPassword(u, pass, eraAutomatico) {
     borrados = Array.isArray(data.borrados) ? data.borrados : [];
     borradosListas = Array.isArray(data.borradosListas) ? data.borradosListas : [];
     if (data.tnaConfig) usuarioActivo.tnaConfig = data.tnaConfig;
+    usuarioActivo.vinculos = Array.isArray(data.vinculos) ? data.vinculos : [];
+    solicitudesVinculoRecibidas = Array.isArray(data.solicitudesVinculoRecibidas) ? data.solicitudesVinculoRecibidas : [];
+    solicitudesVinculoEnviadas = Array.isArray(data.solicitudesVinculoEnviadas) ? data.solicitudesVinculoEnviadas : [];
 
     registrarActividadSesion();
     loginPasswordBox.classList.add('hidden');
@@ -2183,6 +2188,9 @@ async function sincronizarDesdeNube() {
     if (Array.isArray(cloud.tareasCompartidas)) tareasCompartidas = cloud.tareasCompartidas;
     if (cloud.dni) usuarioActivo.dni = cloud.dni;
     if (cloud.tnaConfig) usuarioActivo.tnaConfig = cloud.tnaConfig;
+    if (Array.isArray(cloud.vinculos)) usuarioActivo.vinculos = cloud.vinculos;
+    if (Array.isArray(cloud.solicitudesVinculoRecibidas)) solicitudesVinculoRecibidas = cloud.solicitudesVinculoRecibidas;
+    if (Array.isArray(cloud.solicitudesVinculoEnviadas)) solicitudesVinculoEnviadas = cloud.solicitudesVinculoEnviadas;
 
     const seLimpiaronVencidas = limpiarTareasVencidas();
     actualizarContadoresYAlertas();
@@ -2299,7 +2307,16 @@ function actualizarContadoresYAlertas() {
   }
 
   if (homeExtrasCounter) {
-    homeExtrasCounter.textContent = '6 herramientas y ajustes';
+    const cantRec = (solicitudesVinculoRecibidas || []).length;
+    if (cantRec > 0) {
+      homeExtrasCounter.textContent = `🔔 ${cantRec} solicitud(es) de vínculo`;
+      homeExtrasCounter.style.borderColor = '#f59e0b';
+      homeExtrasCounter.style.color = '#fbbf24';
+    } else {
+      homeExtrasCounter.textContent = '7 herramientas y ajustes';
+      homeExtrasCounter.style.borderColor = '';
+      homeExtrasCounter.style.color = '';
+    }
   }
 
   if (cantHoy > 0) {
@@ -3523,6 +3540,17 @@ const subviewWorkout = document.getElementById('subview-workout');
 const subviewLists = document.getElementById('subview-lists');
 const subviewDebts = document.getElementById('subview-debts');
 const subviewSettings = document.getElementById('subview-settings');
+const cardExtraVincular = document.getElementById('card-extra-vincular');
+const subviewVincular = document.getElementById('subview-vincular');
+const inputVincularDni = document.getElementById('input-vincular-dni');
+const btnSubmitVincular = document.getElementById('btn-submit-vincular');
+const vincularErrorMsg = document.getElementById('vincular-error-msg');
+const vincularSuccessMsg = document.getElementById('vincular-success-msg');
+const boxVincularRecibidas = document.getElementById('box-vincular-recibidas');
+const vincularListaRecibidas = document.getElementById('vincular-lista-recibidas');
+const vincularListaActivos = document.getElementById('vincular-lista-activos');
+const boxVincularEnviadas = document.getElementById('box-vincular-enviadas');
+const vincularListaEnviadas = document.getElementById('vincular-lista-enviadas');
 
 function mostrarMenuExtras() {
   if (extrasMenuSection) extrasMenuSection.classList.remove('hidden');
@@ -3534,6 +3562,7 @@ function mostrarMenuExtras() {
   if (subviewLists) subviewLists.classList.add('hidden');
   if (subviewDebts) subviewDebts.classList.add('hidden');
   if (subviewSettings) subviewSettings.classList.add('hidden');
+  if (subviewVincular) subviewVincular.classList.add('hidden');
 
   const extraSuperCounter = document.getElementById('extra-super-counter');
   if (extraSuperCounter) {
@@ -3561,6 +3590,20 @@ function mostrarMenuExtras() {
       extraDebtsCounter.textContent = cantD === 1 ? `1 deudor (${formatearPesos(totalPendiente)})` : `${cantD} deudores (${formatearPesos(totalPendiente)})`;
     }
   }
+  const extraVincularCounter = document.getElementById('extra-vincular-counter');
+  if (extraVincularCounter) {
+    const cantRec = (solicitudesVinculoRecibidas || []).length;
+    const cantVinc = (usuarioActivo?.vinculos || []).length;
+    if (cantRec > 0) {
+      extraVincularCounter.textContent = `🔔 ${cantRec} nueva(s)`;
+      extraVincularCounter.style.borderColor = '#f59e0b';
+      extraVincularCounter.style.color = '#fbbf24';
+    } else {
+      extraVincularCounter.textContent = cantVinc === 1 ? '1 contacto' : `${cantVinc} contactos`;
+      extraVincularCounter.style.borderColor = '#3b82f6';
+      extraVincularCounter.style.color = '#93c5fd';
+    }
+  }
 }
 
 function abrirHerramientaExtras(cual) {
@@ -3582,6 +3625,7 @@ function abrirHerramientaExtras(cual) {
   if (subviewLists) subviewLists.classList.toggle('hidden', cual !== 'lists');
   if (subviewDebts) subviewDebts.classList.toggle('hidden', cual !== 'debts');
   if (subviewSettings) subviewSettings.classList.toggle('hidden', cual !== 'settings');
+  if (subviewVincular) subviewVincular.classList.toggle('hidden', cual !== 'vincular');
 
   if (cual === 'super') {
     renderizarSupermercado();
@@ -3604,6 +3648,9 @@ function abrirHerramientaExtras(cual) {
     renderizarDeudores();
   } else if (cual === 'settings') {
     renderizarConfiguracion();
+  } else if (cual === 'vincular') {
+    renderizarVincular();
+    if (inputVincularDni) inputVincularDni.focus();
   }
 }
 
@@ -3614,6 +3661,7 @@ if (cardExtraWorkout) cardExtraWorkout.addEventListener('click', () => abrirHerr
 if (cardExtraLists) cardExtraLists.addEventListener('click', () => abrirHerramientaExtras('lists'));
 if (cardExtraDebts) cardExtraDebts.addEventListener('click', () => abrirHerramientaExtras('debts'));
 if (cardExtraSettings) cardExtraSettings.addEventListener('click', () => abrirHerramientaExtras('settings'));
+if (cardExtraVincular) cardExtraVincular.addEventListener('click', () => abrirHerramientaExtras('vincular'));
 
 if (btnBackToExtrasMenu) btnBackToExtrasMenu.addEventListener('click', mostrarMenuExtras);
 
@@ -3623,6 +3671,334 @@ if (tabExtraFridge) tabExtraFridge.addEventListener('click', () => abrirHerramie
 if (tabExtraWorkout) tabExtraWorkout.addEventListener('click', () => abrirHerramientaExtras('workout'));
 if (tabExtraLists) tabExtraLists.addEventListener('click', () => abrirHerramientaExtras('lists'));
 if (tabExtraSettings) tabExtraSettings.addEventListener('click', () => abrirHerramientaExtras('settings'));
+
+// ==========================================
+// MÓDULO VINCULAR: AMIGOS Y CONVIVIENTES POR DNI
+// ==========================================
+function renderizarVincular() {
+  if (!usuarioActivo) return;
+
+  // 1. Solicitudes Recibidas
+  if (boxVincularRecibidas && vincularListaRecibidas) {
+    vincularListaRecibidas.innerHTML = '';
+    const recibidas = solicitudesVinculoRecibidas || [];
+    if (recibidas.length > 0) {
+      boxVincularRecibidas.classList.remove('hidden');
+      recibidas.forEach(sol => {
+        const item = document.createElement('div');
+        item.className = 'task-item';
+        item.style.flexWrap = 'wrap';
+        item.style.gap = '8px';
+        item.style.alignItems = 'center';
+        item.style.background = 'rgba(15, 23, 42, 0.7)';
+        item.style.padding = '12px';
+        item.style.borderRadius = '10px';
+        item.style.border = '1px solid #f59e0b';
+
+        const tipoTexto = sol.tipo === 'convivientes' ? '🏠 Convivientes (Misma casa)' : '👥 Amigos';
+        const tipoDetalle = sol.tipo === 'convivientes'
+          ? 'Para compartir tareas, eventos, Supermercado y Heladera.'
+          : 'Para hacer tareas en equipo y coordinar eventos en la agenda.';
+
+        item.innerHTML = `
+          <div style="flex: 1; min-width: 200px;">
+            <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
+              <span class="priority-pill ${sol.tipo === 'convivientes' ? 'pill-verde' : 'pill-hora'}">${tipoTexto}</span>
+              <strong style="color: #fff; font-size: 1rem;">${escaparHTML(sol.deNombre)}</strong>
+            </div>
+            <div style="font-size: 0.82rem; color: #cbd5e1;">DNI: <strong>${escaparHTML(sol.deDni || 'Registrado')}</strong></div>
+            <div style="font-size: 0.78rem; color: #94a3b8; margin-top:2px;">${tipoDetalle}</div>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button type="button" class="btn-primary btn-accept-sol" style="background:#10b981; border-color:#059669; padding:6px 14px; font-weight:700; font-size:0.88rem;">
+              ✓ Aceptar
+            </button>
+            <button type="button" class="btn-secondary btn-reject-sol" style="border-color:#ef4444; color:#fca5a5; padding:6px 12px; font-size:0.88rem;">
+              ✕ Rechazar
+            </button>
+          </div>
+        `;
+
+        item.querySelector('.btn-accept-sol').onclick = () => responderSolicitudVinculo(sol.id, true);
+        item.querySelector('.btn-reject-sol').onclick = () => responderSolicitudVinculo(sol.id, false);
+        vincularListaRecibidas.appendChild(item);
+      });
+    } else {
+      boxVincularRecibidas.classList.add('hidden');
+    }
+  }
+
+  // 2. Vínculos Activos
+  if (vincularListaActivos) {
+    vincularListaActivos.innerHTML = '';
+    const vinculos = usuarioActivo.vinculos || [];
+    if (vinculos.length === 0) {
+      vincularListaActivos.innerHTML = `
+        <div style="text-align: center; padding: 25px 15px; color: var(--text-muted); font-size: 0.92rem; background: rgba(255,255,255,0.02); border-radius: 8px; border: 1px dashed rgba(255,255,255,0.1);">
+          <div style="font-size: 2rem; margin-bottom: 6px;">👥</div>
+          No tenés amigos ni convivientes vinculados todavía.<br>
+          <span style="font-size: 0.82rem;">Escribí el DNI de la persona arriba para invitarla y empezar a compartir tareas o la casa.</span>
+        </div>`;
+    } else {
+      vinculos.forEach(v => {
+        const item = document.createElement('div');
+        item.className = 'task-item';
+        item.style.flexWrap = 'wrap';
+        item.style.gap = '8px';
+        item.style.alignItems = 'center';
+        item.style.padding = '12px';
+        item.style.borderRadius = '10px';
+        item.style.border = v.tipo === 'convivientes' ? '1px solid #10b981' : '1px solid #334155';
+        item.style.background = v.tipo === 'convivientes' ? 'rgba(16, 185, 129, 0.05)' : 'rgba(30, 41, 59, 0.5)';
+
+        const badge = v.tipo === 'convivientes'
+          ? '<span class="priority-pill pill-verde" style="font-weight:700;">🏠 Conviviente (Misma casa)</span>'
+          : '<span class="priority-pill pill-hora" style="font-weight:700;">👥 Amigo</span>';
+
+        item.innerHTML = `
+          <div style="flex: 1; min-width: 180px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              ${badge}
+              <strong style="font-size: 1rem; color: #fff;">${escaparHTML(v.nombre)}</strong>
+            </div>
+            ${v.dni ? `<div style="font-size:0.8rem; color:#94a3b8; margin-top:3px;">DNI: ${escaparHTML(v.dni)}</div>` : ''}
+            <div style="font-size:0.75rem; color:#cbd5e1; margin-top:2px;">
+              ${v.tipo === 'convivientes' ? '✓ Tareas, eventos, Supermercado y Heladera compartidos' : '✓ Tareas y eventos de agenda compartidos'}
+            </div>
+          </div>
+          <button type="button" class="btn-delete btn-del-vinculo" style="padding: 6px 12px; font-size: 0.82rem;">
+            ✕ Desvincular
+          </button>
+        `;
+
+        item.querySelector('.btn-del-vinculo').onclick = () => eliminarVinculoContacto(v.usuarioId, v.nombre);
+        vincularListaActivos.appendChild(item);
+      });
+    }
+  }
+
+  // 3. Solicitudes Enviadas Pendientes
+  if (boxVincularEnviadas && vincularListaEnviadas) {
+    vincularListaEnviadas.innerHTML = '';
+    const enviadas = solicitudesVinculoEnviadas || [];
+    if (enviadas.length > 0) {
+      boxVincularEnviadas.classList.remove('hidden');
+      enviadas.forEach(sol => {
+        const item = document.createElement('div');
+        item.className = 'task-item';
+        item.style.flexWrap = 'wrap';
+        item.style.gap = '8px';
+        item.style.alignItems = 'center';
+        item.style.padding = '10px';
+        item.style.borderRadius = '8px';
+        item.style.background = 'rgba(255, 255, 255, 0.03)';
+        item.style.border = '1px solid rgba(255, 255, 255, 0.1)';
+
+        const tipoTexto = sol.tipo === 'convivientes' ? '🏠 Convivientes' : '👥 Amigos';
+
+        item.innerHTML = `
+          <div style="flex: 1; min-width: 180px;">
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span class="priority-pill pill-simple">${tipoTexto}</span>
+              <strong>${escaparHTML(sol.paraNombre || 'Usuario')}</strong>
+              <small style="color:#94a3b8;">(DNI ${escaparHTML(sol.paraDni)})</small>
+            </div>
+            <div style="font-size: 0.78rem; color: #fbbf24; margin-top: 2px;">⏳ Esperando que acepte la invitación...</div>
+          </div>
+          <button type="button" class="btn-secondary btn-cancel-sol" style="padding: 4px 10px; font-size: 0.78rem; border-color:#64748b; color:#cbd5e1;">
+            ✕ Cancelar solicitud
+          </button>
+        `;
+
+        item.querySelector('.btn-cancel-sol').onclick = () => cancelarSolicitudVinculo(sol.id);
+        vincularListaEnviadas.appendChild(item);
+      });
+    } else {
+      boxVincularEnviadas.classList.add('hidden');
+    }
+  }
+
+  const extraVincularCounter = document.getElementById('extra-vincular-counter');
+  if (extraVincularCounter) {
+    const cantRec = (solicitudesVinculoRecibidas || []).length;
+    const cantVinc = (usuarioActivo?.vinculos || []).length;
+    if (cantRec > 0) {
+      extraVincularCounter.textContent = `🔔 ${cantRec} nueva(s)`;
+      extraVincularCounter.style.borderColor = '#f59e0b';
+      extraVincularCounter.style.color = '#fbbf24';
+    } else {
+      extraVincularCounter.textContent = cantVinc === 1 ? '1 contacto' : `${cantVinc} contactos`;
+      extraVincularCounter.style.borderColor = '#3b82f6';
+      extraVincularCounter.style.color = '#93c5fd';
+    }
+  }
+}
+
+async function enviarSolicitudVinculo() {
+  if (!usuarioActivo) return;
+  const dni = inputVincularDni ? inputVincularDni.value.trim().replace(/\D/g, '') : '';
+  if (vincularErrorMsg) vincularErrorMsg.classList.add('hidden');
+  if (vincularSuccessMsg) vincularSuccessMsg.classList.add('hidden');
+
+  if (!dni || dni.length < 5) {
+    if (vincularErrorMsg) {
+      vincularErrorMsg.textContent = 'Por favor ingresá un número de DNI válido (mínimo 5 dígitos)';
+      vincularErrorMsg.classList.remove('hidden');
+    }
+    if (inputVincularDni) inputVincularDni.focus();
+    return;
+  }
+
+  const radioSel = document.querySelector('input[name="radio-tipo-vinculo"]:checked');
+  const tipo = radioSel ? radioSel.value : 'amigos';
+
+  if (btnSubmitVincular) {
+    btnSubmitVincular.disabled = true;
+    btnSubmitVincular.textContent = 'Enviando...';
+  }
+
+  try {
+    const res = await fetch(API_SYNC_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        accion: 'enviar_solicitud_vinculo',
+        usuarioId: usuarioActivo.id,
+        password: usuarioActivo.password || obtenerPasswordSesionVigente(usuarioActivo.id) || '',
+        targetDni: dni,
+        tipo: tipo
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      if (vincularErrorMsg) {
+        vincularErrorMsg.textContent = data.error || 'No se pudo enviar la solicitud';
+        vincularErrorMsg.classList.remove('hidden');
+      }
+      return;
+    }
+
+    if (vincularSuccessMsg) {
+      vincularSuccessMsg.textContent = `✓ ${data.mensaje || '¡Solicitud enviada con éxito!'}`;
+      vincularSuccessMsg.classList.remove('hidden');
+      setTimeout(() => vincularSuccessMsg.classList.add('hidden'), 4000);
+    }
+    if (inputVincularDni) inputVincularDni.value = '';
+    solicitudesVinculoEnviadas = data.solicitudesVinculoEnviadas || solicitudesVinculoEnviadas;
+    renderizarVincular();
+  } catch (e) {
+    if (vincularErrorMsg) {
+      vincularErrorMsg.textContent = 'Error de conexión. Intentá nuevamente.';
+      vincularErrorMsg.classList.remove('hidden');
+    }
+  } finally {
+    if (btnSubmitVincular) {
+      btnSubmitVincular.disabled = false;
+      btnSubmitVincular.textContent = '📨 Enviar solicitud de vinculación';
+    }
+  }
+}
+
+async function responderSolicitudVinculo(solicitudId, aceptar) {
+  if (!usuarioActivo) return;
+  try {
+    const res = await fetch(API_SYNC_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        accion: 'responder_solicitud_vinculo',
+        usuarioId: usuarioActivo.id,
+        password: usuarioActivo.password || obtenerPasswordSesionVigente(usuarioActivo.id) || '',
+        solicitudId: solicitudId,
+        aceptar: Boolean(aceptar)
+      })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      usuarioActivo.vinculos = data.vinculos || usuarioActivo.vinculos;
+      solicitudesVinculoRecibidas = data.solicitudesVinculoRecibidas || [];
+      if (data.supermercado) supermercado = data.supermercado;
+      if (data.heladera) heladera = data.heladera;
+      if (data.superCompartidoCon) superCompartidoCon = data.superCompartidoCon;
+      renderizarVincular();
+      renderizarSupermercado();
+      renderizarHeladera();
+      renderizarTareasCompartidas();
+      alert(aceptar ? '¡Vínculo aceptado con éxito! Ahora están conectados en la app.' : 'Solicitud rechazada.');
+    } else {
+      alert(data.error || 'No se pudo responder la solicitud.');
+    }
+  } catch (e) {
+    alert('Error de conexión.');
+  }
+}
+
+async function eliminarVinculoContacto(targetUsuarioId, nombre) {
+  if (!usuarioActivo) return;
+  if (!confirm(`¿Estás seguro de desvincular a "${nombre}"?\n\nYa no podrán compartir tareas ni eventos en conjunto, y si convivían se separarán las listas de Supermercado y Heladera.`)) return;
+
+  try {
+    const res = await fetch(API_SYNC_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        accion: 'eliminar_vinculo',
+        usuarioId: usuarioActivo.id,
+        password: usuarioActivo.password || obtenerPasswordSesionVigente(usuarioActivo.id) || '',
+        targetUsuarioId: targetUsuarioId
+      })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      usuarioActivo.vinculos = data.vinculos || [];
+      if (data.superCompartidoCon) superCompartidoCon = data.superCompartidoCon;
+      renderizarVincular();
+      renderizarTareasCompartidas();
+      renderizarSupermercado();
+      renderizarHeladera();
+      alert(`Vínculo con "${nombre}" eliminado.`);
+    } else {
+      alert(data.error || 'No se pudo eliminar el vínculo.');
+    }
+  } catch (e) {
+    alert('Error de conexión.');
+  }
+}
+
+async function cancelarSolicitudVinculo(solicitudId) {
+  if (!usuarioActivo) return;
+  try {
+    const res = await fetch(API_SYNC_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        accion: 'cancelar_solicitud_vinculo',
+        usuarioId: usuarioActivo.id,
+        password: usuarioActivo.password || obtenerPasswordSesionVigente(usuarioActivo.id) || '',
+        solicitudId: solicitudId
+      })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      solicitudesVinculoEnviadas = data.solicitudesVinculoEnviadas || [];
+      renderizarVincular();
+    } else {
+      alert(data.error || 'No se pudo cancelar la solicitud.');
+    }
+  } catch (e) {
+    alert('Error de conexión.');
+  }
+}
+
+if (btnSubmitVincular) btnSubmitVincular.addEventListener('click', enviarSolicitudVinculo);
+if (inputVincularDni) {
+  inputVincularDni.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      enviarSolicitudVinculo();
+    }
+  });
+}
 
 async function renderizarConfiguracion() {
   if (!usuarioActivo) return;
@@ -4067,9 +4443,10 @@ function actualizarPreviewSubtotalItem() {
 function renderizarCheckboxesCompartirNuevaLista() {
   if (!newListShareCheckboxes) return;
   newListShareCheckboxes.innerHTML = '';
-  const otrosUsuarios = (listaUsuariosPublica || []).filter(u => usuarioActivo && u.id !== usuarioActivo.id);
+  const vinculosIds = (usuarioActivo?.vinculos || []).map(v => v.usuarioId);
+  const otrosUsuarios = (listaUsuariosPublica || []).filter(u => usuarioActivo && u.id !== usuarioActivo.id && vinculosIds.includes(u.id));
   if (otrosUsuarios.length === 0) {
-    newListShareCheckboxes.innerHTML = '<div style="color: #94a3b8; font-size: 0.88rem; font-style: italic; padding: 6px;">No hay otros usuarios registrados en la agenda.</div>';
+    newListShareCheckboxes.innerHTML = '<div style="color: #94a3b8; font-size: 0.88rem; font-style: italic; padding: 6px;">Para compartir presupuestos, primero vinculá amigos o convivientes en Extras &gt; Vincular Contactos.</div>';
     return;
   }
   otrosUsuarios.forEach(u => {
@@ -4096,9 +4473,10 @@ function renderizarCheckboxesCompartirNuevaLista() {
 function renderizarCheckboxesEdicionCompartir() {
   if (!editShareCheckboxes) return;
   editShareCheckboxes.innerHTML = '';
-  const otrosUsuarios = (listaUsuariosPublica || []).filter(u => usuarioActivo && u.id !== usuarioActivo.id);
+  const vinculosIds = (usuarioActivo?.vinculos || []).map(v => v.usuarioId);
+  const otrosUsuarios = (listaUsuariosPublica || []).filter(u => usuarioActivo && u.id !== usuarioActivo.id && vinculosIds.includes(u.id));
   if (otrosUsuarios.length === 0) {
-    editShareCheckboxes.innerHTML = '<div style="color: #94a3b8; font-size: 0.88rem; font-style: italic; padding: 6px;">No hay otros usuarios registrados en la agenda.</div>';
+    editShareCheckboxes.innerHTML = '<div style="color: #94a3b8; font-size: 0.88rem; font-style: italic; padding: 6px;">Para compartir presupuestos, primero vinculá amigos o convivientes en Extras &gt; Vincular Contactos.</div>';
     return;
   }
   otrosUsuarios.forEach(u => {
@@ -6286,29 +6664,7 @@ const btnLiveAlone = document.getElementById('btn-live-alone');
 const btnSaveHousemates = document.getElementById('btn-save-housemates');
 
 function verificarPreguntaUnicaConvivencia() {
-  if (!housematesPromptBox || !usuarioActivo) return;
-  const otrosUsuarios = listaUsuariosPublica.filter(u => u.id !== usuarioActivo.id);
-
-  // Solo pregunta si todavía no respondió nunca y si ya existe al menos otro usuario en la app
-  if (!yaConfiguroCasa && otrosUsuarios.length > 0) {
-    housematesPromptBox.classList.remove('hidden');
-    housematesOptionsList.innerHTML = '';
-    otrosUsuarios.forEach(u => {
-      const activo = seleccionConvivientesTemp.has(u.id);
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = `prio-option prio-verde ${activo ? 'active' : ''}`;
-      btn.innerHTML = `<span class="dot ${activo ? 'dot-verde' : ''}" style="${activo ? '' : 'background:#64748b'}"></span> ${activo ? '✓ Vivo con ' : ''}${escaparHTML(u.nombre)}`;
-      btn.addEventListener('click', () => {
-        if (seleccionConvivientesTemp.has(u.id)) seleccionConvivientesTemp.delete(u.id);
-        else seleccionConvivientesTemp.add(u.id);
-        verificarPreguntaUnicaConvivencia();
-      });
-      housematesOptionsList.appendChild(btn);
-    });
-  } else {
-    housematesPromptBox.classList.add('hidden');
-  }
+  if (housematesPromptBox) housematesPromptBox.classList.add('hidden');
 }
 
 async function guardarConvivenciaPorUnicaVez(listaIds) {
@@ -7358,24 +7714,35 @@ const formSharedTaskDesc = document.getElementById('form-shared-task-desc');
 function renderizarChipsSociosCompartidos() {
   if (!sharedPartnersChipsContainer) return;
   sharedPartnersChipsContainer.innerHTML = '';
-  const otros = (listaUsuariosPublica || []).filter(u => u.id !== usuarioActivo?.id);
+
+  const vinculosIds = (usuarioActivo?.vinculos || []).map(v => v.usuarioId);
+  const otros = (listaUsuariosPublica || []).filter(u => u.id !== usuarioActivo?.id && vinculosIds.includes(u.id));
 
   if (otros.length === 0) {
-    sharedPartnersChipsContainer.innerHTML = '<span style="color:var(--text-muted); font-size:0.85rem;">No hay otros usuarios registrados en la app.</span>';
+    sharedPartnersChipsContainer.innerHTML = `
+      <div style="padding: 12px; background: rgba(59, 130, 246, 0.08); border: 1px dashed #3b82f6; border-radius: 8px; color: #93c5fd; font-size: 0.88rem; width: 100%;">
+        👥 Para hacer tareas compartidas o programadas en equipo, primero debés vincular al usuario por DNI como <strong>Amigo</strong> o <strong>Conviviente</strong>.<br>
+        <button type="button" class="btn-secondary" style="margin-top: 8px; padding: 6px 12px; font-size: 0.82rem; border-color:#3b82f6; color:#93c5fd;" onclick="mostrarMenuExtras(); abrirHerramientaExtras('vincular');">
+          🤝 Ir a Vincular Contactos
+        </button>
+      </div>`;
     return;
   }
 
-  // Si no hay seleccionado ninguno, seleccionar el primero por defecto
-  if (sociosSeleccionadosParaTarea.size === 0 && otros.length > 0) {
-    sociosSeleccionadosParaTarea.add(otros[0].id);
+  // Si no hay seleccionado ninguno o no son válidos, seleccionar el primero
+  if (sociosSeleccionadosParaTarea.size === 0 || !otros.some(u => sociosSeleccionadosParaTarea.has(u.id))) {
+    sociosSeleccionadosParaTarea.clear();
+    if (otros.length > 0) sociosSeleccionadosParaTarea.add(otros[0].id);
   }
 
   otros.forEach(u => {
     const isSelected = sociosSeleccionadosParaTarea.has(u.id);
+    const vinc = (usuarioActivo?.vinculos || []).find(v => v.usuarioId === u.id);
+    const tipoBadge = vinc?.tipo === 'convivientes' ? '🏠' : '👥';
     const chip = document.createElement('div');
     chip.className = `partner-chip ${isSelected ? 'active' : ''}`;
     chip.innerHTML = `
-      <span>${u.avatar || '👤'}</span>
+      <span>${tipoBadge} ${u.avatar || '👤'}</span>
       <span>${escaparHTML(u.nombre)}</span>
       <span class="chip-check">${isSelected ? '✓' : '+'}</span>
     `;
@@ -7926,6 +8293,9 @@ async function iniciarSesionConDni() {
     borrados = Array.isArray(data.borrados) ? data.borrados : [];
     borradosListas = Array.isArray(data.borradosListas) ? data.borradosListas : [];
     if (data.tnaConfig) usuarioActivo.tnaConfig = data.tnaConfig;
+    usuarioActivo.vinculos = Array.isArray(data.vinculos) ? data.vinculos : [];
+    solicitudesVinculoRecibidas = Array.isArray(data.solicitudesVinculoRecibidas) ? data.solicitudesVinculoRecibidas : [];
+    solicitudesVinculoEnviadas = Array.isArray(data.solicitudesVinculoEnviadas) ? data.solicitudesVinculoEnviadas : [];
 
     registrarActividadSesion();
     if (inputLoginDni) inputLoginDni.value = '';
