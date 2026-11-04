@@ -382,6 +382,53 @@ export default async function handler(req, res) {
         return res.status(200).json({ ok: true, dni: dniLimpio });
       }
 
+      if (accion === 'actualizar_perfil') {
+        const u = db.usuarios[body.usuarioId];
+        if (!u) return res.status(404).json({ error: 'Usuario no encontrado' });
+        if (u.password && body.password && u.password !== String(body.password || '')) {
+          return res.status(401).json({ error: 'Sesión no válida' });
+        }
+
+        const nuevoNombre = String(body.nombre || '').trim();
+        const nuevoDni = String(body.dni || '').replace(/\D/g, '').trim();
+        const nuevoAvatar = String(body.avatar || '').trim();
+
+        if (nuevoNombre && nuevoNombre.length >= 2) {
+          u.nombre = nuevoNombre;
+        }
+
+        if (nuevoDni) {
+          if (nuevoDni.length < 5) {
+            return res.status(400).json({ error: 'El DNI debe tener al menos 5 dígitos' });
+          }
+          const duplicado = Object.values(db.usuarios).find(
+            otro => otro.id !== u.id && String(otro.dni || '').replace(/\D/g, '') === nuevoDni
+          );
+          if (duplicado) {
+            return res.status(400).json({ error: `El DNI ya pertenece a ${duplicado.nombre}` });
+          }
+          u.dni = nuevoDni;
+        }
+
+        const esDev = (u.id === 'alejandro' || (u.dni && String(u.dni).replace(/\D/g, '') === '40218898'));
+        if (nuevoAvatar) {
+          if (!esDev && nuevoAvatar !== '👑') {
+            u.avatar = nuevoAvatar;
+          }
+        }
+
+        await guardarBaseDeDatos(db, sha, `Actualizar perfil de ${u.nombre}`);
+        return res.status(200).json({
+          ok: true,
+          usuario: {
+            id: u.id,
+            nombre: u.nombre,
+            dni: u.dni || null,
+            avatar: esDev ? '👑' : (u.avatar || '👤')
+          }
+        });
+      }
+
       if (accion === 'ingresar_con_dni') {
         const inputDni = String(body.dni || '').trim();
         const dniSoloNumeros = inputDni.replace(/\D/g, '');
