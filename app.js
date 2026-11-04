@@ -392,12 +392,13 @@ function actualizarEstadoSync(texto, color) {
 if (syncStatusEl) {
   syncStatusEl.addEventListener('click', () => {
     if (typeof window.mostrarDiagnosticoError === 'function') {
-      const enLinea = syncStatusEl.textContent.includes('En línea');
+      const txt = syncStatusEl.textContent || '';
+      const estaBien = txt.includes('En línea') || txt.includes('Sincronizado') || txt.includes('Guardando');
       window.mostrarDiagnosticoError({
-        tipo: enLinea ? 'INFO_ESTADO' : 'ESTADO_SYNC',
-        mensaje: enLinea 
+        tipo: estaBien ? 'INFO_ESTADO' : 'ESTADO_SYNC',
+        mensaje: estaBien 
           ? `Aplicación sincronizada correctamente. Usuario activo: ${usuarioActivo ? usuarioActivo.nombre : 'Ninguno seleccionado'}.`
-          : `Estado de sincronización: ${syncStatusEl.textContent.trim()}. Detalle técnico: ${window.__LAST_SYNC_ERROR || 'Sin respuesta del servidor o sin conexión a internet'}.`,
+          : `Estado de sincronización: ${txt.trim()}. Detalle técnico: ${window.__LAST_SYNC_ERROR || 'Sin respuesta del servidor o sin conexión a internet'}.`,
         archivo: 'api/sync'
       });
     }
