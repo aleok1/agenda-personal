@@ -11,11 +11,11 @@
   <link rel="icon" type="image/svg+xml" href="logo.svg">
   <link rel="apple-touch-icon" href="logo.svg">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="styles.css?v=20261103_01">
+  <link rel="stylesheet" href="styles.css?v=20261103_03">
   <!-- ESCUDO DE DIAGNÓSTICO TEMPRANO Y CAPTURA DE ERRORES PÚBLICOS -->
   <script>
     (function() {
-      window.__APP_VERSION = '20261103_01';
+      window.__APP_VERSION = '20261103_03';
       window.__ERRORES_APP = [];
 
       function copiarTexto(texto) {
@@ -218,7 +218,7 @@
           <h2 id="view-users-heading">🔐 Ingreso a la Agenda Familiar</h2>
           <p class="subtitle-text" id="view-users-subtitle">Ingresá tu DNI y contraseña privada para acceder a tu agenda</p>
         </div>
-        <button id="btn-new-user-toggle" class="btn-add-plus" style="display:inline-flex; align-items:center; gap:6px;">
+        <button id="btn-new-user-toggle" class="btn-add-plus" style="display:none;">
           <span class="plus-symbol">+</span> Nuevo usuario
         </button>
       </div>
@@ -231,6 +231,23 @@
         <p class="subtitle-text" style="margin-bottom: 16px; font-size: 0.88rem;">
           Ingresá tu número de DNI o tu nombre de usuario y tu contraseña privada:
         </p>
+
+        <!-- BOTÓN DE DESBLOQUEO RÁPIDO CON HUELLA DIGITAL (CUANDO ESTÁ ACTIVADA EN ESTE CELULAR) -->
+        <div id="dni-fingerprint-box" class="fingerprint-login-box hidden" style="margin-bottom: 16px;">
+          <button type="button" id="btn-dni-fingerprint" class="btn-fingerprint-large" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 12px; padding: 14px; background: linear-gradient(135deg, #059669, #10b981); border: 1px solid #34d399; border-radius: 12px; color: #fff; font-weight: 700; font-size: 1.05rem; cursor: pointer; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);">
+            <span style="font-size: 1.6rem;">👆</span>
+            <span style="text-align: left;">
+              <strong id="btn-dni-fingerprint-title" style="display: block; font-size: 1rem;">Desbloquear con huella digital</strong>
+              <small style="opacity: 0.9; font-weight: 400; font-size: 0.8rem;">Tocá acá para apoyar tu dedo en el sensor</small>
+            </span>
+          </button>
+          <div style="display: flex; align-items: center; margin: 14px 0 8px 0; color: #64748b; font-size: 0.8rem;">
+            <div style="flex: 1; height: 1px; background: #334155;"></div>
+            <span style="padding: 0 10px;">o ingresá tu contraseña</span>
+            <div style="flex: 1; height: 1px; background: #334155;"></div>
+          </div>
+        </div>
+
         <div class="form-group" style="margin-bottom: 14px;">
           <label for="input-login-dni">Usuario o DNI</label>
           <input type="text" id="input-login-dni" placeholder="Ingresá tu DNI (o tu nombre)..." autocomplete="username">
@@ -316,37 +333,6 @@
             <button type="button" id="btn-cancel-recover-pass" class="btn-secondary">Cancelar</button>
             <button type="button" id="btn-check-recover-dni" class="btn-primary" style="background: #d97706; border-color: #b45309; font-weight: 700;">Continuar</button>
             <button type="button" id="btn-submit-recover-pass" class="btn-primary hidden" style="background: #10b981; border-color: #059669; font-weight: 700;">Guardar contraseña</button>
-          </div>
-        </div>
-
-        <div style="margin-top: 16px; text-align: center; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 14px;">
-          <button type="button" id="btn-toggle-dni-register" class="btn-secondary" style="font-size: 0.95rem; width: 100%; border-color: #3b82f6; color: #93c5fd; padding: 12px; font-weight: 700; background: rgba(59, 130, 246, 0.12); display: flex; align-items: center; justify-content: center; gap: 8px;">
-            ➕ ¿No tenés cuenta? Crear nuevo usuario
-          </button>
-        </div>
-
-        <!-- FORMULARIO DIRECTO PARA NUEVOS USUARIOS -->
-        <div id="box-dni-register-new" class="hidden" style="margin-top: 14px; padding: 14px; background: rgba(30, 58, 138, 0.25); border: 1px solid #3b82f6; border-radius: 12px;">
-          <h4 style="color: #60a5fa; margin-bottom: 6px; font-size: 1rem;">📝 Registrar nueva cuenta</h4>
-          <p class="subtitle-text" style="margin-bottom: 12px; font-size: 0.82rem;">Completá tus datos para acceder a tu agenda personal:</p>
-          <div class="form-group" style="margin-bottom: 10px;">
-            <label for="input-reg-name">Tu nombre completo</label>
-            <input type="text" id="input-reg-name" placeholder="Ej: Lucas Martínez" autocomplete="name">
-          </div>
-          <div class="form-group" style="margin-bottom: 10px;">
-            <label for="input-reg-dni">Tu número de DNI (solo números)</label>
-            <input type="tel" id="input-reg-dni" placeholder="Ej: 35123456" autocomplete="off">
-          </div>
-          <div class="form-group" style="margin-bottom: 12px;">
-            <label for="input-reg-pass">Crear contraseña</label>
-            <input type="password" id="input-reg-pass" placeholder="Tu contraseña privada..." autocomplete="new-password">
-          </div>
-          <div id="dni-register-error" class="login-error hidden" style="margin-bottom: 10px;"></div>
-          <div class="form-actions">
-            <button type="button" id="btn-cancel-dni-register" class="btn-secondary">Cancelar</button>
-            <button type="button" id="btn-submit-dni-register" class="btn-primary" style="background: #2563eb; border-color: #1d4ed8; font-weight: 700;">
-              Crear mi cuenta
-            </button>
           </div>
         </div>
       </div>
@@ -953,25 +939,18 @@
             1. Elegí tu billetera virtual:
           </label>
           <div class="wallet-tna-chips-grid" id="wallet-tna-chips-grid">
-            <button type="button" class="tna-chip active" data-wallet="mercadopago" data-default-tna="37.0">
+            <button type="button" class="tna-chip active" data-wallet="mercadopago" data-default-tna="31.5">
               <span style="font-size:1.1rem;">💙</span>
               <div>
                 <div style="font-weight:700;">Mercado Pago</div>
-                <div style="font-size:0.72rem;opacity:0.8;">Fondo (~37% TNA)</div>
+                <div style="font-size:0.72rem;opacity:0.8;">Fondo (~31.5% TNA)</div>
               </div>
             </button>
-            <button type="button" class="tna-chip" data-wallet="naranjax" data-default-tna="42.0">
-              <span style="font-size:1.1rem;">🧡</span>
-              <div>
-                <div style="font-weight:700;">Naranja X</div>
-                <div style="font-size:0.72rem;opacity:0.8;">Cta Remunerada (~42% TNA)</div>
-              </div>
-            </button>
-            <button type="button" class="tna-chip" data-wallet="uala" data-default-tna="38.0">
+            <button type="button" class="tna-chip" data-wallet="uala" data-default-tna="19.0">
               <span style="font-size:1.1rem;">💳</span>
               <div>
                 <div style="font-weight:700;">Ualá</div>
-                <div style="font-size:0.72rem;opacity:0.8;">Cta Remunerada (~38% TNA)</div>
+                <div style="font-size:0.72rem;opacity:0.8;">Cta Remunerada (~19% TNA)</div>
               </div>
             </button>
           </div>
@@ -1688,7 +1667,18 @@
           </div>
         </div>
 
-        <div class="settings-container">
+        <!-- SELECTOR DE PESTAÑAS (PARA ADMIN: NORMAL VS DESARROLLADOR) -->
+        <div id="settings-tabs-header" style="display: flex; gap: 8px; margin-bottom: 18px; border-bottom: 1px solid #334155; padding-bottom: 10px;">
+          <button type="button" id="tab-btn-settings-normal" class="btn-primary" style="flex: 1; padding: 10px 14px; font-weight: 700; font-size: 0.92rem; border-radius: 8px;">
+            ⚙️ 1. Configuración Normal
+          </button>
+          <button type="button" id="tab-btn-settings-dev" class="btn-secondary hidden" style="flex: 1; padding: 10px 14px; font-weight: 700; font-size: 0.92rem; border-radius: 8px; border-color: #f59e0b; color: #fbbf24;">
+            🛠️ 2. Panel Desarrollador / Admin
+          </button>
+        </div>
+
+        <!-- CONTENEDOR 1: CONFIGURACIÓN NORMAL (TODOS LOS USUARIOS) -->
+        <div id="box-settings-normal" class="settings-container">
           <!-- 1. TIEMPO DE BLOQUEO POR INACTIVIDAD -->
           <div class="settings-card">
             <div class="settings-card-header">
@@ -1851,14 +1841,52 @@
             </div>
             <div id="settings-share-copied" class="share-copied-msg hidden" style="margin-top: 10px;">✓ ¡Link copiado al portapapeles!</div>
           </div>
+        </div>
 
-          <!-- 5. ADMINISTRACIÓN DE USUARIOS (SOLO ALEJANDRO / ADMINISTRADOR) -->
-          <div class="settings-card admin-box" id="settings-admin-card" style="display: none;">
+        <!-- CONTENEDOR 2: PANEL DESARROLLADOR / ADMIN (SOLO ALEJANDRO) -->
+        <div id="box-settings-dev" class="settings-container hidden">
+          <!-- 1. TASAS TNA OFICIALES (GLOBALES) -->
+          <div class="settings-card" style="border-color: #f59e0b; background: rgba(120, 53, 15, 0.12);">
+            <div class="settings-card-header">
+              <span class="settings-icon">📈</span>
+              <div>
+                <h3 style="color: #fbbf24;">Tasas TNA Oficiales (Billeteras Virtuales)</h3>
+                <p class="subtitle-text">Modificá las tasas oficiales de Mercado Pago y Ualá. Se sincronizan para todos los usuarios de la familia:</p>
+              </div>
+            </div>
+            <div style="display: flex; gap: 14px; flex-wrap: wrap; margin-top: 14px;">
+              <div class="form-group" style="flex: 1; min-width: 150px; margin-bottom: 0;">
+                <label for="input-dev-tna-mp" style="font-weight: 700; color: #93c5fd;">💙 Mercado Pago TNA (%)</label>
+                <div style="display: flex; align-items: center; gap: 6px; margin-top: 4px;">
+                  <input type="number" id="input-dev-tna-mp" step="0.1" value="31.5" style="padding: 10px; font-size: 1.05rem; font-weight: 700; color: #38bdf8; background: #1e293b; border: 1px solid #475569; border-radius: 8px; width: 100%;">
+                  <span style="font-weight: 700; color: #94a3b8;">%</span>
+                </div>
+              </div>
+              <div class="form-group" style="flex: 1; min-width: 150px; margin-bottom: 0;">
+                <label for="input-dev-tna-uala" style="font-weight: 700; color: #93c5fd;">💳 Ualá TNA (%)</label>
+                <div style="display: flex; align-items: center; gap: 6px; margin-top: 4px;">
+                  <input type="number" id="input-dev-tna-uala" step="0.1" value="19.0" style="padding: 10px; font-size: 1.05rem; font-weight: 700; color: #38bdf8; background: #1e293b; border: 1px solid #475569; border-radius: 8px; width: 100%;">
+                  <span style="font-weight: 700; color: #94a3b8;">%</span>
+                </div>
+              </div>
+            </div>
+            <div class="form-actions" style="margin-top: 14px;">
+              <button type="button" id="btn-dev-save-tna" class="btn-primary" style="background: #d97706; border-color: #b45309; font-weight: 700; width: 100%; padding: 12px;">
+                💾 Guardar tasas oficiales para toda la familia
+              </button>
+            </div>
+            <div id="dev-tna-saved-msg" class="share-copied-msg hidden" style="margin-top: 10px; background: rgba(34, 197, 94, 0.2); color: #86efac; border-color: #22c55e;">
+              ✓ ¡Tasas actualizadas y sincronizadas con éxito!
+            </div>
+          </div>
+
+          <!-- 2. ADMINISTRACIÓN DE USUARIOS -->
+          <div class="settings-card admin-box" id="settings-admin-card" style="display: block;">
             <div class="settings-card-header">
               <span class="settings-icon">🛡️</span>
               <div>
-                <h3 style="color: #f87171;">Administración de Usuarios (Exclusivo Alejandro)</h3>
-                <p class="subtitle-text">Como administrador podés eliminar usuarios de la aplicación (por privacidad no se muestra su contenido interno):</p>
+                <h3 style="color: #f87171;">Administración de Usuarios</h3>
+                <p class="subtitle-text">Blanqueá contraseñas de usuarios para que las recuperen con su DNI, o eliminalos definitivamente:</p>
               </div>
             </div>
             <div id="settings-admin-users-list" class="tasks-list" style="margin-top: 14px;"></div>
@@ -2164,6 +2192,6 @@
     </section>
   </main>
 
-  <script src="app.js?v=20261103_01"></script>
+  <script src="app.js?v=20261103_03"></script>
 </body>
 </html>
