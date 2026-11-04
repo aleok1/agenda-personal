@@ -11,11 +11,11 @@
   <link rel="icon" type="image/svg+xml" href="logo.svg">
   <link rel="apple-touch-icon" href="logo.svg">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="styles.css?v=20261103_04">
+  <link rel="stylesheet" href="styles.css?v=20261104_02">
   <!-- ESCUDO DE DIAGNÓSTICO TEMPRANO Y CAPTURA DE ERRORES PÚBLICOS -->
   <script>
     (function() {
-      window.__APP_VERSION = '20261103_04';
+      window.__APP_VERSION = '20261104_02';
       window.__ERRORES_APP = [];
 
       function copiarTexto(texto) {
@@ -1675,11 +1675,11 @@
         </div>
 
         <!-- SELECTOR DE PESTAÑAS (PARA ADMIN: NORMAL VS DESARROLLADOR) -->
-        <div id="settings-tabs-header" style="display: flex; gap: 8px; margin-bottom: 18px; border-bottom: 1px solid #334155; padding-bottom: 10px;">
+        <div id="settings-tabs-header" class="hidden" style="display: none; gap: 8px; margin-bottom: 18px; border-bottom: 1px solid #334155; padding-bottom: 10px;">
           <button type="button" id="tab-btn-settings-normal" class="btn-primary" style="flex: 1; padding: 10px 14px; font-weight: 700; font-size: 0.92rem; border-radius: 8px;">
             ⚙️ 1. Configuración Normal
           </button>
-          <button type="button" id="tab-btn-settings-dev" class="btn-secondary hidden" style="flex: 1; padding: 10px 14px; font-weight: 700; font-size: 0.92rem; border-radius: 8px; border-color: #f59e0b; color: #fbbf24;">
+          <button type="button" id="tab-btn-settings-dev" class="btn-secondary hidden" style="display: none; flex: 1; padding: 10px 14px; font-weight: 700; font-size: 0.92rem; border-radius: 8px; border-color: #f59e0b; color: #fbbf24;">
             🛠️ 2. Panel Desarrollador / Admin
           </button>
         </div>
@@ -1851,7 +1851,7 @@
         </div>
 
         <!-- CONTENEDOR 2: PANEL DESARROLLADOR / ADMIN (SOLO ALEJANDRO) -->
-        <div id="box-settings-dev" class="settings-container hidden">
+        <div id="box-settings-dev" class="settings-container hidden" style="display: none;">
           <!-- 1. TASAS TNA OFICIALES (GLOBALES) -->
           <div class="settings-card" style="border-color: #f59e0b; background: rgba(120, 53, 15, 0.12);">
             <div class="settings-card-header">
@@ -2284,6 +2284,6 @@
     </section>
   </main>
 
-  <script src="app.js?v=20261103_04"></script>
+  <script src="app.js?v=20261104_02"></script>
 </body>
 </html>
