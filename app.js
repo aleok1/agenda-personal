@@ -561,6 +561,7 @@ async function cargarListaDeUsuarios() {
             inputLoginDni.value = uRec.dni || uRec.nombre;
           }
         }
+        actualizarVisibilidadHuellaDni(false);
       }
 
       if (data.configTna) {
@@ -971,13 +972,16 @@ if (btnCloseAvatarPicker && avatarPickerBox) {
 // SISTEMA DE DESBLOQUEO POR HUELLA DIGITAL (WEBAUTHN / BIOMETRÍA AISLADA POR USUARIO)
 // =========================================================================
 async function esBiometriaSoportada() {
-  if (window.PublicKeyCredential &&
-      typeof PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable === 'function') {
-    try {
-      return await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
-    } catch (e) {
-      return false;
+  if (window.PublicKeyCredential) {
+    if (typeof PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable === 'function') {
+      try {
+        const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+        return Boolean(available);
+      } catch (e) {
+        return true;
+      }
     }
+    return true;
   }
   return false;
 }
@@ -1031,7 +1035,7 @@ async function activarHuellaParaUsuario(u, password) {
         ],
         authenticatorSelection: {
           authenticatorAttachment: 'platform',
-          userVerification: 'required',
+          userVerification: 'preferred',
           requireResidentKey: false
         },
         timeout: 60000
@@ -1104,13 +1108,24 @@ function obtenerUsuarioParaHuella() {
   return null;
 }
 
-function actualizarVisibilidadHuellaDni(autoLanzar = false) {
+async function actualizarVisibilidadHuellaDni(autoLanzar = false) {
   if (!dniFingerprintBox) return;
+  const soporta = await esBiometriaSoportada();
+  if (!soporta) {
+    dniFingerprintBox.classList.add('hidden');
+    return;
+  }
+
+  dniFingerprintBox.classList.remove('hidden');
   const uBio = obtenerUsuarioParaHuella();
-  if (uBio) {
-    dniFingerprintBox.classList.remove('hidden');
+  const btnSub = document.getElementById('btn-dni-fingerprint-sub');
+
+  if (uBio && tieneHuellaGuardada(uBio.id)) {
     if (btnDniFingerprintTitle) {
       btnDniFingerprintTitle.textContent = `Desbloquear a ${uBio.nombre || 'mi usuario'} con huella`;
+    }
+    if (btnSub) {
+      btnSub.textContent = 'Tocá acá para apoyar tu dedo en el sensor';
     }
     if (inputLoginDni && !inputLoginDni.value) {
       inputLoginDni.value = uBio.dni || uBio.nombre || '';
@@ -1121,7 +1136,17 @@ function actualizarVisibilidadHuellaDni(autoLanzar = false) {
       }, 350);
     }
   } else {
-    dniFingerprintBox.classList.add('hidden');
+    const recId = localStorage.getItem('agenda_usuario_recordado') || 'alejandro';
+    const uRec = (Array.isArray(listaUsuariosPublica) && listaUsuariosPublica.find(x => x.id === recId)) || { id: recId, nombre: 'Alejandro' };
+    if (btnDniFingerprintTitle) {
+      btnDniFingerprintTitle.textContent = '👆 Ingresar con huella digital';
+    }
+    if (btnSub) {
+      btnSub.textContent = 'Tocá acá para activar o ingresar con tu huella';
+    }
+    if (inputLoginDni && !inputLoginDni.value) {
+      inputLoginDni.value = uRec.dni || uRec.nombre || 'Alejandro';
+    }
   }
 }
 
@@ -1171,7 +1196,7 @@ async function solicitarDesbloqueoConHuella(u) {
           type: 'public-key',
           id: credBytes
         }],
-        userVerification: 'required',
+        userVerification: 'preferred',
         timeout: 60000
       }
     });
@@ -1214,12 +1239,21 @@ async function solicitarDesbloqueoConHuella(u) {
 }
 
 if (btnDniFingerprint) {
-  btnDniFingerprint.addEventListener('click', () => {
+  btnDniFingerprint.addEventListener('click', async () => {
     const u = obtenerUsuarioParaHuella();
-    if (u) {
-      solicitarDesbloqueoConHuella(u);
+    if (u && tieneHuellaGuardada(u.id)) {
+      await solicitarDesbloqueoConHuella(u);
     } else {
-      alert('No hay huella configurada en este dispositivo para este usuario.');
+      const pass = inputLoginDniPass ? inputLoginDniPass.value.trim() : '';
+      if (pass) {
+        await iniciarSesionConDni(true);
+      } else {
+        if (dniLoginError) {
+          dniLoginError.textContent = 'Ingresá tu contraseña privada una vez abajo para activar tu huella en este celular.';
+          dniLoginError.classList.remove('hidden');
+        }
+        if (inputLoginDniPass) inputLoginDniPass.focus();
+      }
     }
   });
 }
@@ -1234,9 +1268,8 @@ if (inputLoginDni) {
 }
 
 async function actualizarEstadoBotonHuella() {
-  if (!btnToggleBiometrics) return;
   if (!usuarioActivo) {
-    btnToggleBiometrics.classList.add('hidden');
+    if (btnToggleBiometrics) btnToggleBiometrics.classList.add('hidden');
     if (bannerEnrollBiometrics) bannerEnrollBiometrics.classList.add('hidden');
     if (biometricsModalBox) biometricsModalBox.classList.add('hidden');
     return;
@@ -1244,21 +1277,27 @@ async function actualizarEstadoBotonHuella() {
 
   const soporta = await esBiometriaSoportada();
   if (!soporta) {
-    btnToggleBiometrics.classList.add('hidden');
+    if (btnToggleBiometrics) btnToggleBiometrics.classList.add('hidden');
     if (bannerEnrollBiometrics) bannerEnrollBiometrics.classList.add('hidden');
     return;
   }
 
-  btnToggleBiometrics.classList.remove('hidden');
   const tiene = tieneHuellaGuardada(usuarioActivo.id);
-  if (tiene) {
-    btnToggleBiometrics.textContent = '👆 Huella activada';
-    if (bannerEnrollBiometrics) bannerEnrollBiometrics.classList.add('hidden');
-  } else {
-    btnToggleBiometrics.textContent = '👆 Activar huella';
-    const descartado = localStorage.getItem('agenda_dismiss_bio_' + usuarioActivo.id);
-    if (!descartado && bannerEnrollBiometrics) {
-      bannerEnrollBiometrics.classList.remove('hidden');
+  if (btnToggleBiometrics) {
+    btnToggleBiometrics.classList.remove('hidden');
+    btnToggleBiometrics.textContent = tiene ? '👆 Huella activada' : '👆 Activar huella';
+  }
+
+  if (bannerEnrollBiometrics) {
+    if (tiene) {
+      bannerEnrollBiometrics.classList.add('hidden');
+    } else {
+      const descartado = localStorage.getItem('agenda_dismiss_bio_' + usuarioActivo.id);
+      if (!descartado) {
+        bannerEnrollBiometrics.classList.remove('hidden');
+      } else {
+        bannerEnrollBiometrics.classList.add('hidden');
+      }
     }
   }
 }
@@ -1638,6 +1677,7 @@ function entrarAMenuDeUsuarioActivo() {
   if (btnEnableNotifications) btnEnableNotifications.classList.add('hidden');
   if (btnToggleBiometrics) btnToggleBiometrics.classList.add('hidden');
   sincronizarSuscripcionWebPush();
+  actualizarEstadoBotonHuella();
 
   // Avatar selector: solo el admin Alejandro tiene la corona exclusiva 👑 fija
   if (usuarioActivo.esAdmin) {
@@ -1729,7 +1769,7 @@ function volverAPantallaUsuarios(forzarDni) {
   cargarListaDeUsuarios();
 }
 
-btnSwitchUser.addEventListener('click', () => volverAPantallaUsuarios(true));
+btnSwitchUser.addEventListener('click', () => volverAPantallaUsuarios(false));
 
 // =========================================================================
 // PEDIR TAREA A OTRO USUARIO DE LA APP (DISPONIBLE PARA TODOS LOS USUARIOS)
@@ -2207,7 +2247,11 @@ async function sincronizarDesdeNube() {
     renderizarHeladera();
     renderizarEntrenamiento();
     renderizarListasPresupuestos();
-    renderizarDeudores();
+    if (subtabDeudaActiva === 'yo-debo') {
+      renderizarYoDebo();
+    } else {
+      renderizarDeudores(true);
+    }
     verificarPreguntaUnicaConvivencia();
     verificarNotificacionesPendientes(false);
 
@@ -2629,10 +2673,9 @@ window.addEventListener('popstate', () => {
       return;
     }
 
-    // 4. Si está en el menú de inicio del usuario, bloquear
+    // 4. Si está en el menú de inicio del usuario, permanecer en inicio
     if (!viewHome.classList.contains('hidden')) {
-      volverAPantallaUsuarios(false);
-      history.pushState({ vista: 'users' }, '');
+      history.pushState({ vista: 'home' }, '');
       return;
     }
 
@@ -5065,7 +5108,7 @@ function renderizarDeudores() {
   }
 
   if (idDeudorActivo && deudores.find(d => d.id === idDeudorActivo)) {
-    mostrarDetalleDeudor(idDeudorActivo);
+    mostrarDetalleDeudor(idDeudorActivo, false);
     return;
   }
 
@@ -5112,7 +5155,7 @@ function renderizarDeudores() {
 
       card.onclick = () => {
         idDeudorActivo = d.id;
-        mostrarDetalleDeudor(d.id);
+        mostrarDetalleDeudor(d.id, true);
       };
 
       debtorsCardsGrid.appendChild(card);
@@ -5120,7 +5163,7 @@ function renderizarDeudores() {
   }
 }
 
-function mostrarDetalleDeudor(debtorId) {
+function mostrarDetalleDeudor(debtorId, limpiarFormularios = false) {
   const deudor = deudores.find(d => d.id === debtorId);
   if (!deudor) {
     volverAListaDeudores();
@@ -5132,9 +5175,11 @@ function mostrarDetalleDeudor(debtorId) {
 
   if (debtsMainView) debtsMainView.classList.add('hidden');
   if (debtorDetailView) debtorDetailView.classList.remove('hidden');
-  if (debtMovementFormBox) debtMovementFormBox.classList.add('hidden');
-  if (conceptPaymentModalBox) conceptPaymentModalBox.classList.add('hidden');
-  if (debtorShareModal) debtorShareModal.classList.add('hidden');
+  if (limpiarFormularios) {
+    if (debtMovementFormBox) debtMovementFormBox.classList.add('hidden');
+    if (conceptPaymentModalBox) conceptPaymentModalBox.classList.add('hidden');
+    if (debtorShareModal) debtorShareModal.classList.add('hidden');
+  }
 
   const res = calcularResumenDeudor(deudor);
 
@@ -5555,12 +5600,14 @@ async function guardarNuevaDeuda() {
 
   const concepto = inputDebtConcept ? inputDebtConcept.value.trim() : '';
   if (!concepto) {
+    alert('Ingresá el concepto o motivo de la deuda');
     if (inputDebtConcept) inputDebtConcept.focus();
     return;
   }
 
   const montoVal = parseFloat(inputDebtAmount && inputDebtAmount.value ? inputDebtAmount.value : '0') || 0;
   if (montoVal <= 0) {
+    alert('Ingresá un monto válido mayor a 0');
     if (inputDebtAmount) inputDebtAmount.focus();
     return;
   }
@@ -5595,9 +5642,11 @@ async function guardarNuevaDeuda() {
         if (inputDebtConcept) inputDebtConcept.value = '';
         if (inputDebtAmount) inputDebtAmount.value = '';
         if (inputDebtInstallments) inputDebtInstallments.value = '1';
-        mostrarDetalleDeudor(deudor.id);
-        if (data.vinculadoAUsuario) {
-          alert(`✓ ¡Deuda agregada y sincronizada directamente en la sección "Yo debo" del usuario registrado con DNI (${cuotasVal} cuotas)!`);
+        mostrarDetalleDeudor(deudor.id, false);
+        if (data.vinculadoAUsuario || deudor.usuarioId) {
+          alert(`✓ ¡Deuda agregada y sincronizada directamente en la sección "Yo debo" del usuario registrado (${cuotasVal} cuotas)!`);
+        } else {
+          alert(`✓ ¡Deuda agregada exitosamente!`);
         }
         return;
       }
@@ -5638,11 +5687,34 @@ async function guardarNuevaDeuda() {
 async function crearNuevoDeudor() {
   const nombre = inputNewDebtorName ? inputNewDebtorName.value.trim() : '';
   const rawDni = inputNewDebtorDni ? inputNewDebtorDni.value.trim() : '';
-  const dniLimpio = rawDni.replace(/\D/g, '');
+  let dniLimpio = rawDni.replace(/\D/g, '');
 
   if (!nombre) {
+    alert('Ingresá el nombre o DNI de la persona que te debe');
     if (inputNewDebtorName) inputNewDebtorName.focus();
     return;
+  }
+
+  // Si no puso DNI en el campo DNI, verificar si el nombre es un DNI o contiene un DNI
+  if (!dniLimpio) {
+    const digitosNombre = nombre.replace(/\D/g, '');
+    if (digitosNombre.length >= 7 && digitosNombre.length <= 9) {
+      dniLimpio = digitosNombre;
+    }
+  }
+
+  // Buscar en listaUsuariosPublica si coincide con algún usuario registrado
+  const usuarioVinculadoLocal = (listaUsuariosPublica || []).find(u => {
+    if (!u) return false;
+    const uDni = String(u.dni || '').replace(/\D/g, '');
+    if (dniLimpio && uDni && uDni === dniLimpio) return true;
+    if (dniLimpio && u.id.startsWith(dniLimpio)) return true;
+    if (String(u.nombre || '').trim().toLowerCase() === nombre.toLowerCase()) return true;
+    return false;
+  });
+
+  if (usuarioVinculadoLocal && !dniLimpio && usuarioVinculadoLocal.dni) {
+    dniLimpio = String(usuarioVinculadoLocal.dni).replace(/\D/g, '');
   }
 
   if (btnSaveNewDebtor) {
@@ -5670,9 +5742,10 @@ async function crearNuevoDeudor() {
         if (inputNewDebtorName) inputNewDebtorName.value = '';
         if (inputNewDebtorDni) inputNewDebtorDni.value = '';
         if (createDebtorBox) createDebtorBox.classList.add('hidden');
-        mostrarDetalleDeudor(data.deudor.id);
-        if (data.usuarioVinculado) {
-          alert(`✓ ¡Deudor "${nombre}" creado y vinculado con el usuario registrado (${data.usuarioVinculado.nombre}, DNI ${dniLimpio})! Las deudas que le cargues se sincronizarán directamente en su sección "Yo debo".`);
+        mostrarDetalleDeudor(data.deudor.id, true);
+        if (data.usuarioVinculado || usuarioVinculadoLocal) {
+          const uv = data.usuarioVinculado || usuarioVinculadoLocal;
+          alert(`✓ ¡Deudor "${nombre}" creado y vinculado con el usuario registrado (${uv.nombre}, DNI ${dniLimpio})! Las deudas que le cargues se sincronizarán directamente en su sección "Yo debo".`);
         }
         return;
       }
@@ -5690,6 +5763,7 @@ async function crearNuevoDeudor() {
     id: 'deudor-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
     nombre: nombre,
     dni: dniLimpio || null,
+    usuarioId: usuarioVinculadoLocal ? usuarioVinculadoLocal.id : null,
     conceptos: [],
     pagosPendientes: [],
     creadoEl: Date.now(),
@@ -5701,7 +5775,7 @@ async function crearNuevoDeudor() {
   if (inputNewDebtorDni) inputNewDebtorDni.value = '';
   if (createDebtorBox) createDebtorBox.classList.add('hidden');
 
-  mostrarDetalleDeudor(nuevo.id);
+  mostrarDetalleDeudor(nuevo.id, true);
   await guardarEnNube();
 }
 
@@ -8257,7 +8331,7 @@ if (sharedTaskPrioritySelector) {
 // ==========================================
 // INGRESO Y REGISTRO CON DNI
 // ==========================================
-async function iniciarSesionConDni() {
+async function iniciarSesionConDni(forzarRegistroHuella = false) {
   const dni = inputLoginDni ? inputLoginDni.value.trim() : '';
   const pass = inputLoginDniPass ? inputLoginDniPass.value : '';
 
@@ -8347,6 +8421,11 @@ async function iniciarSesionConDni() {
     solicitudesVinculoEnviadas = Array.isArray(data.solicitudesVinculoEnviadas) ? data.solicitudesVinculoEnviadas : [];
 
     registrarActividadSesion();
+    const checkBio = document.getElementById('check-enable-fingerprint-login');
+    const activarBio = forzarRegistroHuella || (checkBio ? checkBio.checked : true);
+    if (activarBio && window.PublicKeyCredential && !tieneHuellaGuardada(u.id)) {
+      activarHuellaParaUsuario(usuarioActivo, pass).catch(err => console.warn('Huella no registrada:', err));
+    }
     if (inputLoginDni) inputLoginDni.value = '';
     if (inputLoginDniPass) inputLoginDniPass.value = '';
     if (dniLoginBox) dniLoginBox.classList.add('hidden');
