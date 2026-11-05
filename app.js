@@ -3848,6 +3848,22 @@ function mostrarMenuConfiguracion() {
   }
 }
 
+function guardarUsuarioRecordado(u) {
+  if (!u || !u.id) return;
+  localStorage.setItem('agenda_usuario_recordado', u.id);
+  try {
+    localStorage.setItem('agenda_usuarios_cache', JSON.stringify(listaUsuariosPublica));
+  } catch (e) {}
+}
+
+function actualizarBadgePreguntaSeguridad() {
+  renderizarConfiguracion();
+}
+
+function actualizarEstadoPushUI() {
+  renderizarConfiguracion();
+}
+
 function abrirPanelConfiguracion(cual) {
   if (settingsMenuList) settingsMenuList.classList.add('hidden');
   ocultarTodosLosPanelesConfiguracion();
