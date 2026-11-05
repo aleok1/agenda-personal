@@ -708,9 +708,10 @@ export default async function handler(req, res) {
 
         if (todosTildaron) {
           tc.estado = 'completada';
-          tc.completadaEl = Date.now();
+          tc.completadaEl = tc.completadaEl || Date.now();
         } else {
           tc.estado = 'activa';
+          tc.completadaEl = null;
         }
         tc.actualizadoEl = Date.now();
 
