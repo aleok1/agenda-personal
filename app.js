@@ -3887,6 +3887,8 @@ function abrirPanelConfiguracion(cual) {
     if (panelCfgTimeout) panelCfgTimeout.classList.remove('hidden');
   } else if (cual === 'vincular') {
     if (panelCfgVincular) panelCfgVincular.classList.remove('hidden');
+    const sv = document.getElementById('subview-vincular');
+    if (sv) sv.classList.remove('hidden');
     renderizarVincular();
     if (inputVincularDni) inputVincularDni.focus();
   } else if (cual === 'profile') {
@@ -3899,6 +3901,10 @@ function abrirPanelConfiguracion(cual) {
     );
     if (esAlejandroDev) {
       if (panelCfgDev) panelCfgDev.classList.remove('hidden');
+      if (boxSettingsDev) {
+        boxSettingsDev.classList.remove('hidden');
+        boxSettingsDev.style.display = 'block';
+      }
     } else {
       mostrarMenuConfiguracion();
     }
