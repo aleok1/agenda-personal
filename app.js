@@ -4559,101 +4559,17 @@ async function renderizarConfiguracion() {
     };
   }
 
-  // 5. PESTAÑAS: CONFIGURACIÓN NORMAL VS PANEL DESARROLLADOR / ADMIN
+  // 5. GUARDAR TASAS TNA (PANEL DESARROLLADOR)
   const settingsAdminUsersList = document.getElementById('settings-admin-users-list');
-  const esAlejandroDev = Boolean(
-    usuarioActivo &&
-    (usuarioActivo.id === 'alejandro' || (usuarioActivo.dni && String(usuarioActivo.dni).replace(/\D/g, '') === '40218898'))
-  );
-
-  function cambiarTabSettings(tab) {
-    if (tab === 'dev') {
-      if (!esAlejandroDev) {
-        cambiarTabSettings('normal');
-        return;
-      }
-      if (boxSettingsNormal) {
-        boxSettingsNormal.classList.add('hidden');
-        boxSettingsNormal.style.display = 'none';
-      }
-      if (boxSettingsDev) {
-        boxSettingsDev.classList.remove('hidden');
-        boxSettingsDev.style.display = 'block';
-      }
-      if (tabBtnSettingsDev) {
-        tabBtnSettingsDev.className = 'btn-primary';
-        tabBtnSettingsDev.style.borderColor = '#f59e0b';
-        tabBtnSettingsDev.style.background = '#f59e0b';
-        tabBtnSettingsDev.style.color = '#000';
-        tabBtnSettingsDev.style.display = '';
-      }
-      if (tabBtnSettingsNormal) {
-        tabBtnSettingsNormal.className = 'btn-secondary';
-        tabBtnSettingsNormal.style.borderColor = '#334155';
-        tabBtnSettingsNormal.style.background = 'transparent';
-        tabBtnSettingsNormal.style.color = '#94a3b8';
-      }
-      if (inputDevTnaMp) inputDevTnaMp.value = TNA_BILLETERAS_INFO.mercadopago.tnaDefault;
-      if (inputDevTnaUala) inputDevTnaUala.value = TNA_BILLETERAS_INFO.uala.tnaDefault;
-      if (settingsAdminUsersList) renderizarListaAdminEnSettings(settingsAdminUsersList);
-    } else {
-      if (boxSettingsNormal) {
-        boxSettingsNormal.classList.remove('hidden');
-        boxSettingsNormal.style.display = 'block';
-      }
-      if (boxSettingsDev) {
-        boxSettingsDev.classList.add('hidden');
-        boxSettingsDev.style.display = 'none';
-      }
-      if (tabBtnSettingsNormal) {
-        tabBtnSettingsNormal.className = 'btn-primary';
-        tabBtnSettingsNormal.style.background = '';
-        tabBtnSettingsNormal.style.color = '';
-      }
-      if (tabBtnSettingsDev) {
-        if (esAlejandroDev) {
-          tabBtnSettingsDev.className = 'btn-secondary';
-          tabBtnSettingsDev.style.borderColor = '#f59e0b';
-          tabBtnSettingsDev.style.background = 'transparent';
-          tabBtnSettingsDev.style.color = '#fbbf24';
-          tabBtnSettingsDev.style.display = '';
-        } else {
-          tabBtnSettingsDev.className = 'btn-secondary hidden';
-          tabBtnSettingsDev.style.display = 'none';
-        }
-      }
-    }
+  if (settingsAdminUsersList && typeof renderizarListaAdminEnSettings === 'function') {
+    renderizarListaAdminEnSettings(settingsAdminUsersList);
   }
-
-  if (esAlejandroDev) {
-    if (settingsTabsHeader) {
-      settingsTabsHeader.classList.remove('hidden');
-      settingsTabsHeader.style.display = 'flex';
-    }
-    if (tabBtnSettingsDev) {
-      tabBtnSettingsDev.classList.remove('hidden');
-      tabBtnSettingsDev.style.display = '';
-      tabBtnSettingsDev.onclick = () => cambiarTabSettings('dev');
-    }
-    cambiarTabSettings('normal');
-  } else {
-    if (settingsTabsHeader) {
-      settingsTabsHeader.classList.add('hidden');
-      settingsTabsHeader.style.display = 'none';
-    }
-    if (tabBtnSettingsDev) {
-      tabBtnSettingsDev.classList.add('hidden');
-      tabBtnSettingsDev.style.display = 'none';
-      tabBtnSettingsDev.onclick = null;
-    }
-    if (boxSettingsDev) {
-      boxSettingsDev.classList.add('hidden');
-      boxSettingsDev.style.display = 'none';
-    }
-    cambiarTabSettings('normal');
+  if (inputDevTnaMp && TNA_BILLETERAS_INFO && TNA_BILLETERAS_INFO.mercadopago) {
+    inputDevTnaMp.value = TNA_BILLETERAS_INFO.mercadopago.tnaDefault;
   }
-
-  if (tabBtnSettingsNormal) tabBtnSettingsNormal.onclick = () => cambiarTabSettings('normal');
+  if (inputDevTnaUala && TNA_BILLETERAS_INFO && TNA_BILLETERAS_INFO.uala) {
+    inputDevTnaUala.value = TNA_BILLETERAS_INFO.uala.tnaDefault;
+  }
 
   if (btnDevSaveTna) {
     btnDevSaveTna.onclick = async () => {
