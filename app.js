@@ -3905,6 +3905,16 @@ function abrirPanelConfiguracion(cual) {
         boxSettingsDev.classList.remove('hidden');
         boxSettingsDev.style.display = 'block';
       }
+      if (inputDevTnaMp && TNA_BILLETERAS_INFO && TNA_BILLETERAS_INFO.mercadopago) {
+        inputDevTnaMp.value = TNA_BILLETERAS_INFO.mercadopago.tnaDefault;
+      }
+      if (inputDevTnaUala && TNA_BILLETERAS_INFO && TNA_BILLETERAS_INFO.uala) {
+        inputDevTnaUala.value = TNA_BILLETERAS_INFO.uala.tnaDefault;
+      }
+      const adminUsersBox = document.getElementById('settings-admin-users-list');
+      if (adminUsersBox && typeof renderizarListaAdminEnSettings === 'function') {
+        renderizarListaAdminEnSettings(adminUsersBox);
+      }
     } else {
       mostrarMenuConfiguracion();
     }
