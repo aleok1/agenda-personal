@@ -10,8 +10,9 @@ window.onerror = function(msg, url, lineNo, colNo, error) {
   }
 };
 
-// Configuración de tiempos: 1 hora para sesión sin contraseña y 1 hora para auto-borrar tareas realizadas
+// Configuración de tiempos: 1 hora para sesión sin contraseña, 1 hora para desaparecer tareas completadas, y 1 año para historial de calendario
 const UNA_HORA_MS = 60 * 60 * 1000;
+const UN_ANIO_MS = 365 * 24 * 60 * 60 * 1000; // 365 días para historial del calendario
 const STORAGE_SESSIONS_KEY = 'agenda_familiar_sesiones_v1';
 
 const IDS_EJEMPLO = new Set(['t-1', 't-2', 't-3', 'r-1']);
@@ -2147,13 +2148,14 @@ async function enviarTareaExterna() {
 }
 
 // ================================================================
-// LIMPIEZA AUTOMÁTICA: BORRAR TAREAS REALIZADAS HACE MÁS DE 1 HORA
+// LIMPIEZA AUTOMÁTICA: TAREAS (60 MINUTOS) Y CALENDARIO (1 AÑO)
 // ================================================================
 function limpiarTareasVencidas() {
   if (!usuarioActivo) return false;
   const ahora = Date.now();
   let huboCambios = false;
 
+  // 1. Tareas individuales realizadas: desaparecen tras 60 minutos
   tareas = tareas.filter(t => {
     if (t.realizada) {
       if (!t.completedAt) {
@@ -2169,8 +2171,58 @@ function limpiarTareasVencidas() {
     return true;
   });
 
+  // 2. Calendario / Recordatorios: guardan historial durante 1 año entero (365 días).
+  // Solo se eliminan si están marcados como realizados y han pasado más de 365 días.
+  // Las pendientes nunca se autoeliminan, y las realizadas del último año se conservan siempre.
+  if (Array.isArray(recordatorios)) {
+    recordatorios = recordatorios.filter(r => {
+      if (r.realizada) {
+        let fechaCompletada = r.completedAt || r.updatedAt;
+        if (!fechaCompletada && r.fecha) {
+          fechaCompletada = new Date(r.fecha + 'T23:59:59').getTime();
+        }
+        if (fechaCompletada && (ahora - fechaCompletada >= UN_ANIO_MS)) {
+          borrados.push(r.id);
+          huboCambios = true;
+          return false;
+        }
+      }
+      return true;
+    });
+  }
+
+  // 3. Tareas Compartidas:
+  // - Si fueron completadas por todos y NO son programadas, se depuran a los 60 min.
+  // - Si SON programadas en la agenda (esProgramada), NO se eliminan a los 60 min:
+  //   permanecen en el calendario durante 1 año entero para consulta histórica.
+  if (Array.isArray(tareasCompartidas)) {
+    tareasCompartidas = tareasCompartidas.filter(tc => {
+      const participantesAceptados = Array.isArray(tc.participantes)
+        ? tc.participantes.filter(p => p.estadoInvitacion === 'aceptada')
+        : [];
+      const todosCompletaron = tc.estado === 'completada' ||
+        (participantesAceptados.length > 0 && participantesAceptados.every(p => p.realizada));
+
+      if (todosCompletaron) {
+        const tiempoFin = tc.completadaEl || tc.actualizadoEl || ahora;
+        if (!tc.esProgramada && (ahora - tiempoFin >= UNA_HORA_MS)) {
+          huboCambios = true;
+          return false;
+        }
+        if (tc.esProgramada && (ahora - tiempoFin >= UN_ANIO_MS)) {
+          huboCambios = true;
+          return false;
+        }
+      }
+      return true;
+    });
+  }
+
   if (huboCambios) {
     renderizarTareas();
+    renderizarTareasCompartidas();
+    renderizarCalendario();
+    renderizarRecordatoriosDelDia();
   }
   return huboCambios;
 }
@@ -3048,7 +3100,7 @@ function renderizarCalendario() {
 
     const grupalesDia = (tareasCompartidas || []).filter(t =>
       t.esProgramada && t.fechaProgramada === fechaISO &&
-      (t.creadorId === usuarioActivo?.id || (t.participantes && t.participantes.some(p => p.id === usuarioActivo?.id && p.estadoInvitacion === 'aceptada')) || (t.socioId === usuarioActivo?.id && t.estado === 'activa'))
+      (t.creadorId === usuarioActivo?.id || (t.participantes && t.participantes.some(p => p.id === usuarioActivo?.id && p.estadoInvitacion === 'aceptada')) || (t.socioId === usuarioActivo?.id))
     );
     const pendientesGrupales = grupalesDia.filter(t => {
       const miP = t.participantes ? t.participantes.find(p => p.id === usuarioActivo?.id) : null;
@@ -3096,7 +3148,7 @@ function renderizarRecordatoriosDelDia() {
 
   const grupalesDia = (tareasCompartidas || []).filter(t =>
     t.esProgramada && t.fechaProgramada === fechaSeleccionadaISO &&
-    (t.creadorId === usuarioActivo?.id || (t.participantes && t.participantes.some(p => p.id === usuarioActivo?.id && p.estadoInvitacion === 'aceptada')) || (t.socioId === usuarioActivo?.id && t.estado === 'activa'))
+    (t.creadorId === usuarioActivo?.id || (t.participantes && t.participantes.some(p => p.id === usuarioActivo?.id && p.estadoInvitacion === 'aceptada')) || (t.socioId === usuarioActivo?.id))
   );
 
   if (listaDia.length === 0 && grupalesDia.length === 0) {
@@ -3167,6 +3219,11 @@ function renderizarRecordatoriosDelDia() {
     fila.querySelector('[data-action="toggle"]').addEventListener('click', () => {
       rec.realizada = !rec.realizada;
       rec.updatedAt = Date.now();
+      if (rec.realizada) {
+        rec.completedAt = rec.completedAt || Date.now();
+      } else {
+        rec.completedAt = null;
+      }
       renderizarCalendario();
       renderizarRecordatoriosDelDia();
       guardarEnNube();
@@ -8202,12 +8259,35 @@ function renderizarTareasCompartidas() {
   if (!sharedTasksList) return;
   sharedTasksList.innerHTML = '';
 
+  const ahora = Date.now();
   const activas = (tareasCompartidas || []).filter(t => {
-    if (t.creadorId === usuarioActivo.id) return true;
-    if (t.participantes) {
-      return t.participantes.some(p => p.id === usuarioActivo.id && (p.estadoInvitacion === 'aceptada' || p.estadoInvitacion === 'pendiente'));
+    // 1. Participante activo o creador
+    const esPart = (t.creadorId === usuarioActivo.id) ||
+      (t.participantes && t.participantes.some(p => p.id === usuarioActivo.id && (p.estadoInvitacion === 'aceptada' || p.estadoInvitacion === 'pendiente'))) ||
+      (t.socioId === usuarioActivo.id);
+    if (!esPart) return false;
+
+    // 2. Regla de los 60 minutos para la lista de tareas:
+    // Si todos la completaron y ya pasaron 60 minutos, desaparece de la lista de tareas compartidas
+    // (pero si fue programada en la agenda, sigue viviendo en el calendario por 1 año).
+    const participantesAceptados = Array.isArray(t.participantes)
+      ? t.participantes.filter(p => p.estadoInvitacion === 'aceptada')
+      : [];
+    const soyCreador = t.creadorId === usuarioActivo.id;
+    const miPart = t.participantes ? t.participantes.find(p => p.id === usuarioActivo.id) : null;
+    const miMarca = miPart ? Boolean(miPart.realizada) : (soyCreador ? Boolean(t.realizadaPorCreador) : Boolean(t.realizadaPorSocio));
+    const todosCompletaron = (t.estado === 'completada') ||
+      (miMarca && (participantesAceptados.length === 0 || participantesAceptados.every(p => p.realizada)));
+
+    if (todosCompletaron) {
+      if (!t.completadaEl) {
+        t.completadaEl = t.actualizadoEl || ahora;
+      }
+      if (ahora - t.completadaEl >= UNA_HORA_MS) {
+        return false; // Desaparece de la lista de tareas compartidas a los 60 min
+      }
     }
-    return t.socioId === usuarioActivo.id && t.estado === 'activa';
+    return true;
   });
 
   if (activas.length === 0) {
@@ -8263,6 +8343,10 @@ function renderizarTareasCompartidas() {
     const card = document.createElement('div');
     card.className = `shared-task-card prio-${tc.prioridad || 'simple'} ${todosCompletaron ? 'completada' : ''}`;
 
+    const avisoOcultar = todosCompletaron
+      ? `🎉 Todos la completaron · <span style="color:#38bdf8; font-weight:600;">⏱️ ${textoTiempoRestante(tc.completadaEl || ahora)}</span>${tc.esProgramada ? '<br><small style="color:#7dd3fc;">(Permanece guardada en tu Calendario)</small>' : ''}`
+      : 'Todos deben tildarla para que desaparezca';
+
     card.innerHTML = `
       <div class="shared-task-header">
         <span class="partner-tag">${encabezadoEquipo}</span>
@@ -8287,8 +8371,8 @@ function renderizarTareasCompartidas() {
       </div>
 
       <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px; flex-wrap:wrap; gap:6px;">
-        <span style="font-size:0.75rem; color:#94a3b8;">
-          ${esPendienteInvitacion ? 'Invitación enviada' : (todosCompletaron ? '🎉 Todos los integrantes la completaron' : 'Todos deben tildarla para que desaparezca')}
+        <span style="font-size:0.75rem; color:#94a3b8; line-height: 1.35;">
+          ${esPendienteInvitacion ? 'Invitación enviada' : avisoOcultar}
         </span>
         <button type="button" class="btn-delete btn-delete-shared" style="padding:4px 8px; font-size:0.8rem;" title="Eliminar tarea compartida">
           🗑️ Eliminar
