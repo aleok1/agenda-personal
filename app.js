@@ -7315,9 +7315,26 @@ const inputFridgeQty = document.getElementById('input-fridge-qty');
 const btnAddFridgeItem = document.getElementById('btn-add-fridge-item');
 const fridgeItemsList = document.getElementById('fridge-items-list');
 const btnGenerateRecipe = document.getElementById('btn-generate-recipe');
+const btnGenerateSelectedRecipe = document.getElementById('btn-generate-selected-recipe');
+const fridgeSelectionBar = document.getElementById('fridge-selection-bar');
+const fridgeSelectionStatus = document.getElementById('fridge-selection-status');
+const btnConfirmSelectedRecipe = document.getElementById('btn-confirm-selected-recipe');
+const btnCancelFridgeSelection = document.getElementById('btn-cancel-fridge-selection');
+const btnCookRecipe = document.getElementById('btn-cook-recipe');
 const btnAnotherRecipe = document.getElementById('btn-another-recipe');
 const fridgeRecipeBox = document.getElementById('fridge-recipe-box');
+const fridgeRecipeTitle = document.getElementById('fridge-recipe-title');
 const fridgeRecipeContent = document.getElementById('fridge-recipe-content');
+const fridgeRecipeActions = document.getElementById('fridge-recipe-actions');
+const fridgeDiscountFeedback = document.getElementById('fridge-discount-feedback');
+
+let modoSeleccionHeladera = false;
+let ingredientesSeleccionadosIds = new Set();
+let ultimoModoSeleccionados = false;
+let ultimosIdsSeleccionados = [];
+let ultimaRecetaTexto = '';
+let historialRecetasDescartadas = [];
+let recetaYaDescontada = false;
 
 function agregarIngredienteHeladera() {
   if (!usuarioActivo) return;
@@ -7362,29 +7379,77 @@ if (inputFridgeQty) {
 
 if (btnAddFridgeItem) btnAddFridgeItem.addEventListener('click', agregarIngredienteHeladera);
 
+function actualizarBarraSeleccionHeladera() {
+  // Limpiar IDs que ya no existan en heladera
+  const idsValidos = new Set(heladera.map(x => x.id));
+  Array.from(ingredientesSeleccionadosIds).forEach(id => {
+    if (!idsValidos.has(id)) ingredientesSeleccionadosIds.delete(id);
+  });
+
+  const cantSel = ingredientesSeleccionadosIds.size;
+  if (fridgeSelectionBar) {
+    if (modoSeleccionHeladera || cantSel > 0) {
+      fridgeSelectionBar.classList.remove('hidden');
+    } else {
+      fridgeSelectionBar.classList.add('hidden');
+    }
+  }
+  if (fridgeSelectionStatus) {
+    fridgeSelectionStatus.textContent = cantSel > 0
+      ? `✅ ${cantSel} ingrediente${cantSel === 1 ? '' : 's'} seleccionado${cantSel === 1 ? '' : 's'} para cocinar`
+      : '👆 Tildá en la lista los ingredientes que querés usar hoy y tocá "Armar receta con seleccionados"';
+  }
+  if (btnGenerateSelectedRecipe) {
+    btnGenerateSelectedRecipe.textContent = cantSel > 0
+      ? `☑️ Generar con Seleccionados (${cantSel})`
+      : '☑️ Generar con Ingredientes Seleccionados';
+  }
+}
+
 function renderizarHeladera() {
   if (!fridgeItemsList) return;
+  actualizarContadoresYAlertas();
+  actualizarBarraSeleccionHeladera();
   fridgeItemsList.innerHTML = '';
 
   if (heladera.length === 0) {
-    fridgeItemsList.innerHTML = `<div class="empty-state">Tu heladera está vacía. Cargá arriba los ingredientes y cantidades que tenés disponibles y después tocá <b>🍳 Generar Receta</b>.</div>`;
+    fridgeItemsList.innerHTML = `<div class="empty-state">Tu heladera está vacía. Cargá arriba los ingredientes y cantidades que tenés disponibles y después tocá <b>🎲 Generar Receta Aleatoria</b> o <b>☑️ Generar con Ingredientes Seleccionados</b>.</div>`;
     return;
   }
 
   heladera.forEach(ing => {
+    const seleccionado = ingredientesSeleccionadosIds.has(ing.id);
     const fila = document.createElement('div');
     fila.className = 'task-item prio-simple';
+    if (seleccionado) {
+      fila.style.borderColor = '#3b82f6';
+      fila.style.background = 'rgba(59, 130, 246, 0.12)';
+    }
+
     fila.innerHTML = `
-      <div class="task-info">
+      <div class="task-info" style="display:flex; align-items:center; gap:10px; cursor:pointer; flex:1;" data-action="toggle-select">
+        <button type="button" class="super-check-btn ${seleccionado ? 'checked' : ''}" style="width:32px; height:32px; flex-shrink:0; ${modoSeleccionHeladera && !seleccionado ? 'border-color:#60a5fa; box-shadow:0 0 0 2px rgba(59,130,246,0.35);' : ''}" title="Seleccionar ingrediente para receta">
+          ${seleccionado ? '✓' : ''}
+        </button>
         <span class="priority-pill pill-simple">🥬 ${escaparHTML(ing.cantidad)}</span>
-        <span class="task-text">${escaparHTML(ing.nombre)}</span>
+        <span class="task-text" style="font-weight:${seleccionado ? '700' : '500'};">${escaparHTML(ing.nombre)}</span>
       </div>
       <div class="task-actions">
         <button type="button" class="btn-delete" data-action="delete" title="Quitar ingrediente">✕</button>
       </div>
     `;
 
+    fila.querySelector('[data-action="toggle-select"]').addEventListener('click', () => {
+      if (ingredientesSeleccionadosIds.has(ing.id)) {
+        ingredientesSeleccionadosIds.delete(ing.id);
+      } else {
+        ingredientesSeleccionadosIds.add(ing.id);
+      }
+      renderizarHeladera();
+    });
+
     fila.querySelector('[data-action="delete"]').addEventListener('click', () => {
+      ingredientesSeleccionadosIds.delete(ing.id);
       heladera = heladera.filter(x => x.id !== ing.id);
       renderizarHeladera();
       guardarEnNube();
@@ -7394,20 +7459,80 @@ function renderizarHeladera() {
   });
 }
 
-async function generarRecetaDesdeHeladera(esOtraOpcion) {
+async function generarRecetaDesdeHeladera(esOtraOpcion, soloSeleccionados) {
   if (heladera.length === 0) {
     alert('Primero agregá al menos un ingrediente en tu heladera para que la IA pueda armarte la receta.');
     if (inputFridgeName) inputFridgeName.focus();
     return;
   }
 
-  const listado = heladera.map(i => `- ${i.nombre} (${i.cantidad})`).join('\n');
-  const promptReceta = `Tengo exactamente estos ingredientes disponibles en mi heladera/cocina:\n${listado}\n\n${esOtraOpcion ? 'Dame UNA RECETA DIFERENTE a la anterior' : 'Armame una receta rica y casera'} usando estos ingredientes (más condimentos básicos como sal, aceite o agua). Incluí:\n1. Nombre del plato\n2. Cantidades exactas a usar de cada ingrediente\n3. Paso a paso claro y numerado para cocinarlo.`;
+  const usarSeleccionados = esOtraOpcion ? ultimoModoSeleccionados : Boolean(soloSeleccionados);
+  let itemsParaReceta = [];
 
-  btnGenerateRecipe.disabled = true;
-  btnGenerateRecipe.textContent = '🍳 Cocinando receta...';
+  if (usarSeleccionados) {
+    const idsTarget = esOtraOpcion && ultimosIdsSeleccionados.length > 0
+      ? ultimosIdsSeleccionados
+      : Array.from(ingredientesSeleccionadosIds);
+    itemsParaReceta = heladera.filter(x => idsTarget.includes(x.id));
+    if (itemsParaReceta.length === 0) {
+      modoSeleccionHeladera = true;
+      renderizarHeladera();
+      if (fridgeSelectionBar) fridgeSelectionBar.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+    ultimosIdsSeleccionados = itemsParaReceta.map(x => x.id);
+  } else {
+    itemsParaReceta = [...heladera];
+    ultimosIdsSeleccionados = itemsParaReceta.map(x => x.id);
+  }
+
+  if (!esOtraOpcion) {
+    historialRecetasDescartadas = [];
+  } else if (ultimaRecetaTexto) {
+    historialRecetasDescartadas.push(ultimaRecetaTexto.slice(0, 350));
+  }
+
+  ultimoModoSeleccionados = usarSeleccionados;
+  recetaYaDescontada = false;
+
+  const listado = itemsParaReceta.map(i => `- ${i.nombre} (Cantidad disponible: ${i.cantidad})`).join('\n');
+  const previasTexto = historialRecetasDescartadas.length > 0
+    ? `\n\nIMPORTANTE: El usuario pidió OTRA RECETA DISTINTA porque no quiso las anteriores. NO repitas ninguna de estas recetas previas:\n${historialRecetasDescartadas.map((r, idx) => `[Opción descartada ${idx + 1}]: ${r}`).join('\n')}\n`
+    : '';
+
+  const instruccionModo = usarSeleccionados
+    ? `El usuario seleccionó específicamente estos ingredientes para cocinar hoy:\n${listado}\n\nArmame una receta rica y casera usando EXCLUSIVAMENTE estos ingredientes seleccionados (más condimentos básicos como sal, aceite, pimienta o agua), sin agregar otros ingredientes principales que no estén en esta selección.`
+    : `Tengo estos ingredientes disponibles en mi heladera/cocina:\n${listado}\n\nArmame una receta aleatoria, rica y casera combinando todos o algunos de estos ingredientes disponibles (más condimentos básicos como sal, aceite, pimienta o agua).`;
+
+  const promptReceta = `${instruccionModo}${previasTexto}\n\nRespetá las cantidades máximas disponibles y detallá claramente:\n1. Nombre del plato\n2. Lista exacta de ingredientes y qué cantidad se usa de cada uno\n3. Paso a paso claro y numerado para cocinarlo.`;
+
+  if (btnGenerateRecipe) {
+    btnGenerateRecipe.disabled = true;
+    if (!usarSeleccionados) btnGenerateRecipe.textContent = '🍳 Generando receta...';
+  }
+  if (btnGenerateSelectedRecipe) {
+    btnGenerateSelectedRecipe.disabled = true;
+    if (usarSeleccionados) btnGenerateSelectedRecipe.textContent = '🍳 Generando con seleccionados...';
+  }
+  if (btnAnotherRecipe) btnAnotherRecipe.disabled = true;
+  if (btnCookRecipe) {
+    btnCookRecipe.disabled = true;
+    btnCookRecipe.textContent = '✅ Sí, cocinaré la receta';
+    btnCookRecipe.style.background = '#10b981';
+  }
+  if (fridgeDiscountFeedback) {
+    fridgeDiscountFeedback.classList.add('hidden');
+    fridgeDiscountFeedback.innerHTML = '';
+  }
+  if (fridgeRecipeTitle) {
+    fridgeRecipeTitle.textContent = usarSeleccionados
+      ? `👨‍🍳 Receta con tus ${itemsParaReceta.length} ingrediente(s) seleccionado(s)`
+      : '👨‍🍳 Receta aleatoria sugerida con tu heladera';
+  }
+
   fridgeRecipeBox.classList.remove('hidden');
-  fridgeRecipeContent.innerHTML = '⏳ Pensando la mejor receta con tus ingredientes...';
+  fridgeRecipeContent.innerHTML = '⏳ Pensando la mejor receta paso a paso con tus ingredientes...';
+  fridgeRecipeBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
   try {
     const res = await fetch(API_CHAT_URL, {
@@ -7423,20 +7548,223 @@ async function generarRecetaDesdeHeladera(esOtraOpcion) {
     if (res.ok) {
       const data = await res.json();
       const texto = data.respuesta || 'No se pudo generar la receta.';
+      ultimaRecetaTexto = texto;
       fridgeRecipeContent.innerHTML = escaparHTML(texto).replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      if (btnCookRecipe) btnCookRecipe.disabled = false;
     } else {
       fridgeRecipeContent.textContent = 'Hubo un problema al generar la receta. Tocá el botón de nuevo.';
     }
   } catch (e) {
     fridgeRecipeContent.textContent = 'Error de conexión al consultar a la IA.';
   } finally {
-    btnGenerateRecipe.disabled = false;
-    btnGenerateRecipe.textContent = '🍳 Generar Receta';
+    if (btnGenerateRecipe) {
+      btnGenerateRecipe.disabled = false;
+      btnGenerateRecipe.textContent = '🎲 Generar Receta Aleatoria';
+    }
+    if (btnGenerateSelectedRecipe) {
+      btnGenerateSelectedRecipe.disabled = false;
+    }
+    if (btnAnotherRecipe) btnAnotherRecipe.disabled = false;
+    actualizarBarraSeleccionHeladera();
   }
 }
 
-if (btnGenerateRecipe) btnGenerateRecipe.addEventListener('click', () => generarRecetaDesdeHeladera(false));
-if (btnAnotherRecipe) btnAnotherRecipe.addEventListener('click', () => generarRecetaDesdeHeladera(true));
+async function descontarIngredientesRecetaConIA() {
+  if (!ultimaRecetaTexto || recetaYaDescontada) return;
+  if (heladera.length === 0) return;
+
+  if (btnCookRecipe) {
+    btnCookRecipe.disabled = true;
+    btnCookRecipe.textContent = '⏳ IA descontando cantidades usadas...';
+  }
+  if (btnAnotherRecipe) btnAnotherRecipe.disabled = true;
+
+  const inventarioActual = heladera.map(h => ({
+    id: h.id,
+    nombre: h.nombre,
+    cantidad: h.cantidad
+  }));
+
+  const promptDescuento = `El usuario confirmó que va a cocinar la siguiente receta y necesitamos descontar de su heladera las cantidades utilizadas.
+
+INVENTARIO ACTUAL EN LA HELADERA (JSON):
+${JSON.stringify(inventarioActual, null, 2)}
+
+RECETA QUE VA A COCINAR:
+${ultimaRecetaTexto}
+
+INSTRUCCIONES DE DESCUENTO:
+1. Analizá qué ingredientes del inventario se usan en esta receta y qué cantidad utiliza la receta de cada uno.
+2. Restá la cantidad usada de la cantidad disponible en el inventario (interpretando unidades naturales como kg, gramos, litros, ml, unidades, pechugas, paquetes, o sumas como "1 litro + 2 litros").
+3. Si un ingrediente usado se consume en su totalidad (queda 0 o menos, o si su cantidad decía "Cantidad necesaria" / "un poco" y se usó en la receta), marcá "agotado": true y "cantidadRestante": "0".
+4. Si de un ingrediente usado todavía sobra cantidad (por ejemplo tenía "1 kg" y la receta usa "300 g", o tenía "6 u." y usa "2"), marcá "agotado": false y poné en "cantidadRestante" lo que queda expresado claramente (ej: "700g", "4 u.").
+5. Si un ingrediente del inventario NO se menciona ni se usa en la receta, dejalo intacto con "agotado": false y su misma "cantidadRestante".
+
+Respondé ÚNICAMENTE con un objeto JSON válido (sin texto extra fuera del JSON) con esta estructura exacta:
+{
+  "items": [
+    { "id": "id_del_ingrediente", "nombre": "Nombre", "agotado": false, "cantidadRestante": "cantidad que queda", "usadoEnReceta": true, "detalle": "Se usaron X, quedan Y" }
+  ]
+}`;
+
+  try {
+    const res = await fetch(API_CHAT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        nombreUsuario: usuarioActivo ? usuarioActivo.nombre : 'Alejandro',
+        mensaje: promptDescuento,
+        historial: []
+      })
+    });
+
+    let aplicadoConExito = false;
+    let detallesCambios = [];
+
+    if (res.ok) {
+      const data = await res.json();
+      const raw = String(data.respuesta || '');
+      const matchJson = raw.match(/\{[\s\S]*\}/);
+      if (matchJson) {
+        try {
+          const parsed = JSON.parse(matchJson[0]);
+          if (parsed && Array.isArray(parsed.items)) {
+            const mapaActualizaciones = new Map();
+            parsed.items.forEach(item => {
+              if (item && item.id) mapaActualizaciones.set(item.id, item);
+            });
+
+            const nuevaHeladera = [];
+            heladera.forEach(ing => {
+              const info = mapaActualizaciones.get(ing.id) || parsed.items.find(
+                x => (x.nombre || '').trim().toLowerCase() === (ing.nombre || '').trim().toLowerCase()
+              );
+
+              if (!info) {
+                nuevaHeladera.push(ing);
+                return;
+              }
+
+              const cantRest = String(info.cantidadRestante || '').trim();
+              const seAgoto = Boolean(info.agotado) || cantRest === '0' || /^0(\s|$|[a-zA-Z])/.test(cantRest);
+
+              if (seAgoto) {
+                ingredientesSeleccionadosIds.delete(ing.id);
+                detallesCambios.push(`🗑️ <b>${escaparHTML(ing.nombre)}</b>: consumido por completo (se quitó de la heladera).`);
+              } else {
+                const cambioCantidad = cantRest && cantRest !== ing.cantidad;
+                if (cambioCantidad || info.usadoEnReceta) {
+                  detallesCambios.push(`📉 <b>${escaparHTML(ing.nombre)}</b>: tenía <em>${escaparHTML(ing.cantidad)}</em> ➔ ahora quedan <b>${escaparHTML(cantRest || ing.cantidad)}</b>.`);
+                }
+                nuevaHeladera.push({
+                  ...ing,
+                  cantidad: cantRest || ing.cantidad,
+                  updatedAt: Date.now()
+                });
+              }
+            });
+
+            heladera = nuevaHeladera;
+            aplicadoConExito = true;
+          }
+        } catch (errParse) {}
+      }
+    }
+
+    if (!aplicadoConExito) {
+      // Respaldo inteligente si la respuesta no vino en JSON estricto
+      const textoRecetaMin = ultimaRecetaTexto.toLowerCase();
+      const nuevaHeladera = [];
+      heladera.forEach(ing => {
+        const nombreMin = (ing.nombre || '').trim().toLowerCase();
+        if (nombreMin && textoRecetaMin.includes(nombreMin)) {
+          ingredientesSeleccionadosIds.delete(ing.id);
+          detallesCambios.push(`📉 <b>${escaparHTML(ing.nombre)}</b>: descontado de la heladera.`);
+        } else {
+          nuevaHeladera.push(ing);
+        }
+      });
+      heladera = nuevaHeladera;
+    }
+
+    recetaYaDescontada = true;
+    modoSeleccionHeladera = false;
+    renderizarHeladera();
+    guardarEnNube();
+
+    if (btnCookRecipe) {
+      btnCookRecipe.disabled = true;
+      btnCookRecipe.textContent = '✅ ¡Ingredientes descontados de tu Heladera!';
+      btnCookRecipe.style.background = '#059669';
+    }
+    if (fridgeDiscountFeedback) {
+      fridgeDiscountFeedback.classList.remove('hidden');
+      fridgeDiscountFeedback.innerHTML = detallesCambios.length > 0
+        ? `<strong>👨‍🍳 ¡A cocinar! La IA actualizó el stock de tu heladera:</strong><br>${detallesCambios.join('<br>')}`
+        : `<strong>👨‍🍳 ¡A cocinar! Se actualizaron los ingredientes de tu heladera.</strong>`;
+    }
+  } catch (e) {
+    if (btnCookRecipe) {
+      btnCookRecipe.disabled = false;
+      btnCookRecipe.textContent = '✅ Sí, cocinaré la receta';
+    }
+    alert('No se pudo conectar con la IA para descontar los ingredientes. Intentá nuevamente.');
+  } finally {
+    if (btnAnotherRecipe) btnAnotherRecipe.disabled = false;
+  }
+}
+
+if (btnGenerateRecipe) {
+  btnGenerateRecipe.addEventListener('click', () => {
+    modoSeleccionHeladera = false;
+    generarRecetaDesdeHeladera(false, false);
+  });
+}
+
+if (btnGenerateSelectedRecipe) {
+  btnGenerateSelectedRecipe.addEventListener('click', () => {
+    if (heladera.length === 0) {
+      alert('Primero agregá al menos un ingrediente en tu heladera.');
+      if (inputFridgeName) inputFridgeName.focus();
+      return;
+    }
+    if (ingredientesSeleccionadosIds.size > 0) {
+      generarRecetaDesdeHeladera(false, true);
+    } else {
+      modoSeleccionHeladera = true;
+      renderizarHeladera();
+      if (fridgeSelectionBar) fridgeSelectionBar.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  });
+}
+
+if (btnConfirmSelectedRecipe) {
+  btnConfirmSelectedRecipe.addEventListener('click', () => {
+    if (ingredientesSeleccionadosIds.size === 0) {
+      alert('Tildá al menos un ingrediente de la lista con el botón "✓" para armar la receta.');
+      return;
+    }
+    generarRecetaDesdeHeladera(false, true);
+  });
+}
+
+if (btnCancelFridgeSelection) {
+  btnCancelFridgeSelection.addEventListener('click', () => {
+    modoSeleccionHeladera = false;
+    ingredientesSeleccionadosIds.clear();
+    renderizarHeladera();
+  });
+}
+
+if (btnCookRecipe) {
+  btnCookRecipe.addEventListener('click', descontarIngredientesRecetaConIA);
+}
+
+if (btnAnotherRecipe) {
+  btnAnotherRecipe.addEventListener('click', () => {
+    generarRecetaDesdeHeladera(true, ultimoModoSeleccionados);
+  });
+}
 
 // ==========================================
 // EXTRAS -> 4. ENTRENAMIENTO (DIVISIÓN DE A 2 GRUPOS POR DÍA + LISTADO PASO A PASO)
