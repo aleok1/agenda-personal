@@ -11,11 +11,11 @@
   <link rel="icon" type="image/svg+xml" href="logo.svg">
   <link rel="apple-touch-icon" href="logo.svg">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="styles.css?v=20261105_05">
+  <link rel="stylesheet" href="styles.css?v=20261106_01">
   <!-- ESCUDO DE DIAGNÓSTICO TEMPRANO Y CAPTURA DE ERRORES PÚBLICOS -->
   <script>
     (function() {
-      window.__APP_VERSION = '20261105_05';
+      window.__APP_VERSION = '20261106_01';
       window.__ERRORES_APP = [];
 
       function copiarTexto(texto) {
@@ -1545,14 +1545,19 @@
 
       <div id="subview-fridge" class="hidden">
         <button type="button" id="btn-back-fridge-to-casa" class="btn-back" style="margin-bottom: 10px;">&larr; Volver a Casa</button>
-        <div class="tasks-top-bar">
+        <div class="tasks-top-bar" style="flex-wrap: wrap; gap: 12px;">
           <div>
             <h2>🧊 3. Heladera — ¿Qué cocinamos hoy?</h2>
-            <p class="subtitle-text">Cargá los ingredientes y cantidades que tenés disponibles y la IA te armará la receta paso a paso</p>
+            <p class="subtitle-text">Cargá los ingredientes y cantidades disponibles o seleccioná cuáles querés usar para que la IA te arme la receta</p>
           </div>
-          <button type="button" id="btn-generate-recipe" class="btn-buy-finish" title="Generar una receta con los ingredientes de tu heladera">
-            🍳 Generar Receta
-          </button>
+          <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <button type="button" id="btn-generate-recipe" class="btn-buy-finish" title="Generar una receta aleatoria con IA usando los ingredientes de tu heladera">
+              🎲 Generar Receta Aleatoria
+            </button>
+            <button type="button" id="btn-generate-selected-recipe" class="btn-buy-finish" style="background: #3b82f6; color: #ffffff;" title="Seleccionar qué ingredientes querés usar y generar receta solo con ellos">
+              ☑️ Generar con Ingredientes Seleccionados
+            </button>
+          </div>
         </div>
 
         <!-- FORMULARIO PARA CARGAR INGREDIENTE Y CANTIDAD -->
@@ -1572,16 +1577,45 @@
           </div>
         </div>
 
+        <!-- BARRA DE SELECCIÓN DE INGREDIENTES -->
+        <div id="fridge-selection-bar" class="task-form-box hidden" style="margin-bottom: 14px; border-color: #3b82f6; background: rgba(59, 130, 246, 0.1); padding: 12px 16px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+            <span id="fridge-selection-status" style="color: #93c5fd; font-weight: 600;">
+              👆 Tildá en la lista los ingredientes que querés usar hoy
+            </span>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+              <button type="button" id="btn-confirm-selected-recipe" class="btn-buy-finish" style="padding: 8px 16px; font-size: 0.92rem;">
+                🍳 Armar receta con seleccionados
+              </button>
+              <button type="button" id="btn-cancel-fridge-selection" class="btn-secondary" style="padding: 8px 14px; font-size: 0.9rem;">
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+
         <!-- LISTA DE INGREDIENTES EN LA HELADERA -->
         <div id="fridge-items-list" class="tasks-list" style="margin-bottom: 22px;"></div>
 
         <!-- RESULTADO DE LA RECETA GENERADA POR LA IA -->
         <div id="fridge-recipe-box" class="task-form-box hidden" style="border-color: #f59e0b;">
           <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
-            <h3 style="margin-bottom:0; color:#fbbf24;">👨‍🍳 Receta sugerida con tus ingredientes</h3>
-            <button type="button" id="btn-another-recipe" class="btn-secondary">🔄 Probar otra receta distinta</button>
+            <h3 id="fridge-recipe-title" style="margin-bottom:0; color:#fbbf24;">👨‍🍳 Receta sugerida con tus ingredientes</h3>
           </div>
           <div id="fridge-recipe-content" class="recipe-text-body"></div>
+
+          <!-- BOTONES AL FINAL DE LA RECETA: SÍ COCINARÉ LA RECETA / GENERAR OTRA RECETA -->
+          <div id="fridge-recipe-actions" style="display: flex; gap: 12px; flex-wrap: wrap; margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.1);">
+            <button type="button" id="btn-cook-recipe" class="btn-buy-finish" style="flex: 1 1 220px; justify-content: center; text-align: center;">
+              ✅ Sí, cocinaré la receta
+            </button>
+            <button type="button" id="btn-another-recipe" class="btn-secondary" style="flex: 1 1 200px; justify-content: center; text-align: center; padding: 12px 20px; font-size: 1rem; font-weight: 600;">
+              🔄 Generar otra receta
+            </button>
+          </div>
+
+          <!-- RESUMEN DE DESCUENTO DE INGREDIENTES POR IA -->
+          <div id="fridge-discount-feedback" class="hidden" style="margin-top: 14px; padding: 12px 16px; border-radius: 10px; background: rgba(16, 185, 129, 0.14); border: 1px solid #10b981; color: #d1fae5; font-size: 0.95rem; line-height: 1.5;"></div>
         </div>
       </div>
 
@@ -2414,6 +2448,6 @@
     </section>
   </main>
 
-  <script src="app.js?v=20261105_05"></script>
+  <script src="app.js?v=20261106_01"></script>
 </body>
 </html>
