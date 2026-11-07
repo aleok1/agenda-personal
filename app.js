@@ -7184,6 +7184,290 @@ if (inputSuperQty) {
   });
 }
 
+function normalizarClaveIngrediente(nombre) {
+  return String(nombre || '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .split(' ')
+    .map(palabra => {
+      if (palabra.length > 4 && palabra.endsWith('es') && !palabra.endsWith('tes') && !palabra.endsWith('ches')) {
+        return palabra.slice(0, -2);
+      }
+      if (palabra.length > 3 && palabra.endsWith('s')) {
+        return palabra.slice(0, -1);
+      }
+      return palabra;
+    })
+    .join(' ');
+}
+
+function buscarIngredienteEnHeladera(nombreBuscado) {
+  const clave = normalizarClaveIngrediente(nombreBuscado);
+  if (!clave) return null;
+  return heladera.find(h => normalizarClaveIngrediente(h.nombre) === clave) || null;
+}
+
+function parsearSegmentoCantidad(segRaw) {
+  let s = String(segRaw || '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/,/g, '.');
+
+  if (!s || s === 'cantidad necesaria' || s === 'un poco' || s === 'a gusto') {
+    return null;
+  }
+
+  let extraMedio = 0;
+  if (/\by\s+medi[oa]s?\b/.test(s)) {
+    extraMedio = 0.5;
+    s = s.replace(/\by\s+medi[oa]s?\b/g, ' ').trim();
+  }
+
+  const mapaPalabrasNum = {
+    'un': 1, 'uno': 1, 'una': 1,
+    'dos': 2, 'tres': 3, 'cuatro': 4, 'cinco': 5,
+    'seis': 6, 'siete': 7, 'ocho': 8, 'nueve': 9, 'diez': 10,
+    'doce': 12
+  };
+
+  let num = null;
+  let resto = s;
+
+  if (/^medi[oa]s?\b/.test(s)) {
+    num = 0.5;
+    resto = s.replace(/^medi[oa]s?\b/, '').trim();
+  } else {
+    const matchNum = s.match(/^(\d+(?:\.\d+)?)\s*(.*)$/);
+    if (matchNum) {
+      num = parseFloat(matchNum[1]);
+      resto = (matchNum[2] || '').trim();
+    } else {
+      const partes = s.split(/\s+/);
+      const primera = partes[0];
+      if (mapaPalabrasNum[primera] !== undefined) {
+        num = mapaPalabrasNum[primera];
+        resto = partes.slice(1).join(' ').trim();
+      }
+    }
+  }
+
+  if (num === null || isNaN(num)) return null;
+  const valorTotal = num + extraMedio;
+
+  resto = resto.replace(/^de\s+/, '').replace(/\.$/, '').trim();
+
+  // Clasificar unidad
+  if (/^(kg|kilo|kilos|kilogramo|kilogramos)$/.test(resto)) {
+    return { familia: 'peso', valorGramos: valorTotal * 1000, usaPalabraKilo: /kilo/.test(resto), tuvoMedio: extraMedio > 0 || num === 0.5 };
+  }
+  if (/^(g|gr|grs|gramo|gramos)$/.test(resto)) {
+    return { familia: 'peso', valorGramos: valorTotal, usaPalabraKilo: false, tuvoMedio: false };
+  }
+  if (/^(l|lt|lts|litro|litros)$/.test(resto)) {
+    return { familia: 'volumen', valorMl: valorTotal * 1000, usaPalabraLitro: /litro/.test(resto) || extraMedio > 0, tuvoMedio: extraMedio > 0 || num === 0.5 };
+  }
+  if (/^(ml|cc|mililitro|mililitros)$/.test(resto)) {
+    return { familia: 'volumen', valorMl: valorTotal, usaPalabraLitro: false, tuvoMedio: false };
+  }
+  if (/^(docena|docenas)$/.test(resto)) {
+    return { familia: 'unidad', valor: valorTotal * 12, unidadSingular: 'u.', unidadPlural: 'u.', genero: 'f', especifica: false };
+  }
+
+  const esGenerica = !resto || /^(u|un|unid|unidad|unidades)$/.test(resto);
+  if (esGenerica) {
+    return {
+      familia: 'unidad',
+      valor: valorTotal,
+      unidadSingular: resto === 'unidad' || resto === 'unidades' ? 'unidad' : 'u.',
+      unidadPlural: resto === 'unidad' || resto === 'unidades' ? 'unidades' : 'u.',
+      genero: 'f',
+      especifica: false
+    };
+  }
+
+  // Unidad contable específica (ej: paquete, paquetes, lata, botella, pechuga, horma, etc.)
+  let sing = resto;
+  let plur = resto;
+  if (resto.endsWith('es') && resto.length > 4 && !resto.endsWith('tes') && !resto.endsWith('ques')) {
+    sing = resto.slice(0, -2);
+    plur = resto;
+  } else if (resto.endsWith('s') && resto.length > 2) {
+    sing = resto.slice(0, -1);
+    plur = resto;
+  } else {
+    sing = resto;
+    plur = (/[aeiou]$/.test(resto)) ? resto + 's' : resto + 'es';
+  }
+
+  const esFemenino = /(a|cion|sion)$/.test(sing);
+  return {
+    familia: 'unidad',
+    valor: valorTotal,
+    unidadSingular: sing,
+    unidadPlural: plur,
+    genero: esFemenino ? 'f' : 'm',
+    especifica: true
+  };
+}
+
+function formatearConYMedio(valor, sing, plur, genero) {
+  const redondeado = Math.round(valor * 2) / 2;
+  const esMedioExacto = Math.abs((valor - Math.floor(valor)) - 0.5) < 0.08 && Math.abs(valor - redondeado) < 0.08;
+  const palabraMedio = genero === 'f' ? 'media' : 'medio';
+
+  if (esMedioExacto) {
+    const entero = Math.floor(redondeado);
+    if (entero === 0) return `${palabraMedio} ${sing}`;
+    if (entero === 1) return `1 ${sing} y ${palabraMedio}`;
+    return `${entero} ${plur} y ${palabraMedio}`;
+  }
+
+  const numLim = Number(valor.toFixed(2));
+  if (numLim === 1) return `1 ${sing}`;
+  return `${numLim} ${plur}`;
+}
+
+function sumarCantidadesInteligente(cantExistente, cantNueva) {
+  const textoCombinado = `${cantExistente || ''} + ${cantNueva || ''}`;
+  const partes = textoCombinado.split('+').map(p => p.trim()).filter(Boolean);
+  if (partes.length === 0) return { texto: cantNueva || '1 u.', necesitaIA: false };
+
+  const parseados = partes.map(parsearSegmentoCantidad);
+  if (parseados.some(p => p === null)) {
+    return { texto: partes.join(' + '), necesitaIA: true };
+  }
+
+  const fam = parseados[0].familia;
+  if (!parseados.every(p => p.familia === fam)) {
+    return { texto: partes.join(' + '), necesitaIA: true };
+  }
+
+  if (fam === 'peso') {
+    const totalGramos = parseados.reduce((acc, p) => acc + p.valorGramos, 0);
+    const prefiereKiloPalabra = parseados.some(p => p.usaPalabraKilo || p.tuvoMedio);
+    if (totalGramos >= 1000) {
+      const kilos = totalGramos / 1000;
+      if (prefiereKiloPalabra) {
+        return { texto: formatearConYMedio(kilos, 'kilo', 'kilos', 'm'), necesitaIA: false };
+      }
+      return { texto: `${Number(kilos.toFixed(2))} kg`, necesitaIA: false };
+    }
+    return { texto: `${Math.round(totalGramos)}g`, necesitaIA: false };
+  }
+
+  if (fam === 'volumen') {
+    const totalMl = parseados.reduce((acc, p) => acc + p.valorMl, 0);
+    if (totalMl >= 1000) {
+      const litros = totalMl / 1000;
+      return { texto: formatearConYMedio(litros, 'litro', 'litros', 'm'), necesitaIA: false };
+    }
+    return { texto: `${Math.round(totalMl)}ml`, necesitaIA: false };
+  }
+
+  // Familia 'unidad'
+  const especificas = parseados.filter(p => p.especifica);
+  let unidadRef = especificas[0] || parseados[0];
+
+  // Si hay dos unidades específicas distintas (ej: "1 paquete" y "2 latas"), delegar a IA
+  if (especificas.length > 1) {
+    const baseSing = especificas[0].unidadSingular;
+    if (!especificas.every(e => e.unidadSingular === baseSing)) {
+      return { texto: partes.join(' + '), necesitaIA: true };
+    }
+  }
+
+  const totalUnidades = parseados.reduce((acc, p) => acc + p.valor, 0);
+  if (unidadRef.unidadSingular === 'u.') {
+    const numLim = Number(totalUnidades.toFixed(2));
+    return { texto: `${numLim} u.`, necesitaIA: false };
+  }
+
+  return {
+    texto: formatearConYMedio(totalUnidades, unidadRef.unidadSingular, unidadRef.unidadPlural, unidadRef.genero),
+    necesitaIA: false
+  };
+}
+
+async function unificarCantidadesHeladeraConIA(idsParaUnificar) {
+  if (!Array.isArray(idsParaUnificar) || idsParaUnificar.length === 0) return;
+  const itemsTarget = heladera.filter(h => idsParaUnificar.includes(h.id));
+  if (itemsTarget.length === 0) return;
+
+  const promptUnificar = `Unificá y sumá matemáticamente las cantidades de estos ingredientes de la heladera para que cada uno tenga una única cantidad total expresada en español natural (por ejemplo, si dice "1 paquete y medio + 2" o "1 paquete y medio + 2 paquetes", debe quedar "3 paquetes y medio"; si dice "500g + 1 kg", debe quedar "1.5 kg").
+
+INGREDIENTES A UNIFICAR (JSON):
+${JSON.stringify(itemsTarget.map(x => ({ id: x.id, nombre: x.nombre, cantidad: x.cantidad })), null, 2)}
+
+Respondé ÚNICAMENTE con un objeto JSON válido con este formato exacto:
+{
+  "items": [
+    { "id": "id_del_ingrediente", "cantidadUnificada": "cantidad total sumada" }
+  ]
+}`;
+
+  try {
+    const res = await fetch(API_CHAT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        nombreUsuario: usuarioActivo ? usuarioActivo.nombre : 'Alejandro',
+        mensaje: promptUnificar,
+        historial: []
+      })
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    const matchJson = String(data.respuesta || '').match(/\{[\s\S]*\}/);
+    if (!matchJson) return;
+    const parsed = JSON.parse(matchJson[0]);
+    if (parsed && Array.isArray(parsed.items)) {
+      let huboCambio = false;
+      parsed.items.forEach(u => {
+        const target = heladera.find(h => h.id === u.id);
+        if (target && u.cantidadUnificada && String(u.cantidadUnificada).trim()) {
+          target.cantidad = String(u.cantidadUnificada).trim();
+          target.updatedAt = Date.now();
+          huboCambio = true;
+        }
+      });
+      if (huboCambio) {
+        renderizarHeladera();
+        guardarEnNube();
+      }
+    }
+  } catch (e) {}
+}
+
+function sumarOAgregarIngredienteEnHeladera(nombreProd, cantidadProd) {
+  const cantLimpia = (cantidadProd || '').trim() || '1 u.';
+  const existente = buscarIngredienteEnHeladera(nombreProd);
+
+  if (existente) {
+    const resultadoSuma = sumarCantidadesInteligente(existente.cantidad, cantLimpia);
+    existente.cantidad = resultadoSuma.texto;
+    existente.updatedAt = Date.now();
+    return { id: existente.id, necesitaIA: resultadoSuma.necesitaIA };
+  } else {
+    // Incluso si es nuevo, si el usuario escribió algo con "+", lo normalizamos
+    const resultadoInicial = cantLimpia.includes('+')
+      ? sumarCantidadesInteligente('', cantLimpia)
+      : { texto: cantLimpia, necesitaIA: false };
+    const nuevoId = 'hel-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6);
+    heladera.push({
+      id: nuevoId,
+      nombre: nombreProd.trim(),
+      cantidad: resultadoInicial.texto,
+      updatedAt: Date.now()
+    });
+    return { id: nuevoId, necesitaIA: resultadoInicial.necesitaIA };
+  }
+}
+
 if (btnFinishShopping) {
   btnFinishShopping.addEventListener('click', () => {
     const tildados = supermercado.filter(x => x.tildado);
@@ -7192,23 +7476,15 @@ if (btnFinishShopping) {
       return;
     }
 
-    // Pasar automáticamente los productos comestibles comprados a la Heladera
+    // Pasar automáticamente los productos comestibles comprados a la Heladera sumando cantidades reales
     const comestiblesComprados = tildados.filter(x => x.comestible !== false);
+    const idsParaIA = [];
+
     comestiblesComprados.forEach(item => {
       const cantItem = item.cantidad || '1 u.';
-      const existente = heladera.find(
-        h => (h.nombre || '').trim().toLowerCase() === (item.texto || '').trim().toLowerCase()
-      );
-      if (existente) {
-        existente.cantidad = `${existente.cantidad} + ${cantItem}`;
-        existente.updatedAt = Date.now();
-      } else {
-        heladera.push({
-          id: 'hel-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
-          nombre: item.texto,
-          cantidad: cantItem,
-          updatedAt: Date.now()
-        });
+      const resSuma = sumarOAgregarIngredienteEnHeladera(item.texto, cantItem);
+      if (resSuma.necesitaIA) {
+        idsParaIA.push(resSuma.id);
       }
     });
 
@@ -7216,6 +7492,10 @@ if (btnFinishShopping) {
     renderizarSupermercado();
     renderizarHeladera();
     guardarEnNube();
+
+    if (idsParaIA.length > 0) {
+      unificarCantidadesHeladeraConIA(idsParaIA);
+    }
   });
 }
 
@@ -7345,18 +7625,17 @@ function agregarIngredienteHeladera() {
     return;
   }
 
-  heladera.push({
-    id: 'hel-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
-    nombre: nombre,
-    cantidad: cantidad,
-    updatedAt: Date.now()
-  });
+  const resSuma = sumarOAgregarIngredienteEnHeladera(nombre, cantidad);
 
   inputFridgeName.value = '';
   inputFridgeQty.value = '';
   renderizarHeladera();
   inputFridgeName.focus();
   guardarEnNube();
+
+  if (resSuma.necesitaIA) {
+    unificarCantidadesHeladeraConIA([resSuma.id]);
+  }
 }
 
 if (inputFridgeName) {
