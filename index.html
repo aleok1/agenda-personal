@@ -11,11 +11,11 @@
   <link rel="icon" type="image/svg+xml" href="logo.svg">
   <link rel="apple-touch-icon" href="logo.svg">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="styles.css?v=20261107_01">
+  <link rel="stylesheet" href="styles.css?v=20261108_01">
   <!-- ESCUDO DE DIAGNÓSTICO TEMPRANO Y CAPTURA DE ERRORES PÚBLICOS -->
   <script>
     (function() {
-      window.__APP_VERSION = '20261107_01';
+      window.__APP_VERSION = '20261108_01';
       window.__ERRORES_APP = [];
 
       function copiarTexto(texto) {
@@ -1486,40 +1486,240 @@
       <!-- SUBVISTAS INTERNAS DE ELEMENTOS DIARIOS -->
       <div id="subview-super" class="hidden">
         <button type="button" id="btn-back-super-to-casa" class="btn-back" style="margin-bottom: 10px;">&larr; Volver a Casa</button>
-        <div class="tasks-top-bar">
+        <div class="tasks-top-bar" style="margin-bottom: 14px;">
           <div>
-            <h2>1. Lista de Supermercado</h2>
-            <p class="subtitle-text" id="super-subtitle-info">Agregá productos con su cantidad; los marcados como "Comestibles" pasan solos a tu Heladera al comprarlos</p>
+            <h2>🛒 1. Supermercado</h2>
+            <p class="subtitle-text" id="super-subtitle-info">Confeccioná tus listas de compras y gestioná tus compras pendientes con memoria inteligente de precios</p>
           </div>
-          <button id="btn-finish-shopping" class="btn-buy-finish" title="Cerrar compra, quitar lo tildado y pasar los comestibles a la Heladera">
-            🛒 Comprar (Cerrar compra)
+        </div>
+
+        <!-- PANTALLA PRINCIPAL SUPERMERCADO: SELECTOR DE LAS 2 PANTALLAS -->
+        <div id="super-home-screens" class="home-grid" style="margin-bottom: 18px;">
+          <button type="button" id="card-super-confeccionar" class="big-card card-primary">
+            <div class="card-icon">📝</div>
+            <div class="card-title">1. Confeccionar Lista</div>
+            <div class="card-desc">Armá una lista nueva, ponele o cambiale el nombre y guardala para cuando vayas a comprar.</div>
+            <div class="card-badge badge-primary" id="badge-super-draft-count">Armar lista</div>
+          </button>
+
+          <button type="button" id="card-super-pendientes" class="big-card card-wallet">
+            <div class="card-icon">🛍️</div>
+            <div class="card-title">2. Pendiente de Compra</div>
+            <div class="card-desc">Tus listas en espera. Abrí cualquiera para iniciar la compra, tildar con precio y cantidad, y cerrar y pagar.</div>
+            <div class="card-badge badge-wallet" id="badge-super-pending-count">0 listas en espera</div>
           </button>
         </div>
 
-        <div class="task-form-box" style="margin-bottom: 20px;">
-          <div class="form-row" style="margin-bottom: 12px; align-items: flex-end;">
-            <div class="form-group flex-grow">
-              <label for="input-super-item">Producto</label>
-              <input type="text" id="input-super-item" placeholder="Ej: Leche, pollo, arroz, detergente..." autocomplete="off">
+        <!-- PANTALLA 1: CONFECCIONAR LISTA -->
+        <div id="super-screen-confeccion" class="hidden">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:14px;">
+            <button type="button" id="btn-back-from-confeccion" class="btn-back" style="margin-bottom:0;">&larr; Volver a Supermercado</button>
+            <button type="button" id="btn-go-to-pendientes-from-conf" class="btn-secondary" style="padding:8px 14px; font-size:0.9rem;">
+              🛍️ Ver Pendientes de Compra
+            </button>
+          </div>
+
+          <div class="task-form-box" style="margin-bottom: 18px; border-color: #3b82f6;">
+            <div class="form-row" style="margin-bottom: 14px; align-items: flex-end;">
+              <div class="form-group flex-grow">
+                <label for="input-super-list-name">📋 Nombre de la lista (podés cambiarlo cuando quieras)</label>
+                <input type="text" id="input-super-list-name" placeholder="Ej: Compra semanal, Mayorista, Verdulería..." autocomplete="off">
+              </div>
             </div>
-            <div class="form-group" style="min-width: 170px; flex: 1 1 170px;">
-              <label for="input-super-qty">Cantidad</label>
-              <input type="text" id="input-super-qty" placeholder="Ej: 2 litros, 1 kg, 3 u." autocomplete="off">
+
+            <div class="form-row" style="margin-bottom: 12px; align-items: flex-end;">
+              <div class="form-group flex-grow">
+                <label for="input-super-item">Producto a agregar</label>
+                <input type="text" id="input-super-item" placeholder="Ej: Leche, harina, pollo, detergente..." autocomplete="off">
+                <small id="super-price-memory-hint" style="display:block; margin-top:4px; color:#60a5fa; font-size:0.82rem; min-height:18px;"></small>
+              </div>
+              <div class="form-group" style="min-width: 170px; flex: 1 1 170px;">
+                <label for="input-super-qty">Cantidad</label>
+                <input type="text" id="input-super-qty" placeholder="Ej: 2 paquetes, 1 kg, 3 u." autocomplete="off">
+              </div>
+            </div>
+
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+              <label class="super-edible-check-label" for="check-super-edible">
+                <input type="checkbox" id="check-super-edible" checked>
+                <span class="super-edible-box" id="super-edible-box-ui">✓</span>
+                <span>🍎 <b>Comestibles</b> <small style="color: #bbf7d0;">(se suma directo a 🧊 Heladera al comprar)</small></span>
+              </label>
+              <button type="button" id="btn-add-super-item" class="btn-add-plus">
+                <span class="plus-symbol">+</span> Añadir producto
+              </button>
             </div>
           </div>
-          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
-            <label class="super-edible-check-label" for="check-super-edible">
-              <input type="checkbox" id="check-super-edible" checked>
-              <span class="super-edible-box" id="super-edible-box-ui">✓</span>
-              <span>🍎 <b>Comestibles</b> <small style="color: #bbf7d0;">(se suma directo a 🧊 Heladera al comprar)</small></span>
-            </label>
-            <button type="button" id="btn-add-super-item" class="btn-add-plus">
-              <span class="plus-symbol">+</span> Añadir a la lista
+
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+            <h3 style="margin:0; font-size:1.05rem; color:#e2e8f0;">Productos en esta lista en confección</h3>
+            <button type="button" id="btn-save-super-list-to-pending" class="btn-buy-finish" title="Guardar esta lista y enviarla a Pendiente de Compra">
+              📌 Guardar en "Pendiente de Compra"
             </button>
+          </div>
+
+          <div id="super-items-list" class="tasks-list"></div>
+        </div>
+
+        <!-- PANTALLA 2: PENDIENTE DE COMPRA -->
+        <div id="super-screen-pendientes" class="hidden">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:14px;">
+            <button type="button" id="btn-back-from-pendientes" class="btn-back" style="margin-bottom:0;">&larr; Volver a Supermercado</button>
+            <button type="button" id="btn-new-list-from-pendientes" class="btn-add-plus" style="padding:8px 16px; font-size:0.9rem;">
+              <span class="plus-symbol">+</span> Confeccionar otra lista
+            </button>
+          </div>
+
+          <!-- VISTA 2A: LISTADO DE TODAS LAS LISTAS EN ESPERA -->
+          <div id="super-pending-lists-overview">
+            <h3 style="margin-bottom: 10px; color: #f8fafc;">🛍️ Listas en espera para comprar</h3>
+            <p class="subtitle-text" style="margin-bottom: 14px;">Tocá una lista para abrirla, iniciar la compra e ir tildando los productos</p>
+            <div id="super-pending-lists-container" class="tasks-list"></div>
+          </div>
+
+          <!-- VISTA 2B: DETALLE DE UNA LISTA ABIERTA EN PENDIENTE DE COMPRA -->
+          <div id="super-active-pending-detail" class="hidden">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+              <button type="button" id="btn-back-to-pending-lists" class="btn-back" style="margin-bottom:0;">&larr; Volver a Listas en Espera</button>
+              <button type="button" id="btn-rename-active-list" class="btn-secondary" style="padding:7px 14px; font-size:0.88rem;">
+                ✏️ Cambiar nombre de la lista
+              </button>
+            </div>
+
+            <div class="task-form-box" style="margin-bottom: 16px; border-color: #f59e0b;">
+              <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                <div>
+                  <h3 id="active-pending-list-title" style="margin:0 0 4px 0; color:#fbbf24; font-size:1.25rem;">Lista de compras</h3>
+                  <p id="active-pending-list-status" class="subtitle-text" style="margin:0;">Lista en espera</p>
+                </div>
+                <div style="text-align:right;">
+                  <div style="font-size:0.82rem; color:#94a3b8;">Total acumulado en carrito</div>
+                  <div id="active-pending-total-badge" style="font-size:1.5rem; font-weight:800; color:#34d399;">$0</div>
+                </div>
+              </div>
+
+              <!-- PREGUNTA: ¿INICIAR COMPRA? -->
+              <div id="super-start-shopping-box" style="margin-top: 14px; padding: 14px; border-radius: 12px; background: rgba(59, 130, 246, 0.14); border: 1px solid #3b82f6; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+                <div>
+                  <div style="font-weight: 700; font-size: 1.05rem; color: #93c5fd;">🛒 ¿Iniciar compra?</div>
+                  <div style="font-size: 0.88rem; color: #cbd5e1;">Esta lista está en espera. Iniciá la compra para ir tildando los productos con su precio y cantidad.</div>
+                </div>
+                <button type="button" id="btn-confirm-start-shopping" class="btn-buy-finish" style="background:#3b82f6; color:#fff;">
+                  ▶️ Sí, iniciar compra
+                </button>
+              </div>
+
+              <!-- AGREGAR PRODUCTO RÁPIDO A ESTA LISTA PENDIENTE -->
+              <details style="margin-top: 12px;">
+                <summary style="cursor:pointer; color:#93c5fd; font-size:0.9rem; font-weight:600;">+ Agregar un producto más a esta lista</summary>
+                <div class="form-row" style="margin-top: 10px; margin-bottom: 0; align-items: flex-end;">
+                  <div class="form-group flex-grow">
+                    <label for="input-pending-extra-item">Producto</label>
+                    <input type="text" id="input-pending-extra-item" placeholder="Ej: Pan, gaseosa..." autocomplete="off">
+                  </div>
+                  <div class="form-group" style="min-width: 130px; flex: 1 1 130px;">
+                    <label for="input-pending-extra-qty">Cantidad</label>
+                    <input type="text" id="input-pending-extra-qty" placeholder="Ej: 1 u., 2 kg" autocomplete="off">
+                  </div>
+                  <label class="super-edible-check-label" style="margin-bottom:4px;">
+                    <input type="checkbox" id="check-pending-extra-edible" checked>
+                    <span class="super-edible-box">✓</span>
+                    <span>🍎 Comestible</span>
+                  </label>
+                  <button type="button" id="btn-add-pending-extra-item" class="btn-add-plus">
+                    <span class="plus-symbol">+</span> Sumar
+                  </button>
+                </div>
+              </details>
+            </div>
+
+            <!-- PRODUCTOS DE LA LISTA ACTIVA -->
+            <div id="super-active-pending-items" class="tasks-list" style="margin-bottom: 18px;"></div>
+
+            <!-- BOTÓN FINAL: ¿CERRAR Y PAGAR? -->
+            <div class="task-form-box" style="border-color:#10b981; background:rgba(16, 185, 129, 0.08); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+              <div>
+                <div style="font-weight:700; color:#d1fae5; font-size:1.05rem;">💳 Finalizar recorrido del súper</div>
+                <div id="super-checkout-summary-line" style="font-size:0.9rem; color:#a7f3d0;">Tildá los productos que pongas en el carrito para calcular el total</div>
+              </div>
+              <button type="button" id="btn-finish-shopping" class="btn-buy-finish" style="font-size:1.05rem; padding:13px 24px;">
+                💳 ¿Cerrar y pagar? ($0)
+              </button>
+            </div>
           </div>
         </div>
 
-        <div id="super-items-list" class="tasks-list"></div>
+        <!-- MODAL PARA INGRESAR PRECIO Y CANTIDAD AL TILDAR UN PRODUCTO -->
+        <div id="super-price-qty-modal" class="hidden" style="position:fixed; inset:0; background:rgba(2, 6, 23, 0.82); z-index:9999; display:flex; align-items:center; justify-content:center; padding:16px;">
+          <div class="task-form-box" style="max-width:440px; width:100%; border-color:#3b82f6; background:#0f172a; box-shadow:0 20px 50px rgba(0,0,0,0.7);">
+            <h3 id="modal-super-item-title" style="margin-top:0; margin-bottom:6px; color:#60a5fa;">🛒 Producto</h3>
+            <p id="modal-super-price-memory-badge" style="margin-top:0; margin-bottom:14px; font-size:0.86rem; color:#fbbf24;"></p>
+
+            <div class="form-group" style="margin-bottom:12px;">
+              <label for="modal-input-super-qty">Cantidad que llevás (para tu lista / Heladera)</label>
+              <input type="text" id="modal-input-super-qty" placeholder="Ej: 2 paquetes, 1 kg, 3 u." autocomplete="off">
+            </div>
+
+            <div class="form-row" style="margin-bottom:12px;">
+              <div class="form-group" style="flex:1 1 120px;">
+                <label for="modal-input-super-units">Unidades a multiplicar</label>
+                <input type="number" id="modal-input-super-units" step="any" min="0.01" value="1" placeholder="1">
+              </div>
+              <div class="form-group" style="flex:1 1 160px;">
+                <label for="modal-input-super-price">Precio unitario ($)</label>
+                <input type="number" id="modal-input-super-price" step="any" min="0" placeholder="Ej: 1850">
+              </div>
+            </div>
+
+            <div style="padding:10px 14px; border-radius:10px; background:rgba(16, 185, 129, 0.12); border:1px solid rgba(16, 185, 129, 0.35); margin-bottom:16px; display:flex; justify-content:space-between; align-items:center;">
+              <span style="color:#cbd5e1; font-weight:600;">Subtotal de este producto:</span>
+              <strong id="modal-super-item-subtotal" style="font-size:1.25rem; color:#34d399;">$0</strong>
+            </div>
+
+            <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end;">
+              <button type="button" id="btn-modal-super-uncheck" class="btn-secondary hidden" style="color:#f87171; border-color:#ef4444; margin-right:auto;">
+                Quitar tilde
+              </button>
+              <button type="button" id="btn-modal-super-cancel" class="btn-secondary">Cancelar</button>
+              <button type="button" id="btn-modal-super-confirm" class="btn-buy-finish">✅ Confirmar y tildar</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- MODAL FINAL: ¿CERRAR Y PAGAR? + OPCIÓN DE DESCONTAR DE BILLETERA (EFECTIVO / VIRTUAL / NO DESCONTAR) -->
+        <div id="super-pay-checkout-modal" class="hidden" style="position:fixed; inset:0; background:rgba(2, 6, 23, 0.85); z-index:9999; display:flex; align-items:center; justify-content:center; padding:16px;">
+          <div class="task-form-box" style="max-width:480px; width:100%; border-color:#10b981; background:#0f172a; box-shadow:0 20px 50px rgba(0,0,0,0.75);">
+            <h3 style="margin-top:0; margin-bottom:6px; color:#34d399; font-size:1.35rem;">💳 ¿Cerrar y pagar?</h3>
+            <p id="checkout-modal-list-info" style="margin-top:0; margin-bottom:12px; color:#cbd5e1; font-size:0.95rem;"></p>
+
+            <div style="padding:14px 16px; border-radius:12px; background:rgba(16, 185, 129, 0.14); border:1px solid #10b981; margin-bottom:16px; text-align:center;">
+              <div style="font-size:0.88rem; color:#a7f3d0; text-transform:uppercase; letter-spacing:0.5px;">Total de la compra</div>
+              <div id="checkout-modal-total-amount" style="font-size:2rem; font-weight:800; color:#34d399; margin-top:2px;">$0</div>
+              <div id="checkout-modal-fridge-note" style="font-size:0.85rem; color:#bbf7d0; margin-top:6px;"></div>
+            </div>
+
+            <div style="margin-bottom:14px;">
+              <div style="font-weight:700; color:#f8fafc; margin-bottom:10px; font-size:1rem;">
+                💰 ¿Querés descontar este dinero de tu Billetera?
+              </div>
+              <div style="display:flex; flex-direction:column; gap:10px;">
+                <button type="button" id="btn-pay-super-efectivo" class="btn-buy-finish" style="width:100%; justify-content:center; background:#10b981; color:#052e16; font-weight:700;">
+                  💵 Sí, descontar en Efectivo
+                </button>
+                <button type="button" id="btn-pay-super-virtual" class="btn-buy-finish" style="width:100%; justify-content:center; background:#3b82f6; color:#ffffff; font-weight:700;">
+                  📱 Sí, descontar de Billetera Virtual
+                </button>
+                <button type="button" id="btn-pay-super-no-wallet" class="btn-secondary" style="width:100%; justify-content:center; padding:12px; font-weight:600; border-color:#64748b; color:#e2e8f0;">
+                  🚫 No descontar de la Billetera (Solo cerrar compra)
+                </button>
+              </div>
+            </div>
+
+            <div style="text-align:right; margin-top:12px;">
+              <button type="button" id="btn-pay-super-cancel" class="btn-secondary">Seguir comprando / Volver</button>
+            </div>
+          </div>
+        </div>
       </div>
 
 
@@ -2448,6 +2648,6 @@
     </section>
   </main>
 
-  <script src="app.js?v=20261107_01"></script>
+  <script src="app.js?v=20261108_01"></script>
 </body>
 </html>
