@@ -3720,9 +3720,11 @@ function mostrarMenuExtras() {
   // Actualizar contadores del nivel 1
   const dailyCasaCounter = document.getElementById('daily-casa-counter');
   if (dailyCasaCounter) {
-    const cantSuper = Array.isArray(supermercado) ? supermercado.length : 0;
+    const infoSup = typeof obtenerContadoresSupermercado === 'function'
+      ? obtenerContadoresSupermercado()
+      : { listasPendientes: 0, totalProductos: Array.isArray(supermercado) ? supermercado.length : 0 };
     const cantF = Array.isArray(heladera) ? heladera.length : 0;
-    dailyCasaCounter.textContent = `${cantSuper} en super · ${cantF} en heladera`;
+    dailyCasaCounter.textContent = `${infoSup.listasPendientes} lista(s) · ${cantF} en heladera`;
   }
   const dailyUsoCounter = document.getElementById('daily-uso-counter');
   if (dailyUsoCounter) {
@@ -3739,8 +3741,12 @@ function mostrarCasa() {
 
   const extraSuperCounter = document.getElementById('extra-super-counter');
   if (extraSuperCounter) {
-    const cantSuper = Array.isArray(supermercado) ? supermercado.length : 0;
-    extraSuperCounter.textContent = cantSuper === 1 ? '1 producto en lista' : `${cantSuper} productos en lista`;
+    const infoSup = typeof obtenerContadoresSupermercado === 'function'
+      ? obtenerContadoresSupermercado()
+      : { listasPendientes: 0, totalProductos: Array.isArray(supermercado) ? supermercado.length : 0 };
+    extraSuperCounter.textContent = infoSup.listasPendientes === 1
+      ? '1 lista pendiente de compra'
+      : `${infoSup.listasPendientes} listas pendientes`;
   }
   const extraFridgeCounter = document.getElementById('extra-fridge-counter');
   if (extraFridgeCounter) {
@@ -3770,9 +3776,11 @@ function abrirHerramientaExtras(cual) {
 
   if (cual === 'super') {
     if (subviewSuper) subviewSuper.classList.remove('hidden');
-    renderizarSupermercado();
-    const inp = document.getElementById('input-super-item');
-    if (inp) inp.focus();
+    if (typeof mostrarPantallaSuper === 'function') {
+      mostrarPantallaSuper('home');
+    } else {
+      renderizarSupermercado();
+    }
   } else if (cual === 'fridge') {
     if (subviewFridge) subviewFridge.classList.remove('hidden');
     renderizarHeladera();
@@ -7075,16 +7083,74 @@ if (inputChatMsg) {
 }
 
 // ==========================================
-// MÓDULO 5: EXTRAS -> 1. LISTA DE SUPERMERCADO Y PREGUNTA ÚNICA DE CONVIVENCIA
+// MÓDULO 5: EXTRAS -> 1. LISTA DE SUPERMERCADO (2 PANTALLAS: CONFECCIONAR Y PENDIENTE DE COMPRA)
 // ==========================================
+const inputSuperListName = document.getElementById('input-super-list-name');
 const inputSuperItem = document.getElementById('input-super-item');
 const inputSuperQty = document.getElementById('input-super-qty');
+const superPriceMemoryHint = document.getElementById('super-price-memory-hint');
 const checkSuperEdible = document.getElementById('check-super-edible');
 const superEdibleLabel = checkSuperEdible ? checkSuperEdible.closest('.super-edible-check-label') : null;
 const btnAddSuperItem = document.getElementById('btn-add-super-item');
+const btnSaveSuperListToPending = document.getElementById('btn-save-super-list-to-pending');
 const btnFinishShopping = document.getElementById('btn-finish-shopping');
 const superItemsList = document.getElementById('super-items-list');
 const superSubtitleInfo = document.getElementById('super-subtitle-info');
+
+const superHomeScreens = document.getElementById('super-home-screens');
+const cardSuperConfeccionar = document.getElementById('card-super-confeccionar');
+const cardSuperPendientes = document.getElementById('card-super-pendientes');
+const badgeSuperDraftCount = document.getElementById('badge-super-draft-count');
+const badgeSuperPendingCount = document.getElementById('badge-super-pending-count');
+
+const superScreenConfeccion = document.getElementById('super-screen-confeccion');
+const superScreenPendientes = document.getElementById('super-screen-pendientes');
+const btnBackFromConfeccion = document.getElementById('btn-back-from-confeccion');
+const btnGoToPendientesFromConf = document.getElementById('btn-go-to-pendientes-from-conf');
+const btnBackFromPendientes = document.getElementById('btn-back-from-pendientes');
+const btnNewListFromPendientes = document.getElementById('btn-new-list-from-pendientes');
+
+const superPendingListsOverview = document.getElementById('super-pending-lists-overview');
+const superPendingListsContainer = document.getElementById('super-pending-lists-container');
+const superActivePendingDetail = document.getElementById('super-active-pending-detail');
+const btnBackToPendingLists = document.getElementById('btn-back-to-pending-lists');
+const btnRenameActiveList = document.getElementById('btn-rename-active-list');
+const activePendingListTitle = document.getElementById('active-pending-list-title');
+const activePendingListStatus = document.getElementById('active-pending-list-status');
+const activePendingTotalBadge = document.getElementById('active-pending-total-badge');
+const superStartShoppingBox = document.getElementById('super-start-shopping-box');
+const btnConfirmStartShopping = document.getElementById('btn-confirm-start-shopping');
+const inputPendingExtraItem = document.getElementById('input-pending-extra-item');
+const inputPendingExtraQty = document.getElementById('input-pending-extra-qty');
+const checkPendingExtraEdible = document.getElementById('check-pending-extra-edible');
+const btnAddPendingExtraItem = document.getElementById('btn-add-pending-extra-item');
+const superActivePendingItems = document.getElementById('super-active-pending-items');
+const superCheckoutSummaryLine = document.getElementById('super-checkout-summary-line');
+
+const superPriceQtyModal = document.getElementById('super-price-qty-modal');
+const modalSuperItemTitle = document.getElementById('modal-super-item-title');
+const modalSuperPriceMemoryBadge = document.getElementById('modal-super-price-memory-badge');
+const modalInputSuperQty = document.getElementById('modal-input-super-qty');
+const modalInputSuperUnits = document.getElementById('modal-input-super-units');
+const modalInputSuperPrice = document.getElementById('modal-input-super-price');
+const modalSuperItemSubtotal = document.getElementById('modal-super-item-subtotal');
+const btnModalSuperUncheck = document.getElementById('btn-modal-super-uncheck');
+const btnModalSuperCancel = document.getElementById('btn-modal-super-cancel');
+const btnModalSuperConfirm = document.getElementById('btn-modal-super-confirm');
+
+const superPayCheckoutModal = document.getElementById('super-pay-checkout-modal');
+const checkoutModalListInfo = document.getElementById('checkout-modal-list-info');
+const checkoutModalTotalAmount = document.getElementById('checkout-modal-total-amount');
+const checkoutModalFridgeNote = document.getElementById('checkout-modal-fridge-note');
+const btnPaySuperEfectivo = document.getElementById('btn-pay-super-efectivo');
+const btnPaySuperVirtual = document.getElementById('btn-pay-super-virtual');
+const btnPaySuperNoWallet = document.getElementById('btn-pay-super-no-wallet');
+const btnPaySuperCancel = document.getElementById('btn-pay-super-cancel');
+
+const STORAGE_SUPER_PRICES_KEY = 'agenda_familiar_precios_super_v1';
+let vistaSuperActual = 'home'; // 'home' | 'confeccion' | 'pendientes'
+let listaPendienteAbiertaId = null;
+let itemEnEdicionModalRef = null; // { listaId, itemId }
 
 if (checkSuperEdible && superEdibleLabel) {
   checkSuperEdible.addEventListener('change', () => {
@@ -7135,52 +7201,6 @@ if (btnLiveAlone) {
 if (btnSaveHousemates) {
   btnSaveHousemates.addEventListener('click', () => {
     guardarConvivenciaPorUnicaVez(Array.from(seleccionConvivientesTemp));
-  });
-}
-
-function agregarProductoSuper() {
-  if (!usuarioActivo) return;
-  const texto = inputSuperItem.value.trim();
-  if (!texto) {
-    inputSuperItem.focus();
-    return;
-  }
-  const cantidad = inputSuperQty ? (inputSuperQty.value.trim() || '1 u.') : '1 u.';
-  const esComestible = checkSuperEdible ? checkSuperEdible.checked : true;
-
-  supermercado.push({
-    id: 'sup-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
-    texto: texto,
-    cantidad: cantidad,
-    comestible: esComestible,
-    tildado: false,
-    autor: usuarioActivo.nombre,
-    updatedAt: Date.now()
-  });
-
-  inputSuperItem.value = '';
-  if (inputSuperQty) inputSuperQty.value = '';
-  renderizarSupermercado();
-  inputSuperItem.focus();
-  guardarEnNube();
-}
-
-if (btnAddSuperItem) btnAddSuperItem.addEventListener('click', agregarProductoSuper);
-if (inputSuperItem) {
-  inputSuperItem.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      if (inputSuperQty) inputSuperQty.focus();
-      else agregarProductoSuper();
-    }
-  });
-}
-if (inputSuperQty) {
-  inputSuperQty.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      agregarProductoSuper();
-    }
   });
 }
 
@@ -7468,39 +7488,649 @@ function sumarOAgregarIngredienteEnHeladera(nombreProd, cantidadProd) {
   }
 }
 
-if (btnFinishShopping) {
-  btnFinishShopping.addEventListener('click', () => {
-    const tildados = supermercado.filter(x => x.tildado);
-    if (tildados.length === 0) {
-      alert('Primero tildá con el botón "✓" los productos que fuiste poniendo en el carrito, y después tocá "Comprar" para limpiarlos de la lista.');
+function formatearMonedaSuper(num) {
+  const n = Number(num) || 0;
+  return '$' + n.toLocaleString('es-AR', { minimumFractionDigits: n % 1 === 0 ? 0 : 2, maximumFractionDigits: 2 });
+}
+
+function normalizarEstructuraSupermercado() {
+  if (!Array.isArray(supermercado)) supermercado = [];
+
+  const itemsSueltosLegacy = [];
+  const estructuraLimpia = [];
+
+  supermercado.forEach(entry => {
+    if (!entry || typeof entry !== 'object') return;
+    if (entry.esListaSuper) {
+      if (!Array.isArray(entry.items)) entry.items = [];
+      estructuraLimpia.push(entry);
+    } else if (entry.esMemoriaPrecio) {
+      estructuraLimpia.push(entry);
+    } else if (entry.texto) {
+      itemsSueltosLegacy.push(entry);
+    }
+  });
+
+  if (itemsSueltosLegacy.length > 0) {
+    let listaLegacy = estructuraLimpia.find(x => x.esListaSuper && x.estado === 'pendiente');
+    if (listaLegacy) {
+      const idsExist = new Set(listaLegacy.items.map(i => i.id));
+      itemsSueltosLegacy.forEach(it => {
+        if (!idsExist.has(it.id)) listaLegacy.items.push(it);
+      });
+    } else {
+      estructuraLimpia.push({
+        esListaSuper: true,
+        id: 'list-sup-migrated-' + Date.now(),
+        nombre: 'Lista de Supermercado',
+        estado: 'pendiente',
+        compraIniciada: false,
+        autor: usuarioActivo ? usuarioActivo.nombre : 'Alejandro',
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        items: itemsSueltosLegacy
+      });
+    }
+  }
+
+  let borrador = estructuraLimpia.find(x => x.esListaSuper && x.estado === 'confeccion');
+  if (!borrador) {
+    borrador = {
+      esListaSuper: true,
+      id: 'list-draft-' + Date.now() + '-' + Math.random().toString(36).slice(2, 5),
+      nombre: '',
+      estado: 'confeccion',
+      compraIniciada: false,
+      autor: usuarioActivo ? usuarioActivo.nombre : 'Alejandro',
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      items: []
+    };
+    estructuraLimpia.push(borrador);
+  }
+
+  supermercado = estructuraLimpia;
+  return borrador;
+}
+
+function obtenerListaBorradorSuper() {
+  return normalizarEstructuraSupermercado();
+}
+
+function obtenerListasPendientesSuper() {
+  normalizarEstructuraSupermercado();
+  return supermercado.filter(x => x.esListaSuper && x.estado === 'pendiente');
+}
+
+function obtenerContadoresSupermercado() {
+  const borrador = obtenerListaBorradorSuper();
+  const pendientes = obtenerListasPendientesSuper();
+  const cantBorrador = borrador && Array.isArray(borrador.items) ? borrador.items.length : 0;
+  const totalEnPendientes = pendientes.reduce((acc, l) => acc + (Array.isArray(l.items) ? l.items.length : 0), 0);
+  return {
+    listasPendientes: pendientes.length,
+    productosEnBorrador: cantBorrador,
+    totalProductos: cantBorrador + totalEnPendientes
+  };
+}
+
+function obtenerMapaPreciosLocal() {
+  try {
+    const raw = localStorage.getItem(STORAGE_SUPER_PRICES_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch (e) {
+    return {};
+  }
+}
+
+function obtenerPrecioRecordadoSuper(nombreProd) {
+  const clave = normalizarClaveIngrediente(nombreProd);
+  if (!clave) return null;
+  normalizarEstructuraSupermercado();
+  const regNube = supermercado.find(x => x.esMemoriaPrecio && x.clave === clave);
+  if (regNube && Number(regNube.precio) > 0) {
+    return Number(regNube.precio);
+  }
+  const localMap = obtenerMapaPreciosLocal();
+  if (localMap[clave] && Number(localMap[clave]) > 0) {
+    return Number(localMap[clave]);
+  }
+  return null;
+}
+
+function guardarPrecioRecordadoSuper(nombreProd, precioNum) {
+  const clave = normalizarClaveIngrediente(nombreProd);
+  const p = Number(precioNum);
+  if (!clave || isNaN(p) || p <= 0) return;
+
+  normalizarEstructuraSupermercado();
+  let regNube = supermercado.find(x => x.esMemoriaPrecio && x.clave === clave);
+  if (regNube) {
+    regNube.precio = p;
+    regNube.nombre = nombreProd.trim();
+    regNube.updatedAt = Date.now();
+  } else {
+    supermercado.push({
+      esMemoriaPrecio: true,
+      id: 'mem-precio-' + clave.replace(/\s+/g, '-'),
+      clave: clave,
+      nombre: nombreProd.trim(),
+      precio: p,
+      updatedAt: Date.now()
+    });
+  }
+
+  try {
+    const localMap = obtenerMapaPreciosLocal();
+    localMap[clave] = p;
+    localStorage.setItem(STORAGE_SUPER_PRICES_KEY, JSON.stringify(localMap));
+  } catch (e) {}
+}
+
+function estimarUnidadesMultiplicador(cantTexto) {
+  const parsed = parsearSegmentoCantidad(cantTexto);
+  if (!parsed) return 1;
+  if (parsed.familia === 'unidad' && parsed.valor > 0) {
+    return Number(parsed.valor.toFixed(2));
+  }
+  if (parsed.familia === 'peso' && parsed.valorGramos >= 1000) {
+    return Number((parsed.valorGramos / 1000).toFixed(2));
+  }
+  if (parsed.familia === 'volumen' && parsed.valorMl >= 1000) {
+    return Number((parsed.valorMl / 1000).toFixed(2));
+  }
+  return 1;
+}
+
+function mostrarPantallaSuper(cual) {
+  vistaSuperActual = cual || 'home';
+  if (cual !== 'pendientes') {
+    listaPendienteAbiertaId = null;
+  }
+  renderizarSupermercado();
+  if (cual === 'confeccion' && inputSuperItem) {
+    inputSuperItem.focus();
+  }
+}
+
+if (cardSuperConfeccionar) {
+  cardSuperConfeccionar.addEventListener('click', () => mostrarPantallaSuper('confeccion'));
+}
+if (cardSuperPendientes) {
+  cardSuperPendientes.addEventListener('click', () => {
+    listaPendienteAbiertaId = null;
+    mostrarPantallaSuper('pendientes');
+  });
+}
+if (btnBackFromConfeccion) {
+  btnBackFromConfeccion.addEventListener('click', () => mostrarPantallaSuper('home'));
+}
+if (btnGoToPendientesFromConf) {
+  btnGoToPendientesFromConf.addEventListener('click', () => {
+    listaPendienteAbiertaId = null;
+    mostrarPantallaSuper('pendientes');
+  });
+}
+if (btnBackFromPendientes) {
+  btnBackFromPendientes.addEventListener('click', () => mostrarPantallaSuper('home'));
+}
+if (btnNewListFromPendientes) {
+  btnNewListFromPendientes.addEventListener('click', () => mostrarPantallaSuper('confeccion'));
+}
+if (btnBackToPendingLists) {
+  btnBackToPendingLists.addEventListener('click', () => {
+    listaPendienteAbiertaId = null;
+    renderizarSupermercado();
+  });
+}
+
+if (inputSuperListName) {
+  inputSuperListName.addEventListener('input', () => {
+    const borrador = obtenerListaBorradorSuper();
+    borrador.nombre = inputSuperListName.value;
+    borrador.updatedAt = Date.now();
+  });
+  inputSuperListName.addEventListener('change', () => {
+    guardarEnNube();
+  });
+}
+
+if (inputSuperItem) {
+  inputSuperItem.addEventListener('input', () => {
+    if (!superPriceMemoryHint) return;
+    const val = inputSuperItem.value.trim();
+    if (!val) {
+      superPriceMemoryHint.textContent = '';
       return;
     }
+    const precioRec = obtenerPrecioRecordadoSuper(val);
+    if (precioRec !== null) {
+      superPriceMemoryHint.textContent = `💡 Precio recordado de compra anterior: ${formatearMonedaSuper(precioRec)} (podrás usarlo o cambiarlo al comprar)`;
+    } else {
+      superPriceMemoryHint.textContent = '';
+    }
+  });
 
-    // Pasar automáticamente los productos comestibles comprados a la Heladera sumando cantidades reales
-    const comestiblesComprados = tildados.filter(x => x.comestible !== false);
-    const idsParaIA = [];
-
-    comestiblesComprados.forEach(item => {
-      const cantItem = item.cantidad || '1 u.';
-      const resSuma = sumarOAgregarIngredienteEnHeladera(item.texto, cantItem);
-      if (resSuma.necesitaIA) {
-        idsParaIA.push(resSuma.id);
-      }
-    });
-
-    supermercado = supermercado.filter(x => !x.tildado);
-    renderizarSupermercado();
-    renderizarHeladera();
-    guardarEnNube();
-
-    if (idsParaIA.length > 0) {
-      unificarCantidadesHeladeraConIA(idsParaIA);
+  inputSuperItem.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (inputSuperQty) inputSuperQty.focus();
+      else agregarProductoSuper();
     }
   });
 }
 
+if (inputSuperQty) {
+  inputSuperQty.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      agregarProductoSuper();
+    }
+  });
+}
+
+function agregarProductoSuper() {
+  if (!usuarioActivo) return;
+  const texto = inputSuperItem ? inputSuperItem.value.trim() : '';
+  if (!texto) {
+    if (inputSuperItem) inputSuperItem.focus();
+    return;
+  }
+  const cantidad = inputSuperQty ? (inputSuperQty.value.trim() || '1 u.') : '1 u.';
+  const esComestible = checkSuperEdible ? checkSuperEdible.checked : true;
+  const borrador = obtenerListaBorradorSuper();
+
+  if (inputSuperListName && inputSuperListName.value.trim()) {
+    borrador.nombre = inputSuperListName.value.trim();
+  }
+
+  const precioMem = obtenerPrecioRecordadoSuper(texto);
+
+  borrador.items.push({
+    id: 'sup-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+    texto: texto,
+    cantidad: cantidad,
+    unidadesCalculo: estimarUnidadesMultiplicador(cantidad),
+    precioUnitario: precioMem || 0,
+    subtotal: 0,
+    comestible: esComestible,
+    tildado: false,
+    autor: usuarioActivo.nombre,
+    updatedAt: Date.now()
+  });
+  borrador.updatedAt = Date.now();
+
+  inputSuperItem.value = '';
+  if (inputSuperQty) inputSuperQty.value = '';
+  if (superPriceMemoryHint) superPriceMemoryHint.textContent = '';
+  renderizarSupermercado();
+  inputSuperItem.focus();
+  guardarEnNube();
+}
+
+if (btnAddSuperItem) btnAddSuperItem.addEventListener('click', agregarProductoSuper);
+
+if (btnSaveSuperListToPending) {
+  btnSaveSuperListToPending.addEventListener('click', () => {
+    const borrador = obtenerListaBorradorSuper();
+    if (!borrador.items || borrador.items.length === 0) {
+      alert('Primero añadí al menos un producto a la lista antes de guardarla en "Pendiente de Compra".');
+      if (inputSuperItem) inputSuperItem.focus();
+      return;
+    }
+
+    const pendientesActuales = obtenerListasPendientesSuper();
+    const nombreElegido = (inputSuperListName && inputSuperListName.value.trim())
+      || (borrador.nombre && borrador.nombre.trim())
+      || `Lista de compras #${pendientesActuales.length + 1}`;
+
+    borrador.nombre = nombreElegido;
+    borrador.estado = 'pendiente';
+    borrador.compraIniciada = false;
+    borrador.updatedAt = Date.now();
+
+    if (inputSuperListName) inputSuperListName.value = '';
+    normalizarEstructuraSupermercado();
+
+    listaPendienteAbiertaId = null;
+    vistaSuperActual = 'pendientes';
+    renderizarSupermercado();
+    guardarEnNube();
+  });
+}
+
+function cambiarNombreListaSuper(listaObj) {
+  if (!listaObj) return;
+  const nuevoNombre = prompt('Escribí el nombre para esta lista de compras:', listaObj.nombre || 'Lista de compras');
+  if (nuevoNombre === null) return;
+  const limpio = nuevoNombre.trim();
+  if (!limpio) return;
+  listaObj.nombre = limpio;
+  listaObj.updatedAt = Date.now();
+  renderizarSupermercado();
+  guardarEnNube();
+}
+
+if (btnRenameActiveList) {
+  btnRenameActiveList.addEventListener('click', () => {
+    const pendientes = obtenerListasPendientesSuper();
+    const activa = pendientes.find(l => l.id === listaPendienteAbiertaId);
+    if (activa) cambiarNombreListaSuper(activa);
+  });
+}
+
+if (btnConfirmStartShopping) {
+  btnConfirmStartShopping.addEventListener('click', () => {
+    const pendientes = obtenerListasPendientesSuper();
+    const activa = pendientes.find(l => l.id === listaPendienteAbiertaId);
+    if (!activa) return;
+    activa.compraIniciada = true;
+    activa.updatedAt = Date.now();
+    renderizarSupermercado();
+    guardarEnNube();
+  });
+}
+
+if (btnAddPendingExtraItem) {
+  btnAddPendingExtraItem.addEventListener('click', () => {
+    const pendientes = obtenerListasPendientesSuper();
+    const activa = pendientes.find(l => l.id === listaPendienteAbiertaId);
+    if (!activa || !inputPendingExtraItem) return;
+    const texto = inputPendingExtraItem.value.trim();
+    if (!texto) {
+      inputPendingExtraItem.focus();
+      return;
+    }
+    const cant = inputPendingExtraQty ? (inputPendingExtraQty.value.trim() || '1 u.') : '1 u.';
+    const esCom = checkPendingExtraEdible ? checkPendingExtraEdible.checked : true;
+    const precioMem = obtenerPrecioRecordadoSuper(texto);
+
+    activa.items.push({
+      id: 'sup-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+      texto: texto,
+      cantidad: cant,
+      unidadesCalculo: estimarUnidadesMultiplicador(cant),
+      precioUnitario: precioMem || 0,
+      subtotal: 0,
+      comestible: esCom,
+      tildado: false,
+      autor: usuarioActivo ? usuarioActivo.nombre : 'Alejandro',
+      updatedAt: Date.now()
+    });
+    activa.updatedAt = Date.now();
+    inputPendingExtraItem.value = '';
+    if (inputPendingExtraQty) inputPendingExtraQty.value = '';
+    renderizarSupermercado();
+    guardarEnNube();
+  });
+}
+
+function actualizarSubtotalModalSuper() {
+  if (!modalSuperItemSubtotal) return;
+  const u = Math.max(0.01, parseFloat(modalInputSuperUnits ? modalInputSuperUnits.value : '1') || 1);
+  const p = Math.max(0, parseFloat(modalInputSuperPrice ? modalInputSuperPrice.value : '0') || 0);
+  const sub = Math.round(u * p * 100) / 100;
+  modalSuperItemSubtotal.textContent = formatearMonedaSuper(sub);
+}
+
+if (modalInputSuperQty) {
+  modalInputSuperQty.addEventListener('input', () => {
+    const est = estimarUnidadesMultiplicador(modalInputSuperQty.value);
+    if (modalInputSuperUnits && est > 0) {
+      modalInputSuperUnits.value = String(est);
+      actualizarSubtotalModalSuper();
+    }
+  });
+}
+if (modalInputSuperUnits) {
+  modalInputSuperUnits.addEventListener('input', actualizarSubtotalModalSuper);
+}
+if (modalInputSuperPrice) {
+  modalInputSuperPrice.addEventListener('input', actualizarSubtotalModalSuper);
+  modalInputSuperPrice.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      confirmarModalPrecioProductoSuper();
+    }
+  });
+}
+
+function abrirModalPrecioProductoSuper(listaObj, itemObj) {
+  if (!superPriceQtyModal || !listaObj || !itemObj) return;
+  itemEnEdicionModalRef = { listaId: listaObj.id, itemId: itemObj.id };
+
+  if (modalSuperItemTitle) {
+    modalSuperItemTitle.textContent = `🛒 ${itemObj.texto}`;
+  }
+
+  const cantActual = itemObj.cantidad || '1 u.';
+  if (modalInputSuperQty) modalInputSuperQty.value = cantActual;
+
+  const unidadesDefault = (itemObj.tildado && Number(itemObj.unidadesCalculo) > 0)
+    ? Number(itemObj.unidadesCalculo)
+    : estimarUnidadesMultiplicador(cantActual);
+  if (modalInputSuperUnits) modalInputSuperUnits.value = String(unidadesDefault);
+
+  const precioRecordado = obtenerPrecioRecordadoSuper(itemObj.texto);
+  const precioParaMostrar = (Number(itemObj.precioUnitario) > 0)
+    ? Number(itemObj.precioUnitario)
+    : (precioRecordado !== null ? precioRecordado : '');
+
+  if (modalInputSuperPrice) {
+    modalInputSuperPrice.value = precioParaMostrar !== '' ? String(precioParaMostrar) : '';
+  }
+
+  if (modalSuperPriceMemoryBadge) {
+    if (precioRecordado !== null) {
+      modalSuperPriceMemoryBadge.textContent = `🧠 Precio recordado de compra anterior: ${formatearMonedaSuper(precioRecordado)} (podés confirmarlo o cambiarlo)`;
+    } else {
+      modalSuperPriceMemoryBadge.textContent = 'Ingresá el precio y la cantidad de este producto (la app recordará el precio para tu próxima compra):';
+    }
+  }
+
+  if (btnModalSuperUncheck) {
+    if (itemObj.tildado) btnModalSuperUncheck.classList.remove('hidden');
+    else btnModalSuperUncheck.classList.add('hidden');
+  }
+
+  actualizarSubtotalModalSuper();
+  superPriceQtyModal.classList.remove('hidden');
+  setTimeout(() => {
+    if (modalInputSuperPrice) {
+      modalInputSuperPrice.focus();
+      modalInputSuperPrice.select();
+    }
+  }, 40);
+}
+
+function cerrarModalPrecioProductoSuper() {
+  itemEnEdicionModalRef = null;
+  if (superPriceQtyModal) superPriceQtyModal.classList.add('hidden');
+}
+
+function confirmarModalPrecioProductoSuper() {
+  if (!itemEnEdicionModalRef) return;
+  const pendientes = obtenerListasPendientesSuper();
+  const lista = pendientes.find(l => l.id === itemEnEdicionModalRef.listaId);
+  if (!lista) {
+    cerrarModalPrecioProductoSuper();
+    return;
+  }
+  const item = lista.items.find(i => i.id === itemEnEdicionModalRef.itemId);
+  if (!item) {
+    cerrarModalPrecioProductoSuper();
+    return;
+  }
+
+  const cantNueva = modalInputSuperQty ? (modalInputSuperQty.value.trim() || '1 u.') : (item.cantidad || '1 u.');
+  const unidades = Math.max(0.01, parseFloat(modalInputSuperUnits ? modalInputSuperUnits.value : '1') || 1);
+  const precio = Math.max(0, parseFloat(modalInputSuperPrice ? modalInputSuperPrice.value : '0') || 0);
+
+  item.cantidad = cantNueva;
+  item.unidadesCalculo = unidades;
+  item.precioUnitario = precio;
+  item.subtotal = Math.round(unidades * precio * 100) / 100;
+  item.tildado = true;
+  item.updatedAt = Date.now();
+  lista.updatedAt = Date.now();
+
+  if (precio > 0) {
+    guardarPrecioRecordadoSuper(item.texto, precio);
+  }
+
+  cerrarModalPrecioProductoSuper();
+  renderizarSupermercado();
+  guardarEnNube();
+}
+
+if (btnModalSuperCancel) btnModalSuperCancel.addEventListener('click', cerrarModalPrecioProductoSuper);
+if (btnModalSuperConfirm) btnModalSuperConfirm.addEventListener('click', confirmarModalPrecioProductoSuper);
+if (btnModalSuperUncheck) {
+  btnModalSuperUncheck.addEventListener('click', () => {
+    if (!itemEnEdicionModalRef) return;
+    const pendientes = obtenerListasPendientesSuper();
+    const lista = pendientes.find(l => l.id === itemEnEdicionModalRef.listaId);
+    const item = lista ? lista.items.find(i => i.id === itemEnEdicionModalRef.itemId) : null;
+    if (item) {
+      item.tildado = false;
+      item.subtotal = 0;
+      item.updatedAt = Date.now();
+      lista.updatedAt = Date.now();
+    }
+    cerrarModalPrecioProductoSuper();
+    renderizarSupermercado();
+    guardarEnNube();
+  });
+}
+
+function calcularTotalListaPendiente(listaObj) {
+  if (!listaObj || !Array.isArray(listaObj.items)) return 0;
+  return listaObj.items
+    .filter(x => x.tildado)
+    .reduce((acc, x) => {
+      const u = Number(x.unidadesCalculo) > 0 ? Number(x.unidadesCalculo) : 1;
+      const p = Number(x.precioUnitario) || 0;
+      const sub = Number(x.subtotal) >= 0 ? Number(x.subtotal) : (u * p);
+      return Math.round((acc + sub) * 100) / 100;
+    }, 0);
+}
+
+if (btnFinishShopping) {
+  btnFinishShopping.addEventListener('click', () => {
+    const pendientes = obtenerListasPendientesSuper();
+    const activa = pendientes.find(l => l.id === listaPendienteAbiertaId);
+    if (!activa) return;
+
+    const tildados = (activa.items || []).filter(x => x.tildado);
+    if (tildados.length === 0) {
+      alert('Primero tildá con el botón "✓" los productos que fuiste poniendo en el carrito (cargando su precio y cantidad), y después tocá "¿Cerrar y pagar?".');
+      return;
+    }
+
+    const totalCompra = calcularTotalListaPendiente(activa);
+    const cantComestibles = tildados.filter(x => x.comestible !== false).length;
+
+    if (checkoutModalListInfo) {
+      checkoutModalListInfo.innerHTML = `Lista: <strong>${escaparHTML(activa.nombre || 'Compra de Supermercado')}</strong> (${tildados.length} producto${tildados.length === 1 ? '' : 's'} en el carrito)`;
+    }
+    if (checkoutModalTotalAmount) {
+      checkoutModalTotalAmount.textContent = formatearMonedaSuper(totalCompra);
+    }
+    if (checkoutModalFridgeNote) {
+      checkoutModalFridgeNote.textContent = cantComestibles > 0
+        ? `🍎 ${cantComestibles} producto(s) comestible(s) se sumarán automáticamente a tu Heladera.`
+        : '🧴 No hay productos comestibles marcados para pasar a la Heladera.';
+    }
+
+    if (superPayCheckoutModal) {
+      superPayCheckoutModal.classList.remove('hidden');
+    }
+  });
+}
+
+if (btnPaySuperCancel) {
+  btnPaySuperCancel.addEventListener('click', () => {
+    if (superPayCheckoutModal) superPayCheckoutModal.classList.add('hidden');
+  });
+}
+
+function finalizarYPagarCompraSuper(metodoBilletera) {
+  const pendientes = obtenerListasPendientesSuper();
+  const activa = pendientes.find(l => l.id === listaPendienteAbiertaId);
+  if (!activa) {
+    if (superPayCheckoutModal) superPayCheckoutModal.classList.add('hidden');
+    return;
+  }
+
+  const tildados = (activa.items || []).filter(x => x.tildado);
+  const totalCompra = calcularTotalListaPendiente(activa);
+
+  // 1. Pasar comestibles comprados a la Heladera sumando sus cantidades reales
+  const comestiblesComprados = tildados.filter(x => x.comestible !== false);
+  const idsParaIA = [];
+
+  comestiblesComprados.forEach(item => {
+    const cantItem = item.cantidad || '1 u.';
+    const resSuma = sumarOAgregarIngredienteEnHeladera(item.texto, cantItem);
+    if (resSuma.necesitaIA) {
+      idsParaIA.push(resSuma.id);
+    }
+    if (Number(item.precioUnitario) > 0) {
+      guardarPrecioRecordadoSuper(item.texto, Number(item.precioUnitario));
+    }
+  });
+
+  // 2. Si eligió descontar de la Billetera (efectivo o virtual), registrar el gasto
+  if ((metodoBilletera === 'efectivo' || metodoBilletera === 'virtual') && totalCompra > 0) {
+    movimientos.push({
+      id: 'mov-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+      tipo: 'gasto',
+      medio: metodoBilletera,
+      monto: totalCompra,
+      detalle: `🛒 Supermercado — ${activa.nombre || 'Lista de compras'}`,
+      fecha: HOY_ISO,
+      updatedAt: Date.now()
+    });
+    if (typeof renderizarBilletera === 'function') {
+      renderizarBilletera();
+    }
+  }
+
+  // 3. Quitar los productos comprados de la lista; si la lista quedó vacía, eliminarla de Pendientes
+  const restantes = (activa.items || []).filter(x => !x.tildado);
+  if (restantes.length === 0) {
+    supermercado = supermercado.filter(x => x.id !== activa.id);
+    listaPendienteAbiertaId = null;
+  } else {
+    activa.items = restantes;
+    activa.compraIniciada = false;
+    activa.updatedAt = Date.now();
+    listaPendienteAbiertaId = null;
+  }
+
+  if (superPayCheckoutModal) superPayCheckoutModal.classList.add('hidden');
+  renderizarSupermercado();
+  renderizarHeladera();
+  guardarEnNube();
+
+  if (idsParaIA.length > 0) {
+    unificarCantidadesHeladeraConIA(idsParaIA);
+  }
+}
+
+if (btnPaySuperEfectivo) {
+  btnPaySuperEfectivo.addEventListener('click', () => finalizarYPagarCompraSuper('efectivo'));
+}
+if (btnPaySuperVirtual) {
+  btnPaySuperVirtual.addEventListener('click', () => finalizarYPagarCompraSuper('virtual'));
+}
+if (btnPaySuperNoWallet) {
+  btnPaySuperNoWallet.addEventListener('click', () => finalizarYPagarCompraSuper('ninguno'));
+}
+
 function renderizarSupermercado() {
-  if (!superItemsList) return;
+  const borrador = obtenerListaBorradorSuper();
+  const pendientes = obtenerListasPendientesSuper();
   actualizarContadoresYAlertas();
 
   if (superSubtitleInfo) {
@@ -7508,83 +8138,291 @@ function renderizarSupermercado() {
       .map(id => (listaUsuariosPublica.find(u => u.id === id) || {}).nombre)
       .filter(Boolean);
     superSubtitleInfo.textContent = nombresCasa.length > 0
-      ? `🏠 Lista de la casa compartida con ${nombresCasa.join(', ')} (los comestibles pasan solos a 🧊 Heladera al comprar)`
-      : 'Agregá productos con su cantidad; los marcados como "Comestibles" pasan solos a tu Heladera al comprarlos';
+      ? `🏠 Supermercado compartido con ${nombresCasa.join(', ')}: confeccioná listas y gestioná compras pendientes`
+      : 'Confeccioná tus listas de compras y gestioná tus compras pendientes con memoria inteligente de precios';
   }
 
-  superItemsList.innerHTML = '';
-
-  const cantTildados = supermercado.filter(x => x.tildado).length;
-  if (btnFinishShopping) {
-    btnFinishShopping.textContent = cantTildados > 0
-      ? `🛒 Comprar (Cerrar ${cantTildados} y sumar comestibles a Heladera)`
-      : '🛒 Comprar (Cerrar compra)';
+  // Actualizar badges del menú de 2 pantallas
+  const cantBorrador = (borrador.items || []).length;
+  if (badgeSuperDraftCount) {
+    badgeSuperDraftCount.textContent = cantBorrador > 0
+      ? `${cantBorrador} producto${cantBorrador === 1 ? '' : 's'} en confección`
+      : 'Armar nueva lista';
+  }
+  if (badgeSuperPendingCount) {
+    badgeSuperPendingCount.textContent = pendientes.length === 1
+      ? '1 lista en espera'
+      : `${pendientes.length} listas en espera`;
+  }
+  if (btnGoToPendientesFromConf) {
+    btnGoToPendientesFromConf.textContent = `🛍️ Ver Pendientes de Compra (${pendientes.length})`;
   }
 
-  if (supermercado.length === 0) {
-    superItemsList.innerHTML = `<div class="empty-state">La lista de supermercado está vacía. Escribí un producto y su cantidad arriba para añadirlo.</div>`;
-    return;
+  // Controlar visibilidad de las 2 pantallas
+  if (superHomeScreens) superHomeScreens.classList.toggle('hidden', vistaSuperActual !== 'home');
+  if (superScreenConfeccion) superScreenConfeccion.classList.toggle('hidden', vistaSuperActual !== 'confeccion');
+  if (superScreenPendientes) superScreenPendientes.classList.toggle('hidden', vistaSuperActual !== 'pendientes');
+
+  // --- RENDER PANTALLA 1: CONFECCIONAR LISTA ---
+  if (inputSuperListName && document.activeElement !== inputSuperListName) {
+    inputSuperListName.value = borrador.nombre || '';
   }
 
-  supermercado.forEach(item => {
-    const fila = document.createElement('div');
-    fila.className = `task-item prio-simple super-card-sketch ${item.tildado ? 'realizada' : ''}`;
+  if (superItemsList) {
+    superItemsList.innerHTML = '';
+    if (!borrador.items || borrador.items.length === 0) {
+      superItemsList.innerHTML = `<div class="empty-state">Esta lista en confección está vacía. Ponele un nombre arriba, agregá los productos y después tocá <b>📌 Guardar en "Pendiente de Compra"</b>.</div>`;
+    } else {
+      borrador.items.forEach(item => {
+        const fila = document.createElement('div');
+        fila.className = 'task-item prio-simple super-card-sketch';
+        const esComestible = item.comestible !== false;
+        const cantTexto = item.cantidad ? item.cantidad : '1 u.';
+        const autorTexto = item.autor || (usuarioActivo ? usuarioActivo.nombre : 'Alejandro');
+        const precioRec = obtenerPrecioRecordadoSuper(item.texto);
+        const textoComestible = esComestible ? '✓ 🍎 Comestible' : '🧴 No comestible';
+        const claseComestible = esComestible ? 'is-edible' : 'not-edible';
 
-    const esComestible = item.comestible !== false;
-    const cantTexto = item.cantidad ? item.cantidad : '1 u.';
-    const autorTexto = item.autor || (usuarioActivo ? usuarioActivo.nombre : 'Alejandro');
+        fila.innerHTML = `
+          <div class="super-sketch-left">
+            <div class="super-sketch-line">
+              <span class="super-sketch-label">Producto:</span>
+              <span class="super-sketch-val-main task-text">${escaparHTML(item.texto)}</span>
+            </div>
+            <div class="super-sketch-line">
+              <span class="super-sketch-label">Cantidad:</span>
+              <strong>${escaparHTML(cantTexto)}</strong>
+              ${precioRec !== null ? `<span style="margin-left:8px; font-size:0.8rem; color:#60a5fa;">(🧠 Últ. precio: ${formatearMonedaSuper(precioRec)})</span>` : ''}
+            </div>
+            <div class="super-sketch-line">
+              <span class="super-sketch-label">Agregado por:</span>
+              <span>${escaparHTML(autorTexto)}</span>
+            </div>
+            <button type="button" class="super-sketch-edible-btn ${claseComestible}" data-action="toggle-edible" title="Tocá para cambiar entre Comestible y No comestible">
+              ${textoComestible}
+            </button>
+          </div>
+          <div class="super-sketch-right">
+            <button type="button" class="super-delete-square" data-action="delete" title="Quitar de esta lista">✕</button>
+          </div>
+        `;
 
-    const textoComestible = esComestible ? '✓ 🍎 Comestible' : '🧴 No comestible';
-    const claseComestible = esComestible ? 'is-edible' : 'not-edible';
+        fila.querySelector('[data-action="toggle-edible"]').addEventListener('click', () => {
+          item.comestible = !esComestible;
+          item.updatedAt = Date.now();
+          borrador.updatedAt = Date.now();
+          renderizarSupermercado();
+          guardarEnNube();
+        });
 
-    fila.innerHTML = `
-      <div class="super-sketch-left">
-        <div class="super-sketch-line">
-          <span class="super-sketch-label">Producto:</span>
-          <span class="super-sketch-val-main task-text">${escaparHTML(item.texto)}</span>
-        </div>
-        <div class="super-sketch-line">
-          <span class="super-sketch-label">Cantidad:</span>
-          <strong>${escaparHTML(cantTexto)}</strong>
-        </div>
-        <div class="super-sketch-line">
-          <span class="super-sketch-label">Agregado por:</span>
-          <span>${escaparHTML(autorTexto)}</span>
-        </div>
-        <button type="button" class="super-sketch-edible-btn ${claseComestible}" data-action="toggle-edible" title="Tocá para cambiar entre Comestible y No comestible">
-          ${textoComestible}
-        </button>
-      </div>
-      <div class="super-sketch-right">
-        <button type="button" class="super-check-btn ${item.tildado ? 'checked' : ''}" data-action="check" title="Tildar producto en el carrito">
-          ${item.tildado ? '✓' : ''}
-        </button>
-        <button type="button" class="super-delete-square" data-action="delete" title="Eliminar de la lista">✕</button>
-      </div>
-    `;
+        fila.querySelector('[data-action="delete"]').addEventListener('click', () => {
+          borrador.items = borrador.items.filter(x => x.id !== item.id);
+          borrador.updatedAt = Date.now();
+          renderizarSupermercado();
+          guardarEnNube();
+        });
 
-    fila.querySelector('[data-action="check"]').addEventListener('click', () => {
-      item.tildado = !item.tildado;
-      item.updatedAt = Date.now();
-      renderizarSupermercado();
-      guardarEnNube();
-    });
+        superItemsList.appendChild(fila);
+      });
+    }
+  }
 
-    fila.querySelector('[data-action="toggle-edible"]').addEventListener('click', () => {
-      item.comestible = !esComestible;
-      item.updatedAt = Date.now();
-      renderizarSupermercado();
-      guardarEnNube();
-    });
+  // --- RENDER PANTALLA 2: PENDIENTE DE COMPRA ---
+  const listaActiva = pendientes.find(l => l.id === listaPendienteAbiertaId) || null;
+  if (!listaActiva) {
+    listaPendienteAbiertaId = null;
+  }
 
-    fila.querySelector('[data-action="delete"]').addEventListener('click', () => {
-      supermercado = supermercado.filter(x => x.id !== item.id);
-      renderizarSupermercado();
-      guardarEnNube();
-    });
+  if (superPendingListsOverview) {
+    superPendingListsOverview.classList.toggle('hidden', Boolean(listaActiva));
+  }
+  if (superActivePendingDetail) {
+    superActivePendingDetail.classList.toggle('hidden', !listaActiva);
+  }
 
-    superItemsList.appendChild(fila);
-  });
+  // Vista 2A: Tarjetas de todas las listas en espera
+  if (superPendingListsContainer && !listaActiva) {
+    superPendingListsContainer.innerHTML = '';
+    if (pendientes.length === 0) {
+      superPendingListsContainer.innerHTML = `<div class="empty-state">No tenés listas pendientes de compra en este momento. Tocá <b>+ Confeccionar otra lista</b> para armar una nueva.</div>`;
+    } else {
+      pendientes.forEach(lista => {
+        const totalProd = (lista.items || []).length;
+        const tildadosCount = (lista.items || []).filter(i => i.tildado).length;
+        const subtotalActual = calcularTotalListaPendiente(lista);
+        const card = document.createElement('div');
+        card.className = 'task-item prio-simple';
+        card.style.flexWrap = 'wrap';
+        card.style.gap = '12px';
+
+        const estadoBadge = lista.compraIniciada
+          ? `<span class="priority-pill pill-intermedio">🛒 Compra iniciada (${tildadosCount}/${totalProd} · ${formatearMonedaSuper(subtotalActual)})</span>`
+          : `<span class="priority-pill pill-simple">⏳ En espera (${totalProd} producto${totalProd === 1 ? '' : 's'})</span>`;
+
+        card.innerHTML = `
+          <div class="task-info" style="flex:1 1 220px; cursor:pointer;" data-action="open-list">
+            ${estadoBadge}
+            <div class="task-text" style="font-size:1.1rem; font-weight:700; margin-top:4px;">📋 ${escaparHTML(lista.nombre || 'Lista de Supermercado')}</div>
+          </div>
+          <div class="task-actions" style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button type="button" class="btn-buy-finish" style="padding:8px 14px; font-size:0.9rem;" data-action="open-list">
+              ${lista.compraIniciada ? '🛒 Continuar compra' : '🛍️ Abrir lista'}
+            </button>
+            <button type="button" class="btn-secondary" style="padding:8px 12px; font-size:0.86rem;" data-action="rename-list" title="Cambiar nombre de la lista">
+              ✏️ Nombre
+            </button>
+            <button type="button" class="btn-delete" data-action="delete-list" title="Eliminar esta lista">✕</button>
+          </div>
+        `;
+
+        card.querySelectorAll('[data-action="open-list"]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            listaPendienteAbiertaId = lista.id;
+            renderizarSupermercado();
+          });
+        });
+
+        card.querySelector('[data-action="rename-list"]').addEventListener('click', () => {
+          cambiarNombreListaSuper(lista);
+        });
+
+        card.querySelector('[data-action="delete-list"]').addEventListener('click', () => {
+          if (!confirm(`¿Eliminar la lista "${lista.nombre || 'Lista de compras'}" de Pendientes de Compra?`)) return;
+          supermercado = supermercado.filter(x => x.id !== lista.id);
+          renderizarSupermercado();
+          guardarEnNube();
+        });
+
+        superPendingListsContainer.appendChild(card);
+      });
+    }
+  }
+
+  // Vista 2B: Detalle de la lista abierta en Pendiente de Compra
+  if (listaActiva && superActivePendingItems) {
+    if (activePendingListTitle) {
+      activePendingListTitle.textContent = `📋 ${listaActiva.nombre || 'Lista de Supermercado'}`;
+    }
+
+    const totalItems = (listaActiva.items || []).length;
+    const tildadosItems = (listaActiva.items || []).filter(i => i.tildado).length;
+    const totalMonto = calcularTotalListaPendiente(listaActiva);
+
+    if (activePendingListStatus) {
+      activePendingListStatus.textContent = listaActiva.compraIniciada
+        ? `🟢 Compra en curso — ${tildadosItems} de ${totalItems} producto(s) en el carrito`
+        : `⏳ Lista en espera (${totalItems} producto${totalItems === 1 ? '' : 's'})`;
+    }
+    if (activePendingTotalBadge) {
+      activePendingTotalBadge.textContent = formatearMonedaSuper(totalMonto);
+    }
+
+    // Mostrar u ocultar pregunta "¿Iniciar compra?"
+    if (superStartShoppingBox) {
+      superStartShoppingBox.style.display = listaActiva.compraIniciada ? 'none' : 'flex';
+    }
+
+    if (superCheckoutSummaryLine) {
+      superCheckoutSummaryLine.textContent = tildadosItems > 0
+        ? `Llevás ${tildadosItems} producto(s) tildados por un total de ${formatearMonedaSuper(totalMonto)}`
+        : 'Tildá cada producto al ponerlo en el carrito para cargar su precio y cantidad';
+    }
+    if (btnFinishShopping) {
+      btnFinishShopping.textContent = `💳 ¿Cerrar y pagar? (${formatearMonedaSuper(totalMonto)})`;
+    }
+
+    superActivePendingItems.innerHTML = '';
+    if (totalItems === 0) {
+      superActivePendingItems.innerHTML = `<div class="empty-state">No quedan productos en esta lista.</div>`;
+    } else {
+      listaActiva.items.forEach(item => {
+        const fila = document.createElement('div');
+        fila.className = `task-item prio-simple super-card-sketch ${item.tildado ? 'realizada' : ''}`;
+
+        const esComestible = item.comestible !== false;
+        const cantTexto = item.cantidad ? item.cantidad : '1 u.';
+        const precioRec = obtenerPrecioRecordadoSuper(item.texto);
+        const precioUnitMostrar = Number(item.precioUnitario) > 0
+          ? Number(item.precioUnitario)
+          : (precioRec !== null ? precioRec : 0);
+        const subtotalItem = item.tildado
+          ? (Number(item.subtotal) || ( (Number(item.unidadesCalculo) || 1) * precioUnitMostrar ))
+          : 0;
+
+        const textoComestible = esComestible ? '✓ 🍎 Comestible' : '🧴 No comestible';
+        const claseComestible = esComestible ? 'is-edible' : 'not-edible';
+
+        fila.innerHTML = `
+          <div class="super-sketch-left">
+            <div class="super-sketch-line">
+              <span class="super-sketch-label">Producto:</span>
+              <span class="super-sketch-val-main task-text">${escaparHTML(item.texto)}</span>
+            </div>
+            <div class="super-sketch-line">
+              <span class="super-sketch-label">Cantidad:</span>
+              <strong>${escaparHTML(cantTexto)}</strong>
+            </div>
+            <div class="super-sketch-line">
+              <span class="super-sketch-label">Precio:</span>
+              ${item.tildado
+                ? `<strong style="color:#34d399;">Unit.: ${formatearMonedaSuper(precioUnitMostrar)} ➔ Subtotal: ${formatearMonedaSuper(subtotalItem)}</strong>`
+                : (precioRec !== null
+                    ? `<span style="color:#93c5fd;">🧠 Precio recordado: <strong>${formatearMonedaSuper(precioRec)}</strong> (se pedirá al tildar)</span>`
+                    : `<span style="color:#94a3b8;">Se pedirá al tildar el producto</span>`
+                  )
+              }
+            </div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:4px;">
+              <button type="button" class="super-sketch-edible-btn ${claseComestible}" data-action="toggle-edible">
+                ${textoComestible}
+              </button>
+              ${item.tildado ? `<button type="button" class="btn-secondary" style="padding:4px 10px; font-size:0.8rem;" data-action="edit-price">✏️ Cambiar precio/cant.</button>` : ''}
+            </div>
+          </div>
+          <div class="super-sketch-right">
+            <button type="button" class="super-check-btn ${item.tildado ? 'checked' : ''}" data-action="check" title="Tildar producto e ingresar precio y cantidad">
+              ${item.tildado ? '✓' : ''}
+            </button>
+            <button type="button" class="super-delete-square" data-action="delete" title="Eliminar de la lista">✕</button>
+          </div>
+        `;
+
+        fila.querySelector('[data-action="check"]').addEventListener('click', () => {
+          if (!listaActiva.compraIniciada) {
+            if (!confirm('¿Iniciar compra ahora para empezar a tildar productos?')) return;
+            listaActiva.compraIniciada = true;
+            listaActiva.updatedAt = Date.now();
+            renderizarSupermercado();
+          }
+          abrirModalPrecioProductoSuper(listaActiva, item);
+        });
+
+        const btnEditPrice = fila.querySelector('[data-action="edit-price"]');
+        if (btnEditPrice) {
+          btnEditPrice.addEventListener('click', () => {
+            abrirModalPrecioProductoSuper(listaActiva, item);
+          });
+        }
+
+        fila.querySelector('[data-action="toggle-edible"]').addEventListener('click', () => {
+          item.comestible = !esComestible;
+          item.updatedAt = Date.now();
+          listaActiva.updatedAt = Date.now();
+          renderizarSupermercado();
+          guardarEnNube();
+        });
+
+        fila.querySelector('[data-action="delete"]').addEventListener('click', () => {
+          listaActiva.items = listaActiva.items.filter(x => x.id !== item.id);
+          listaActiva.updatedAt = Date.now();
+          renderizarSupermercado();
+          guardarEnNube();
+        });
+
+        superActivePendingItems.appendChild(fila);
+      });
+    }
+  }
 }
 
 // ==========================================
