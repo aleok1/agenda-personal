@@ -11,11 +11,11 @@
   <link rel="icon" type="image/svg+xml" href="logo.svg">
   <link rel="apple-touch-icon" href="logo.svg">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="styles.css?v=20261109_01">
+  <link rel="stylesheet" href="styles.css?v=20261109_02">
   <!-- ESCUDO DE DIAGNÓSTICO TEMPRANO Y CAPTURA DE ERRORES PÚBLICOS -->
   <script>
     (function() {
-      window.__APP_VERSION = '20261109_01';
+      window.__APP_VERSION = '20261109_02';
       window.__ERRORES_APP = [];
 
       function copiarTexto(texto) {
@@ -1470,8 +1470,8 @@
           <button type="button" id="card-extra-workout" class="big-card card-tasks">
             <div class="card-icon">&#128170;</div>
             <div class="card-title">2. Entrenamiento</div>
-            <div class="card-desc">Rutinas de gimnasio y multigym divididas en 2 grupos musculares por d&iacute;a con paso a paso.</div>
-            <div class="card-badge badge-tasks">Ver rutina</div>
+            <div class="card-desc">Cre&aacute; m&aacute;s de una rutina de gimnasio paso a paso y compartilas con tus amigos de la app.</div>
+            <div class="card-badge badge-tasks" id="extra-workout-counter">Ver rutinas</div>
           </button>
 
           <button type="button" id="card-extra-lists" class="big-card card-debts">
@@ -1848,17 +1848,68 @@
 
       <div id="subview-workout" class="hidden">
         <button type="button" id="btn-back-workout-to-uso" class="btn-back" style="margin-bottom: 10px;">&larr; Volver a Uso Diario</button>
-        <div class="tasks-top-bar">
+        <div class="tasks-top-bar" style="flex-wrap: wrap; gap: 10px;">
           <div>
-            <h2>💪 4. Entrenamiento — Rutina Paso a Paso</h2>
-            <p class="subtitle-text">Seleccioná los grupos musculares (se dividen de a 2 grupos por día) y elegí cuántos días por semana vas a entrenar con <b>Mancuernas + Máquina Multigym con poleas</b></p>
+            <h2>💪 4. Entrenamiento — Mis Rutinas de Gimnasio</h2>
+            <p class="subtitle-text">Podés tener más de una rutina guardada y compartir cualquiera con tus amigos de la app (<b>Mancuernas + Máquina Multigym con poleas</b>)</p>
           </div>
-          <button type="button" id="btn-generate-workout" class="btn-buy-finish" title="Generar rutina de entrenamiento con listado de ejercicios paso a paso">
-            💪 Generar Rutina
+          <button type="button" id="btn-new-workout-toggle" class="btn-add-plus" title="Armar una nueva rutina de entrenamiento">
+            <span class="plus-symbol">+</span> Nueva Rutina
           </button>
         </div>
 
-        <div class="task-form-box" style="margin-bottom: 20px;">
+        <!-- SELECTOR DE MÚLTIPLES RUTINAS EN FORMATO PÍLDORAS -->
+        <div id="workout-routines-switcher-wrap" class="lists-switcher-wrap hidden" style="margin-bottom: 16px;">
+          <div style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 6px; font-weight: 600;">📋 Tus rutinas guardadas (tocá una para verla o usarla):</div>
+          <div class="lists-pill-selector" id="workout-routines-pills-container"></div>
+        </div>
+
+        <!-- CUADRO MODAL PARA COMPARTIR LA RUTINA ACTIVA CON AMIGOS DE LA APP -->
+        <div id="workout-share-modal-box" class="task-form-box hidden" style="max-width: 540px; margin: 0 auto 20px auto; border-color: #3b82f6; background: rgba(15, 23, 42, 0.96);">
+          <h3 style="color: #60a5fa; margin-bottom: 6px;">👥 Compartir rutina con amigos de la app</h3>
+          <p class="subtitle-text" style="margin-bottom: 12px;" id="workout-share-modal-subtitle">Seleccioná con qué amigos de la app querés compartir esta rutina (les aparecerá directamente en su sección de Gimnasio):</p>
+          <div id="workout-edit-share-checkboxes" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px;"></div>
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.08);">
+            <button type="button" id="btn-whatsapp-share-workout" class="btn-secondary" style="border-color: #22c55e; color: #4ade80;">
+              📲 Enviar también por WhatsApp
+            </button>
+            <div style="display: flex; gap: 8px;">
+              <button type="button" id="btn-close-workout-share" class="btn-secondary">Cancelar</button>
+              <button type="button" id="btn-save-workout-share" class="btn-primary">💾 Guardar y compartir</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- FORMULARIO GENERADOR / CREADOR DE NUEVA RUTINA -->
+        <div id="workout-creator-box" class="task-form-box" style="margin-bottom: 20px; border-color: #3b82f6;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:14px;">
+            <h3 id="workout-creator-heading" style="margin:0; color:#60a5fa;">➕ Armar Nueva Rutina de Entrenamiento</h3>
+            <button type="button" id="btn-cancel-new-workout" class="btn-secondary hidden" style="padding:5px 12px; font-size:0.84rem;">✕ Cerrar creador</button>
+          </div>
+
+          <div class="form-row" style="margin-bottom: 14px; align-items: flex-end;">
+            <div class="form-group flex-grow" style="margin-bottom:0;">
+              <label for="input-workout-name">Nombre de la rutina</label>
+              <input type="text" id="input-workout-name" placeholder="Ej: Rutina Volumen, Tren Superior, Full Body, Rutina con Nico..." autocomplete="off">
+            </div>
+            <div class="form-group" style="min-width: 240px; margin-bottom:0;">
+              <label>¿Con quién la vas a usar?</label>
+              <div class="priority-selector" id="workout-new-mode-selector">
+                <button type="button" class="prio-option prio-verde active" id="btn-workout-mode-solo" data-mode="solo">
+                  👤 Solo para mí
+                </button>
+                <button type="button" class="prio-option prio-amarillo" id="btn-workout-mode-shared" data-mode="shared">
+                  👥 Compartir con amigos
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div id="workout-new-share-users-box" class="form-group hidden" style="margin-bottom: 16px; background: rgba(59, 130, 246, 0.08); padding: 12px; border-radius: 10px; border: 1px solid rgba(59, 130, 246, 0.35);">
+            <label style="margin-bottom: 8px; color: #93c5fd;">👥 Elegí con qué amigos de la app querés compartir esta rutina:</label>
+            <div id="workout-new-share-checkboxes" style="display: flex; flex-direction: column; gap: 8px;"></div>
+          </div>
+
           <div class="form-group" style="margin-bottom: 16px;">
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:6px;">
               <label style="margin-bottom:0;">1. Grupos musculares a entrenar (podés tildar varios o todos)</label>
@@ -1889,7 +1940,7 @@
             <div id="workout-split-preview" class="workout-split-preview"></div>
           </div>
 
-          <div class="form-row" style="margin-bottom: 0; align-items: flex-end;">
+          <div class="form-row" style="margin-bottom: 16px; align-items: flex-end;">
             <div class="form-group flex-grow">
               <label for="input-workout-days">2. ¿Cuántos días a la semana harás ejercicio?</label>
               <select id="input-workout-days" class="select-input">
@@ -1920,16 +1971,32 @@
               </select>
             </div>
           </div>
+
+          <div style="display:flex; justify-content:flex-end; gap:10px; flex-wrap:wrap;">
+            <button type="button" id="btn-generate-workout" class="btn-buy-finish" style="width:100%; justify-content:center; padding:12px 20px; font-size:1.02rem;" title="Generar y guardar esta rutina en tu lista de rutinas">
+              💪 Generar y Guardar Rutina
+            </button>
+          </div>
         </div>
 
-        <!-- RESULTADO DE LA RUTINA GENERADA CON LISTADO DE EJERCICIOS PASO A PASO -->
+        <!-- RESULTADO DE LA RUTINA ACTIVA CON LISTADO DE EJERCICIOS PASO A PASO -->
         <div id="workout-routine-box" class="task-form-box hidden" style="border-color: #22c55e;">
-          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:14px;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px; margin-bottom:16px; padding-bottom:12px; border-bottom:1px solid rgba(255,255,255,0.08);">
             <div>
-              <h3 style="margin-bottom:4px; color:#4ade80;">🏋️‍♂️ Tu Plan Semanal de Ejercicios Paso a Paso</h3>
-              <span id="workout-expiry-badge" class="priority-pill pill-simple">Vigencia: 1 mes</span>
+              <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:6px;">
+                <h3 id="workout-active-title" style="margin:0; color:#4ade80; font-size:1.25rem;">🏋️‍♂️ Tu Plan Semanal de Ejercicios</h3>
+                <button type="button" id="btn-rename-workout" class="btn-secondary" style="padding:4px 10px; font-size:0.78rem;" title="Cambiar el nombre de esta rutina">✏️ Renombrar</button>
+              </div>
+              <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                <span id="workout-expiry-badge" class="priority-pill pill-simple">Vigencia: 1 mes</span>
+                <span id="workout-share-status-badge" class="list-share-status-tag">👤 Personal (solo para mí)</span>
+              </div>
             </div>
-            <button type="button" id="btn-another-workout" class="btn-secondary">🔄 Cambiar variante de ejercicios</button>
+            <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+              <button type="button" id="btn-open-share-workout" class="btn-share-list-icon" title="Compartir esta rutina con tus amigos de la app">👥 Compartir con amigos</button>
+              <button type="button" id="btn-another-workout" class="btn-secondary" style="padding:8px 12px; font-size:0.88rem;">🔄 Cambiar variante</button>
+              <button type="button" id="btn-delete-workout" class="btn-delete-list-icon" title="Eliminar esta rutina">🗑️ Eliminar</button>
+            </div>
           </div>
           <div id="workout-routine-content" class="workout-days-container"></div>
         </div>
@@ -2674,6 +2741,6 @@
     </section>
   </main>
 
-  <script src="app.js?v=20261109_01"></script>
+  <script src="app.js?v=20261109_02"></script>
 </body>
 </html>
