@@ -2772,8 +2772,25 @@ window.addEventListener('popstate', () => {
         return;
       }
 
+      if (subviewWorkout && !subviewWorkout.classList.contains('hidden')) {
+        if (typeof workoutShareModalBox !== 'undefined' && workoutShareModalBox && !workoutShareModalBox.classList.contains('hidden')) {
+          workoutShareModalBox.classList.add('hidden');
+          history.pushState({ vista: 'workout' }, '');
+          return;
+        }
+        const ruts = typeof obtenerListaRutinasGym === 'function' ? obtenerListaRutinasGym() : [];
+        if (typeof mostrandoCreadorRutina !== 'undefined' && mostrandoCreadorRutina && ruts.length > 0) {
+          mostrandoCreadorRutina = false;
+          renderizarEntrenamiento();
+          history.pushState({ vista: 'workout' }, '');
+          return;
+        }
+        mostrarUsoDiario();
+        history.pushState({ vista: 'uso-diario' }, '');
+        return;
+      }
+
       if ((subviewGemini && !subviewGemini.classList.contains('hidden')) ||
-          (subviewWorkout && !subviewWorkout.classList.contains('hidden')) ||
           (subviewLists && !subviewLists.classList.contains('hidden'))) {
         mostrarUsoDiario();
         history.pushState({ vista: 'uso-diario' }, '');
@@ -3824,6 +3841,14 @@ function mostrarUsoDiario() {
   if (dailyCasaSection) dailyCasaSection.classList.add('hidden');
   if (dailyUsoSection) dailyUsoSection.classList.remove('hidden');
   ocultarTodasLasSubvistasDiarias();
+
+  const extraWorkoutCounter = document.getElementById('extra-workout-counter');
+  if (extraWorkoutCounter) {
+    const ruts = typeof obtenerListaRutinasGym === 'function' ? obtenerListaRutinasGym() : [];
+    extraWorkoutCounter.textContent = ruts.length === 0
+      ? 'Crear rutina'
+      : (ruts.length === 1 ? '1 rutina activa' : `${ruts.length} rutinas activas`);
+  }
 
   const extraListsCounter = document.getElementById('extra-lists-counter');
   if (extraListsCounter) {
@@ -9132,11 +9157,12 @@ if (btnAnotherRecipe) {
 }
 
 // ==========================================
-// EXTRAS -> 4. ENTRENAMIENTO (DIVISIÓN DE A 2 GRUPOS POR DÍA + LISTADO PASO A PASO)
+// EXTRAS -> 4. ENTRENAMIENTO (MÚLTIPLES RUTINAS + COMPARTIR CON AMIGOS DE LA APP)
 // ==========================================
 const workoutZonesSelector = document.getElementById('workout-zones-selector');
 const btnSelectAllZones = document.getElementById('btn-select-all-zones');
 const workoutSplitPreview = document.getElementById('workout-split-preview');
+const inputWorkoutName = document.getElementById('input-workout-name');
 const inputWorkoutDays = document.getElementById('input-workout-days');
 const inputWorkoutTime = document.getElementById('input-workout-time');
 const inputWorkoutDuration = document.getElementById('input-workout-duration');
@@ -9145,10 +9171,37 @@ const btnAnotherWorkout = document.getElementById('btn-another-workout');
 const workoutRoutineBox = document.getElementById('workout-routine-box');
 const workoutRoutineContent = document.getElementById('workout-routine-content');
 const workoutExpiryBadge = document.getElementById('workout-expiry-badge');
+const workoutActiveTitle = document.getElementById('workout-active-title');
+const workoutShareStatusBadge = document.getElementById('workout-share-status-badge');
+
+const btnNewWorkoutToggle = document.getElementById('btn-new-workout-toggle');
+const workoutRoutinesSwitcherWrap = document.getElementById('workout-routines-switcher-wrap');
+const workoutRoutinesPillsContainer = document.getElementById('workout-routines-pills-container');
+const workoutCreatorBox = document.getElementById('workout-creator-box');
+const btnCancelNewWorkout = document.getElementById('btn-cancel-new-workout');
+const btnWorkoutModeSolo = document.getElementById('btn-workout-mode-solo');
+const btnWorkoutModeShared = document.getElementById('btn-workout-mode-shared');
+const workoutNewShareUsersBox = document.getElementById('workout-new-share-users-box');
+const workoutNewShareCheckboxes = document.getElementById('workout-new-share-checkboxes');
+
+const workoutShareModalBox = document.getElementById('workout-share-modal-box');
+const workoutShareModalSubtitle = document.getElementById('workout-share-modal-subtitle');
+const workoutEditShareCheckboxes = document.getElementById('workout-edit-share-checkboxes');
+const btnWhatsappShareWorkout = document.getElementById('btn-whatsapp-share-workout');
+const btnCloseWorkoutShare = document.getElementById('btn-close-workout-share');
+const btnSaveWorkoutShare = document.getElementById('btn-save-workout-share');
+const btnRenameWorkout = document.getElementById('btn-rename-workout');
+const btnOpenShareWorkout = document.getElementById('btn-open-share-workout');
+const btnDeleteWorkout = document.getElementById('btn-delete-workout');
 
 const TODAS_LAS_ZONAS_GYM = ['Pecho', 'Espalda', 'Bíceps', 'Tríceps', 'Hombros', 'Piernas'];
 let zonasSeleccionadasEntrenamiento = new Set(['Pecho', 'Espalda', 'Bíceps', 'Tríceps', 'Hombros', 'Piernas']);
 let indiceVarianteRutina = 0;
+let idRutinaGymActiva = null;
+let mostrandoCreadorRutina = false;
+let modoNuevaRutina = 'solo';
+let amigosSeleccionadosNuevaRutina = new Set();
+let amigosSeleccionadosEdicionRutina = new Set();
 
 // Catálogo completo de ejercicios para Mancuernas y Máquina Multigym con poleas con Paso a Paso
 const CATALOGO_EJERCICIOS_GYM = {
@@ -9739,41 +9792,297 @@ function renderizarTarjetasDePlan(diasPlan, tiempoTexto) {
   });
 }
 
+function normalizarEstructuraEntrenamientoLocal() {
+  if (!entrenamiento || typeof entrenamiento !== 'object') {
+    entrenamiento = { rutinas: [], rutinaActivaId: null, borradasRutinas: [] };
+    return entrenamiento;
+  }
+
+  if (Array.isArray(entrenamiento.rutinas)) {
+    if (!Array.isArray(entrenamiento.borradasRutinas)) {
+      entrenamiento.borradasRutinas = [];
+    }
+    const setBorradas = new Set(entrenamiento.borradasRutinas);
+    entrenamiento.rutinas = entrenamiento.rutinas.filter(r => r && typeof r === 'object' && !setBorradas.has(r.id));
+    return entrenamiento;
+  }
+
+  // Migrar rutina única anterior a colección de rutinas sin perder nada
+  if (Array.isArray(entrenamiento.diasPlan) || entrenamiento.rutinaTexto) {
+    const legacy = entrenamiento;
+    const zonasLegacy = Array.isArray(legacy.zonas) && legacy.zonas.length > 0 ? legacy.zonas : Array.from(zonasSeleccionadasEntrenamiento);
+    const cantDiasLegacy = legacy.diasNumero || 3;
+    const tiempoLegacy = legacy.tiempo || '45 minutos';
+    const planLegacy = Array.isArray(legacy.diasPlan) && legacy.diasPlan.length > 0
+      ? legacy.diasPlan
+      : construirPlanEstructuradoEjercicios(zonasLegacy, cantDiasLegacy, tiempoLegacy, 0);
+
+    const rutinaMigrada = {
+      id: legacy.id || ('rut-' + (legacy.creadoEl || Date.now())),
+      nombre: legacy.nombre || 'Mi Rutina #1',
+      creadorId: legacy.creadorId || (usuarioActivo ? usuarioActivo.id : 'alejandro'),
+      creadorNombre: legacy.creadorNombre || (usuarioActivo ? usuarioActivo.nombre : 'Alejandro'),
+      compartidaCon: Array.isArray(legacy.compartidaCon) ? legacy.compartidaCon : [],
+      zonas: zonasLegacy,
+      diasNumero: cantDiasLegacy,
+      dias: legacy.dias || `${cantDiasLegacy} día${cantDiasLegacy === 1 ? '' : 's'} por semana`,
+      tiempo: tiempoLegacy,
+      duracion: legacy.duracion || '1 mes',
+      varianteOffset: legacy.varianteOffset || 0,
+      creadoEl: legacy.creadoEl || Date.now(),
+      venceEl: legacy.venceEl || (Date.now() + 30 * 24 * 60 * 60 * 1000),
+      diasPlan: planLegacy,
+      updatedAt: legacy.updatedAt || Date.now()
+    };
+
+    entrenamiento = {
+      rutinas: [rutinaMigrada],
+      rutinaActivaId: rutinaMigrada.id,
+      borradasRutinas: []
+    };
+    return entrenamiento;
+  }
+
+  entrenamiento = { rutinas: [], rutinaActivaId: null, borradasRutinas: [] };
+  return entrenamiento;
+}
+
+function obtenerListaRutinasGym() {
+  return normalizarEstructuraEntrenamientoLocal().rutinas;
+}
+
+function obtenerRutinaGymActiva() {
+  const est = normalizarEstructuraEntrenamientoLocal();
+  if (est.rutinas.length === 0) {
+    idRutinaGymActiva = null;
+    est.rutinaActivaId = null;
+    return null;
+  }
+  const buscado = idRutinaGymActiva || est.rutinaActivaId;
+  let encontrada = est.rutinas.find(r => r.id === buscado);
+  if (!encontrada) {
+    encontrada = est.rutinas[0];
+  }
+  idRutinaGymActiva = encontrada.id;
+  est.rutinaActivaId = encontrada.id;
+  return encontrada;
+}
+
+function obtenerAmigosParaCompartirRutina() {
+  const todosOtros = (listaUsuariosPublica || []).filter(u => usuarioActivo && u.id !== usuarioActivo.id);
+  const vinculosMap = new Map();
+  (usuarioActivo?.vinculos || []).forEach(v => {
+    if (v && v.usuarioId) vinculosMap.set(v.usuarioId, v);
+  });
+
+  // Ordenar poniendo primero a los amigos/convivientes vinculados y luego al resto de usuarios de la app
+  return [...todosOtros].sort((a, b) => {
+    const aVinc = vinculosMap.has(a.id) ? 0 : 1;
+    const bVinc = vinculosMap.has(b.id) ? 0 : 1;
+    if (aVinc !== bVinc) return aVinc - bVinc;
+    return String(a.nombre || '').localeCompare(String(b.nombre || ''));
+  });
+}
+
+function renderizarCheckboxesAmigosRutina(contenedor, setSeleccionados) {
+  if (!contenedor) return;
+  contenedor.innerHTML = '';
+  const amigos = obtenerAmigosParaCompartirRutina();
+  if (amigos.length === 0) {
+    contenedor.innerHTML = '<div style="color: #94a3b8; font-size: 0.88rem; font-style: italic; padding: 6px;">Aún no hay otros usuarios registrados en la app para compartir.</div>';
+    return;
+  }
+
+  const vinculosMap = new Map();
+  (usuarioActivo?.vinculos || []).forEach(v => {
+    if (v && v.usuarioId) vinculosMap.set(v.usuarioId, v);
+  });
+
+  amigos.forEach(u => {
+    const item = document.createElement('label');
+    item.className = 'share-user-check-item';
+    const checked = setSeleccionados.has(u.id);
+    const vinc = vinculosMap.get(u.id);
+    const badgeVinculo = vinc
+      ? (vinc.tipo === 'convivientes'
+          ? '<span class="priority-pill pill-verde" style="font-size:0.72rem; margin-left:auto;">🏠 Conviviente</span>'
+          : '<span class="priority-pill pill-hora" style="font-size:0.72rem; margin-left:auto;">👥 Amigo</span>')
+      : '<span class="priority-pill pill-simple" style="font-size:0.72rem; margin-left:auto;">👤 Usuario de la app</span>';
+
+    item.innerHTML = `
+      <input type="checkbox" data-user-id="${u.id}" ${checked ? 'checked' : ''}>
+      <span class="user-avatar">${u.avatar || '👤'}</span>
+      <span class="user-name">${escaparHTML(u.nombre)}</span>
+      ${badgeVinculo}
+    `;
+    const chk = item.querySelector('input');
+    chk.addEventListener('change', () => {
+      if (chk.checked) {
+        setSeleccionados.add(u.id);
+      } else {
+        setSeleccionados.delete(u.id);
+      }
+    });
+    contenedor.appendChild(item);
+  });
+}
+
+function actualizarModoNuevaRutinaUI() {
+  if (btnWorkoutModeSolo) btnWorkoutModeSolo.classList.toggle('active', modoNuevaRutina === 'solo');
+  if (btnWorkoutModeShared) btnWorkoutModeShared.classList.toggle('active', modoNuevaRutina === 'shared');
+  if (workoutNewShareUsersBox) {
+    if (modoNuevaRutina === 'shared') {
+      workoutNewShareUsersBox.classList.remove('hidden');
+      renderizarCheckboxesAmigosRutina(workoutNewShareCheckboxes, amigosSeleccionadosNuevaRutina);
+    } else {
+      workoutNewShareUsersBox.classList.add('hidden');
+    }
+  }
+}
+
+if (btnWorkoutModeSolo) {
+  btnWorkoutModeSolo.addEventListener('click', () => {
+    modoNuevaRutina = 'solo';
+    actualizarModoNuevaRutinaUI();
+  });
+}
+
+if (btnWorkoutModeShared) {
+  btnWorkoutModeShared.addEventListener('click', () => {
+    modoNuevaRutina = 'shared';
+    actualizarModoNuevaRutinaUI();
+  });
+}
+
+if (btnNewWorkoutToggle) {
+  btnNewWorkoutToggle.addEventListener('click', () => {
+    const rutinas = obtenerListaRutinasGym();
+    if (rutinas.length === 0) {
+      mostrandoCreadorRutina = true;
+      renderizarEntrenamiento();
+      if (inputWorkoutName) inputWorkoutName.focus();
+      return;
+    }
+    mostrandoCreadorRutina = !mostrandoCreadorRutina;
+    if (mostrandoCreadorRutina) {
+      registrarPasoHistorial('workout-creator');
+      if (workoutShareModalBox) workoutShareModalBox.classList.add('hidden');
+    }
+    renderizarEntrenamiento();
+    if (mostrandoCreadorRutina && inputWorkoutName) {
+      inputWorkoutName.focus();
+    }
+  });
+}
+
+if (btnCancelNewWorkout) {
+  btnCancelNewWorkout.addEventListener('click', () => {
+    mostrandoCreadorRutina = false;
+    renderizarEntrenamiento();
+  });
+}
+
 function renderizarEntrenamiento() {
   actualizarBotonesZonasEntrenamiento();
   if (!workoutRoutineBox || !workoutRoutineContent) return;
 
-  if (entrenamiento && (Array.isArray(entrenamiento.diasPlan) || entrenamiento.rutinaTexto)) {
-    if (Array.isArray(entrenamiento.zonas) && entrenamiento.zonas.length > 0) {
-      zonasSeleccionadasEntrenamiento = new Set(entrenamiento.zonas);
-    }
-    if (inputWorkoutDays && entrenamiento.diasNumero) {
-      inputWorkoutDays.value = String(entrenamiento.diasNumero);
-    }
-    if (inputWorkoutTime && entrenamiento.tiempo) {
-      inputWorkoutTime.value = entrenamiento.tiempo;
-    }
-    if (inputWorkoutDuration && entrenamiento.duracion) {
-      inputWorkoutDuration.value = entrenamiento.duracion;
-    }
-    actualizarBotonesZonasEntrenamiento();
+  const rutinas = obtenerListaRutinasGym();
+  const rutinaActiva = obtenerRutinaGymActiva();
 
+  // Actualizar contador de Uso Diario
+  const extraWorkoutCounter = document.getElementById('extra-workout-counter');
+  if (extraWorkoutCounter) {
+    extraWorkoutCounter.textContent = rutinas.length === 0
+      ? 'Crear rutina'
+      : (rutinas.length === 1 ? '1 rutina activa' : `${rutinas.length} rutinas activas`);
+  }
+
+  // 1. Selector de múltiples rutinas en píldoras
+  if (workoutRoutinesSwitcherWrap && workoutRoutinesPillsContainer) {
+    if (rutinas.length > 0) {
+      workoutRoutinesSwitcherWrap.classList.remove('hidden');
+      workoutRoutinesPillsContainer.innerHTML = '';
+      rutinas.forEach((r, idx) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        const esActiva = rutinaActiva && r.id === rutinaActiva.id;
+        btn.className = `btn-list-pill ${esActiva ? 'active' : ''}`;
+        const esCompartida = (Array.isArray(r.compartidaCon) && r.compartidaCon.length > 0) || (r.creadorId && usuarioActivo && r.creadorId !== usuarioActivo.id);
+        const icono = esCompartida ? '👥' : '💪';
+        const nombreMostrar = r.nombre || `Rutina #${idx + 1}`;
+        const diasInfo = r.diasNumero ? `${r.diasNumero}d/sem` : '3d/sem';
+        btn.textContent = `${icono} ${nombreMostrar} (${diasInfo})`;
+        btn.onclick = () => {
+          idRutinaGymActiva = r.id;
+          entrenamiento.rutinaActivaId = r.id;
+          mostrandoCreadorRutina = false;
+          if (workoutShareModalBox) workoutShareModalBox.classList.add('hidden');
+          renderizarEntrenamiento();
+        };
+        workoutRoutinesPillsContainer.appendChild(btn);
+      });
+    } else {
+      workoutRoutinesSwitcherWrap.classList.add('hidden');
+      workoutRoutinesPillsContainer.innerHTML = '';
+    }
+  }
+
+  // 2. Mostrar u ocultar el formulario creador de nueva rutina
+  if (workoutCreatorBox) {
+    const debeMostrarCreador = rutinas.length === 0 || mostrandoCreadorRutina;
+    workoutCreatorBox.classList.toggle('hidden', !debeMostrarCreador);
+    if (btnCancelNewWorkout) {
+      btnCancelNewWorkout.classList.toggle('hidden', rutinas.length === 0);
+    }
+    if (debeMostrarCreador) {
+      actualizarModoNuevaRutinaUI();
+    }
+  }
+
+  // 3. Renderizar la rutina activa seleccionada
+  if (rutinaActiva) {
     workoutRoutineBox.classList.remove('hidden');
 
-    const cantDiasGuardados = entrenamiento.diasNumero || 3;
-    const planAMostrar = Array.isArray(entrenamiento.diasPlan) && entrenamiento.diasPlan.length > 0
-      ? entrenamiento.diasPlan
-      : construirPlanEstructuradoEjercicios(Array.from(zonasSeleccionadasEntrenamiento), cantDiasGuardados, entrenamiento.tiempo || '45 minutos', 0);
+    if (workoutActiveTitle) {
+      workoutActiveTitle.textContent = `🏋️‍♂️ ${rutinaActiva.nombre || 'Mi Rutina de Ejercicios'}`;
+    }
 
-    renderizarTarjetasDePlan(planAMostrar, entrenamiento.tiempo || '45 minutos');
+    if (workoutShareStatusBadge) {
+      const compartidaCon = Array.isArray(rutinaActiva.compartidaCon) ? rutinaActiva.compartidaCon : [];
+      const esDeOtro = rutinaActiva.creadorId && usuarioActivo && rutinaActiva.creadorId !== usuarioActivo.id;
+      if (esDeOtro) {
+        workoutShareStatusBadge.className = 'list-share-status-tag shared';
+        workoutShareStatusBadge.textContent = `👥 Compartida por ${rutinaActiva.creadorNombre || 'un amigo'}`;
+      } else if (compartidaCon.length > 0) {
+        workoutShareStatusBadge.className = 'list-share-status-tag shared';
+        const nombresAmigos = compartidaCon.map(uid => {
+          const u = (listaUsuariosPublica || []).find(x => x.id === uid);
+          return u ? u.nombre : uid;
+        }).join(', ');
+        workoutShareStatusBadge.textContent = `👥 Compartida con ${nombresAmigos}`;
+      } else {
+        workoutShareStatusBadge.className = 'list-share-status-tag';
+        workoutShareStatusBadge.textContent = '👤 Personal (solo para mí)';
+      }
+    }
 
-    if (workoutExpiryBadge && entrenamiento.venceEl) {
+    const cantDiasGuardados = rutinaActiva.diasNumero || 3;
+    const zonasRutina = Array.isArray(rutinaActiva.zonas) && rutinaActiva.zonas.length > 0
+      ? rutinaActiva.zonas
+      : Array.from(zonasSeleccionadasEntrenamiento);
+    const planAMostrar = Array.isArray(rutinaActiva.diasPlan) && rutinaActiva.diasPlan.length > 0
+      ? rutinaActiva.diasPlan
+      : construirPlanEstructuradoEjercicios(zonasRutina, cantDiasGuardados, rutinaActiva.tiempo || '45 minutos', rutinaActiva.varianteOffset || 0);
+
+    renderizarTarjetasDePlan(planAMostrar, rutinaActiva.tiempo || '45 minutos');
+
+    if (workoutExpiryBadge && rutinaActiva.venceEl) {
       const ahora = Date.now();
-      const diffDias = Math.ceil((entrenamiento.venceEl - ahora) / (1000 * 60 * 60 * 24));
-      const fechaVence = new Date(entrenamiento.venceEl).toLocaleDateString('es-AR');
+      const diffDias = Math.ceil((rutinaActiva.venceEl - ahora) / (1000 * 60 * 60 * 24));
+      const fechaVence = new Date(rutinaActiva.venceEl).toLocaleDateString('es-AR');
       if (diffDias <= 0) {
         workoutExpiryBadge.className = 'priority-pill pill-urgente';
-        workoutExpiryBadge.textContent = `⚠️ Rutina vencida (${fechaVence}) — ¡Generá una nueva!`;
+        workoutExpiryBadge.textContent = `⚠️ Rutina vencida (${fechaVence}) — ¡Generá o renová tu rutina!`;
       } else {
         workoutExpiryBadge.className = 'priority-pill pill-simple';
         workoutExpiryBadge.textContent = `📅 Vigente hasta el ${fechaVence} (faltan ${diffDias} día${diffDias === 1 ? '' : 's'})`;
@@ -9785,38 +10094,85 @@ function renderizarEntrenamiento() {
 }
 
 function generarRutinaEntrenamiento(esOtraVariante) {
+  normalizarEstructuraEntrenamientoLocal();
+
+  // Si tocó "🔄 Cambiar variante", actualizar los ejercicios de la rutina activa
+  if (esOtraVariante) {
+    const rutinaActiva = obtenerRutinaGymActiva();
+    if (!rutinaActiva) return;
+
+    const nuevoOffset = ((rutinaActiva.varianteOffset || 0) + 1) % 6;
+    const zonasUsar = Array.isArray(rutinaActiva.zonas) && rutinaActiva.zonas.length > 0
+      ? rutinaActiva.zonas
+      : Array.from(zonasSeleccionadasEntrenamiento);
+    const cantDias = rutinaActiva.diasNumero || 3;
+    const tiempo = rutinaActiva.tiempo || '45 minutos';
+
+    rutinaActiva.varianteOffset = nuevoOffset;
+    rutinaActiva.diasPlan = construirPlanEstructuradoEjercicios(zonasUsar, cantDias, tiempo, nuevoOffset);
+    rutinaActiva.updatedAt = Date.now();
+
+    renderizarEntrenamiento();
+    guardarEnNube();
+    return;
+  }
+
+  // Crear y guardar una NUEVA rutina en la colección
   const zonas = Array.from(zonasSeleccionadasEntrenamiento);
   if (zonas.length === 0) {
     alert('Por favor seleccioná al menos un grupo muscular (Pecho, Espalda, Bíceps, Tríceps, Hombros o Piernas).');
     return;
   }
 
-  if (esOtraVariante) {
-    indiceVarianteRutina = (indiceVarianteRutina + 1) % 6;
-  } else {
-    indiceVarianteRutina = 0;
+  if (modoNuevaRutina === 'shared' && amigosSeleccionadosNuevaRutina.size === 0) {
+    alert('Seleccionaste "👥 Compartir con amigos": tildá al menos un amigo de la lista o elegí "👤 Solo para mí".');
+    return;
   }
 
   const cantDias = parseInt((inputWorkoutDays && inputWorkoutDays.value) || '3', 10) || 3;
   const tiempo = (inputWorkoutTime && inputWorkoutTime.value) || '45 minutos';
   const duracion = (inputWorkoutDuration && inputWorkoutDuration.value) || '1 mes';
 
-  const diasPlan = construirPlanEstructuradoEjercicios(zonas, cantDias, tiempo, indiceVarianteRutina);
+  const numeroNueva = entrenamiento.rutinas.length + 1;
+  const resumenZonasCorto = zonas.length === TODAS_LAS_ZONAS_GYM.length
+    ? 'Cuerpo Completo'
+    : zonas.slice(0, 2).join(' + ') + (zonas.length > 2 ? ` (+${zonas.length - 2})` : '');
+  const nombreIngresado = inputWorkoutName ? inputWorkoutName.value.trim() : '';
+  const nombreFinal = nombreIngresado || `Rutina #${numeroNueva} — ${resumenZonasCorto}`;
+
+  const diasPlan = construirPlanEstructuradoEjercicios(zonas, cantDias, tiempo, 0);
   const diasVigencia = calcularDiasDuracionRutina(duracion);
   const ahora = Date.now();
   const venceEl = ahora + diasVigencia * 24 * 60 * 60 * 1000;
 
-  entrenamiento = {
+  const compartidaCon = modoNuevaRutina === 'shared' ? Array.from(amigosSeleccionadosNuevaRutina) : [];
+
+  const nuevaRutina = {
+    id: 'rut-' + ahora + '-' + Math.random().toString(36).slice(2, 6),
+    nombre: nombreFinal,
+    creadorId: usuarioActivo ? usuarioActivo.id : 'alejandro',
+    creadorNombre: usuarioActivo ? usuarioActivo.nombre : 'Alejandro',
+    compartidaCon: compartidaCon,
     zonas: zonas,
     diasNumero: cantDias,
     dias: `${cantDias} día${cantDias === 1 ? '' : 's'} por semana`,
     tiempo: tiempo,
     duracion: duracion,
+    varianteOffset: 0,
     creadoEl: ahora,
     venceEl: venceEl,
     diasPlan: diasPlan,
     updatedAt: ahora
   };
+
+  entrenamiento.rutinas.push(nuevaRutina);
+  idRutinaGymActiva = nuevaRutina.id;
+  entrenamiento.rutinaActivaId = nuevaRutina.id;
+  mostrandoCreadorRutina = false;
+
+  if (inputWorkoutName) inputWorkoutName.value = '';
+  modoNuevaRutina = 'solo';
+  amigosSeleccionadosNuevaRutina.clear();
 
   renderizarEntrenamiento();
   guardarEnNube();
@@ -9824,6 +10180,102 @@ function generarRutinaEntrenamiento(esOtraVariante) {
 
 if (btnGenerateWorkout) btnGenerateWorkout.addEventListener('click', () => generarRutinaEntrenamiento(false));
 if (btnAnotherWorkout) btnAnotherWorkout.addEventListener('click', () => generarRutinaEntrenamiento(true));
+
+if (inputWorkoutName) {
+  inputWorkoutName.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      generarRutinaEntrenamiento(false);
+    }
+  });
+}
+
+// Renombrar rutina activa
+if (btnRenameWorkout) {
+  btnRenameWorkout.addEventListener('click', () => {
+    const rutinaActiva = obtenerRutinaGymActiva();
+    if (!rutinaActiva) return;
+    const nuevoNombre = prompt('Ingresá el nuevo nombre para esta rutina:', rutinaActiva.nombre || 'Mi Rutina');
+    if (nuevoNombre === null) return;
+    const limpio = nuevoNombre.trim();
+    if (!limpio) return;
+    rutinaActiva.nombre = limpio;
+    rutinaActiva.updatedAt = Date.now();
+    renderizarEntrenamiento();
+    guardarEnNube();
+  });
+}
+
+// Abrir modal para compartir la rutina activa con amigos de la app
+if (btnOpenShareWorkout) {
+  btnOpenShareWorkout.addEventListener('click', () => {
+    const rutinaActiva = obtenerRutinaGymActiva();
+    if (!rutinaActiva || !workoutShareModalBox) return;
+
+    registrarPasoHistorial('workout-share-modal');
+    if (workoutShareModalSubtitle) {
+      workoutShareModalSubtitle.textContent = `Seleccioná con qué amigos de la app querés compartir "${rutinaActiva.nombre || 'esta rutina'}" (les aparecerá automáticamente en su sección de Gimnasio):`;
+    }
+    amigosSeleccionadosEdicionRutina = new Set(Array.isArray(rutinaActiva.compartidaCon) ? rutinaActiva.compartidaCon : []);
+    renderizarCheckboxesAmigosRutina(workoutEditShareCheckboxes, amigosSeleccionadosEdicionRutina);
+    workoutShareModalBox.classList.remove('hidden');
+  });
+}
+
+if (btnCloseWorkoutShare) {
+  btnCloseWorkoutShare.addEventListener('click', () => {
+    if (workoutShareModalBox) workoutShareModalBox.classList.add('hidden');
+  });
+}
+
+if (btnSaveWorkoutShare) {
+  btnSaveWorkoutShare.addEventListener('click', () => {
+    const rutinaActiva = obtenerRutinaGymActiva();
+    if (!rutinaActiva) return;
+    rutinaActiva.compartidaCon = Array.from(amigosSeleccionadosEdicionRutina);
+    rutinaActiva.updatedAt = Date.now();
+    if (workoutShareModalBox) workoutShareModalBox.classList.add('hidden');
+    renderizarEntrenamiento();
+    guardarEnNube();
+  });
+}
+
+if (btnWhatsappShareWorkout) {
+  btnWhatsappShareWorkout.addEventListener('click', () => {
+    const rutinaActiva = obtenerRutinaGymActiva();
+    if (!rutinaActiva) return;
+    const lineas = [`💪 *${rutinaActiva.nombre || 'Rutina de Entrenamiento'}* (${rutinaActiva.dias || '3 días/sem'} - ${rutinaActiva.tiempo || '45 min'})`];
+    (rutinaActiva.diasPlan || []).forEach(d => {
+      lineas.push(`\n📅 *Día ${d.numeroDia}: ${d.tituloGrupos}*`);
+      (d.ejercicios || []).forEach((ej, i) => {
+        lineas.push(`  ${i + 1}. ${ej.nombre} (${ej.series})`);
+      });
+    });
+    const textoWp = lineas.join('\n');
+    window.open(`https://wa.me/?text=${encodeURIComponent(textoWp)}`, '_blank');
+  });
+}
+
+// Eliminar rutina activa
+if (btnDeleteWorkout) {
+  btnDeleteWorkout.addEventListener('click', () => {
+    const rutinaActiva = obtenerRutinaGymActiva();
+    if (!rutinaActiva) return;
+    if (!confirm(`¿Seguro que querés eliminar la rutina "${rutinaActiva.nombre || 'seleccionada'}"?`)) return;
+
+    normalizarEstructuraEntrenamientoLocal();
+    if (!entrenamiento.borradasRutinas.includes(rutinaActiva.id)) {
+      entrenamiento.borradasRutinas.push(rutinaActiva.id);
+    }
+    entrenamiento.rutinas = entrenamiento.rutinas.filter(r => r.id !== rutinaActiva.id);
+    idRutinaGymActiva = entrenamiento.rutinas.length > 0 ? entrenamiento.rutinas[0].id : null;
+    entrenamiento.rutinaActivaId = idRutinaGymActiva;
+
+    if (workoutShareModalBox) workoutShareModalBox.classList.add('hidden');
+    renderizarEntrenamiento();
+    guardarEnNube();
+  });
+}
 
 // ==========================================
 // TAREAS COMPARTIDAS (EN EQUIPO Y PROGRAMADAS)
