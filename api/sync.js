@@ -307,6 +307,130 @@ export default async function handler(req, res) {
     }
   }
 
+  function asegurarEstructuraEntrenamiento(userObj) {
+    if (!userObj) return { rutinas: [], borradasRutinas: [] };
+    if (!userObj.entrenamiento || typeof userObj.entrenamiento !== 'object') {
+      userObj.entrenamiento = { rutinas: [], borradasRutinas: [] };
+      return userObj.entrenamiento;
+    }
+    if (Array.isArray(userObj.entrenamiento.rutinas)) {
+      if (!Array.isArray(userObj.entrenamiento.borradasRutinas)) {
+        userObj.entrenamiento.borradasRutinas = [];
+      }
+      return userObj.entrenamiento;
+    }
+    // Migrar formato anterior de una sola rutina a colección de rutinas
+    if (Array.isArray(userObj.entrenamiento.diasPlan) || userObj.entrenamiento.rutinaTexto) {
+      const legacy = userObj.entrenamiento;
+      const rutinaMigrada = {
+        id: legacy.id || ('rut-' + (legacy.creadoEl || Date.now())),
+        nombre: legacy.nombre || 'Mi Rutina Principal',
+        creadorId: legacy.creadorId || userObj.id,
+        creadorNombre: legacy.creadorNombre || userObj.nombre,
+        compartidaCon: Array.isArray(legacy.compartidaCon) ? legacy.compartidaCon : [],
+        zonas: Array.isArray(legacy.zonas) ? legacy.zonas : [],
+        diasNumero: legacy.diasNumero || 3,
+        dias: legacy.dias || '3 días por semana',
+        tiempo: legacy.tiempo || '45 minutos',
+        duracion: legacy.duracion || '1 mes',
+        creadoEl: legacy.creadoEl || Date.now(),
+        venceEl: legacy.venceEl || (Date.now() + 30 * 24 * 60 * 60 * 1000),
+        diasPlan: Array.isArray(legacy.diasPlan) ? legacy.diasPlan : [],
+        updatedAt: legacy.updatedAt || Date.now()
+      };
+      userObj.entrenamiento = {
+        rutinas: [rutinaMigrada],
+        rutinaActivaId: rutinaMigrada.id,
+        borradasRutinas: []
+      };
+      return userObj.entrenamiento;
+    }
+    userObj.entrenamiento = { rutinas: [], borradasRutinas: [] };
+    return userObj.entrenamiento;
+  }
+
+  // Propagar rutinas de gimnasio compartidas entre amigos de la app
+  async function propagarRutinasCompartidas(db, usuarioOrigen) {
+    const entOrigen = asegurarEstructuraEntrenamiento(usuarioOrigen);
+    const rutinasOrigen = Array.isArray(entOrigen.rutinas) ? entOrigen.rutinas : [];
+
+    for (const rutina of rutinasOrigen) {
+      const compartidaCon = Array.isArray(rutina.compartidaCon) ? rutina.compartidaCon : [];
+      if (compartidaCon.length === 0) {
+        // Si el creador quitó a todos de compartidaCon, removerla de otros usuarios
+        if (!rutina.creadorId || rutina.creadorId === usuarioOrigen.id) {
+          Object.values(db.usuarios).forEach(otro => {
+            if (otro.id !== usuarioOrigen.id && otro.entrenamiento && Array.isArray(otro.entrenamiento.rutinas)) {
+              otro.entrenamiento.rutinas = otro.entrenamiento.rutinas.filter(r => r.id !== rutina.id);
+            }
+          });
+        }
+        continue;
+      }
+
+      const destinatariosIds = new Set(compartidaCon);
+      if (rutina.creadorId && rutina.creadorId !== usuarioOrigen.id) {
+        destinatariosIds.add(rutina.creadorId);
+      }
+      destinatariosIds.delete(usuarioOrigen.id);
+
+      // Si el origen es el creador, quitar la rutina a quienes ya no estén en compartidaCon
+      if (!rutina.creadorId || rutina.creadorId === usuarioOrigen.id) {
+        Object.values(db.usuarios).forEach(otro => {
+          if (otro.id !== usuarioOrigen.id && !destinatariosIds.has(otro.id) && otro.entrenamiento && Array.isArray(otro.entrenamiento.rutinas)) {
+            otro.entrenamiento.rutinas = otro.entrenamiento.rutinas.filter(r => r.id !== rutina.id);
+          }
+        });
+      }
+
+      for (const targetId of destinatariosIds) {
+        const targetUser = db.usuarios[targetId];
+        if (!targetUser) continue;
+        const entTarget = asegurarEstructuraEntrenamiento(targetUser);
+
+        const idx = entTarget.rutinas.findIndex(r => r.id === rutina.id);
+        if (idx === -1) {
+          // Nueva rutina compartida con el amigo
+          entTarget.rutinas.push(JSON.parse(JSON.stringify(rutina)));
+
+          if (Array.isArray(targetUser.pushSubscriptions) && targetUser.pushSubscriptions.length > 0) {
+            const payload = {
+              title: `💪 Rutina de Gimnasio de ${usuarioOrigen.nombre}`,
+              body: `Te compartió la rutina "${rutina.nombre || 'Entrenamiento'}" (${rutina.dias || 'Paso a paso'}).`,
+              tag: 'rutina-gym-' + rutina.id,
+              url: '/'
+            };
+            for (const sub of targetUser.pushSubscriptions) {
+              try { await sendWebPushNotification(sub, payload); } catch (e) {}
+            }
+          }
+        } else {
+          // Ya existe: actualizar con la versión más reciente
+          const existente = entTarget.rutinas[idx];
+          const fechaOrigen = Number(rutina.updatedAt) || Number(rutina.creadoEl) || 0;
+          const fechaTarget = Number(existente.updatedAt) || Number(existente.creadoEl) || 0;
+          if (fechaOrigen >= fechaTarget) {
+            entTarget.rutinas[idx] = JSON.parse(JSON.stringify(rutina));
+          }
+        }
+      }
+    }
+
+    // Propagar rutinas eliminadas por su creador
+    const borradasRutinas = Array.isArray(entOrigen.borradasRutinas) ? entOrigen.borradasRutinas : [];
+    if (borradasRutinas.length > 0) {
+      for (const rutIdBorrada of borradasRutinas) {
+        Object.values(db.usuarios).forEach(otro => {
+          if (otro.id !== usuarioOrigen.id && otro.entrenamiento && Array.isArray(otro.entrenamiento.rutinas)) {
+            otro.entrenamiento.rutinas = otro.entrenamiento.rutinas.filter(
+              r => r.id !== rutIdBorrada || (r.creadorId && r.creadorId !== usuarioOrigen.id)
+            );
+          }
+        });
+      }
+    }
+  }
+
   try {
     if (req.method === 'GET') {
       const { db } = await leerBaseDeDatos();
@@ -1865,6 +1989,7 @@ export default async function handler(req, res) {
 
       propagarSupermercadoCompartido(db, u);
       await propagarListasCompartidas(db, u);
+      await propagarRutinasCompartidas(db, u);
       u.borrados = Array.from(new Set([...(u.borrados || []), ...(body.borrados || [])]));
       u.borradosListas = Array.from(new Set([...(u.borradosListas || []), ...(body.borradosListas || [])]));
 
