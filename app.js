@@ -2691,7 +2691,18 @@ window.addEventListener('popstate', () => {
   if (ES_MODO_EXTERNO) return;
   navegandoPorHistorial = true;
   try {
-    // 1. Si hay algún cuadro superior abierto, cerrarlo primero
+    // 1. Si hay algún modal o cuadro superior abierto, cerrarlo primero
+    if (typeof superPriceQtyModal !== 'undefined' && superPriceQtyModal && !superPriceQtyModal.classList.contains('hidden')) {
+      if (typeof cerrarModalPrecioProductoSuper === 'function') cerrarModalPrecioProductoSuper();
+      else superPriceQtyModal.classList.add('hidden');
+      history.pushState({ vista: 'super-modal-closed' }, '');
+      return;
+    }
+    if (typeof superPayCheckoutModal !== 'undefined' && superPayCheckoutModal && !superPayCheckoutModal.classList.contains('hidden')) {
+      superPayCheckoutModal.classList.add('hidden');
+      history.pushState({ vista: 'super-pay-closed' }, '');
+      return;
+    }
     if (askUserTaskBox && !askUserTaskBox.classList.contains('hidden')) {
       askUserTaskBox.classList.add('hidden');
       history.pushState({ vista: 'actual' }, '');
@@ -2707,6 +2718,11 @@ window.addEventListener('popstate', () => {
       history.pushState({ vista: 'actual' }, '');
       return;
     }
+    if (typeof editShareModalBox !== 'undefined' && editShareModalBox && !editShareModalBox.classList.contains('hidden')) {
+      editShareModalBox.classList.add('hidden');
+      history.pushState({ vista: 'actual' }, '');
+      return;
+    }
 
     // 2. Si está en el detalle de un deudor específico, volver a la lista de deudores
     if (idDeudorActivo && debtorDetailView && !debtorDetailView.classList.contains('hidden')) {
@@ -2715,14 +2731,47 @@ window.addEventListener('popstate', () => {
       return;
     }
 
-    // Si está adentro de una subvistas de Elementos Diarios, volver a Casa o Uso Diario
+    // 3. Si está adentro de Elementos Diarios, volver exactamente un paso atrás en la jerarquía
     if (viewExtras && !viewExtras.classList.contains('hidden')) {
-      if ((subviewSuper && !subviewSuper.classList.contains('hidden')) ||
-          (subviewFridge && !subviewFridge.classList.contains('hidden'))) {
+      if (subviewSuper && !subviewSuper.classList.contains('hidden')) {
+        // Si está adentro de una lista pendiente específica
+        if (typeof listaPendienteAbiertaId !== 'undefined' && listaPendienteAbiertaId !== null) {
+          if (typeof modoModificarListaPendiente !== 'undefined' && modoModificarListaPendiente) {
+            modoModificarListaPendiente = false;
+            renderizarSupermercado();
+            history.pushState({ vista: 'super-pending-detail' }, '');
+            return;
+          }
+          listaPendienteAbiertaId = null;
+          renderizarSupermercado();
+          history.pushState({ vista: 'super-pendientes' }, '');
+          return;
+        }
+        // Si está en Confeccionar Lista o en la vista general de Pendientes de Compra, volver al menú de 2 pantallas de Supermercado
+        if (typeof vistaSuperActual !== 'undefined' && (vistaSuperActual === 'confeccion' || vistaSuperActual === 'pendientes')) {
+          mostrarPantallaSuper('home');
+          history.pushState({ vista: 'super-home' }, '');
+          return;
+        }
+        // Si está en el menú principal de Supermercado, volver a Casa
         mostrarCasa();
         history.pushState({ vista: 'casa' }, '');
         return;
       }
+
+      if (subviewFridge && !subviewFridge.classList.contains('hidden')) {
+        if (typeof modoSeleccionHeladera !== 'undefined' && (modoSeleccionHeladera || (typeof ingredientesSeleccionadosIds !== 'undefined' && ingredientesSeleccionadosIds.size > 0))) {
+          modoSeleccionHeladera = false;
+          if (typeof ingredientesSeleccionadosIds !== 'undefined') ingredientesSeleccionadosIds.clear();
+          renderizarHeladera();
+          history.pushState({ vista: 'fridge' }, '');
+          return;
+        }
+        mostrarCasa();
+        history.pushState({ vista: 'casa' }, '');
+        return;
+      }
+
       if ((subviewGemini && !subviewGemini.classList.contains('hidden')) ||
           (subviewWorkout && !subviewWorkout.classList.contains('hidden')) ||
           (subviewLists && !subviewLists.classList.contains('hidden'))) {
@@ -2730,6 +2779,7 @@ window.addEventListener('popstate', () => {
         history.pushState({ vista: 'uso-diario' }, '');
         return;
       }
+
       if ((dailyCasaSection && !dailyCasaSection.classList.contains('hidden')) ||
           (dailyUsoSection && !dailyUsoSection.classList.contains('hidden'))) {
         mostrarMenuExtras();
@@ -2738,14 +2788,26 @@ window.addEventListener('popstate', () => {
       }
     }
 
-    // Si está adentro de un panel de Configuración, volver al menú principal de Configuración
-    if (viewSettings && !viewSettings.classList.contains('hidden') && settingsMenuList && settingsMenuList.classList.contains('hidden')) {
-      mostrarMenuConfiguracion();
-      history.pushState({ vista: 'settings' }, '');
-      return;
+    // 4. Si está adentro de un panel de Configuración, volver al menú principal de Configuración
+    if (viewSettings && !viewSettings.classList.contains('hidden')) {
+      const enSubpanelSettings =
+        (settingsMenuList && (settingsMenuList.classList.contains('hidden') || settingsMenuList.style.display === 'none')) ||
+        (panelCfgPasswords && !panelCfgPasswords.classList.contains('hidden')) ||
+        (panelCfgNotifications && !panelCfgNotifications.classList.contains('hidden')) ||
+        (panelCfgBiometrics && !panelCfgBiometrics.classList.contains('hidden')) ||
+        (panelCfgTimeout && !panelCfgTimeout.classList.contains('hidden')) ||
+        (panelCfgVincular && !panelCfgVincular.classList.contains('hidden')) ||
+        (panelCfgProfile && !panelCfgProfile.classList.contains('hidden')) ||
+        (panelCfgDev && !panelCfgDev.classList.contains('hidden'));
+
+      if (enSubpanelSettings) {
+        mostrarMenuConfiguracion();
+        history.pushState({ vista: 'settings' }, '');
+        return;
+      }
     }
 
-    // Si está adentro de Tareas, Agenda o Tareas Compartidas, volver al menú de Tareas y Agenda
+    // 5. Si está adentro de Tareas, Agenda o Tareas Compartidas, volver al menú de Tareas y Agenda
     const enSubModuloTareas =
       (viewTasks && !viewTasks.classList.contains('hidden')) ||
       (viewAgenda && !viewAgenda.classList.contains('hidden')) ||
@@ -2757,7 +2819,7 @@ window.addEventListener('popstate', () => {
       return;
     }
 
-    // Si está adentro de Billetera o Deudas, volver al menú de Economía
+    // 6. Si está adentro de Billetera o Deudas, volver al menú de Economía
     const enSubModuloEconomia =
       (viewWallet && !viewWallet.classList.contains('hidden')) ||
       (viewDebts && !viewDebts.classList.contains('hidden'));
@@ -2768,7 +2830,7 @@ window.addEventListener('popstate', () => {
       return;
     }
 
-    // 3. Si está adentro de alguno de los otros módulos o en los menús unificados, volver al menú de inicio del usuario
+    // 7. Si está adentro de alguno de los módulos o menús de primer nivel, volver al menú de inicio del usuario
     const enSubModulo =
       (viewTasksAgendaMenu && !viewTasksAgendaMenu.classList.contains('hidden')) ||
       (viewEconomyMenu && !viewEconomyMenu.classList.contains('hidden')) ||
@@ -2782,13 +2844,13 @@ window.addEventListener('popstate', () => {
       return;
     }
 
-    // 4. Si está en el menú de inicio del usuario, permanecer en inicio
+    // 8. Si está en el menú de inicio del usuario, permanecer en inicio
     if (!viewHome.classList.contains('hidden')) {
       history.pushState({ vista: 'home' }, '');
       return;
     }
 
-    // 5. Si está en la pantalla de usuarios con el recuadro de contraseña o nuevo usuario abierto, cerrarlo
+    // 9. Si está en la pantalla de usuarios con el recuadro de contraseña o nuevo usuario abierto, cerrarlo
     if (!loginPasswordBox.classList.contains('hidden') || !createUserBox.classList.contains('hidden')) {
       loginPasswordBox.classList.add('hidden');
       createUserBox.classList.add('hidden');
@@ -3734,6 +3796,7 @@ function mostrarMenuExtras() {
 }
 
 function mostrarCasa() {
+  registrarPasoHistorial('casa');
   if (dailyMenuSection) dailyMenuSection.classList.add('hidden');
   if (dailyCasaSection) dailyCasaSection.classList.remove('hidden');
   if (dailyUsoSection) dailyUsoSection.classList.add('hidden');
@@ -3756,6 +3819,7 @@ function mostrarCasa() {
 }
 
 function mostrarUsoDiario() {
+  registrarPasoHistorial('uso-diario');
   if (dailyMenuSection) dailyMenuSection.classList.add('hidden');
   if (dailyCasaSection) dailyCasaSection.classList.add('hidden');
   if (dailyUsoSection) dailyUsoSection.classList.remove('hidden');
@@ -3769,6 +3833,7 @@ function mostrarUsoDiario() {
 }
 
 function abrirHerramientaExtras(cual) {
+  registrarPasoHistorial('extra-' + cual);
   if (dailyMenuSection) dailyMenuSection.classList.add('hidden');
   if (dailyCasaSection) dailyCasaSection.classList.add('hidden');
   if (dailyUsoSection) dailyUsoSection.classList.add('hidden');
@@ -3930,6 +3995,7 @@ function actualizarEstadoPushUI() {
 }
 
 function abrirPanelConfiguracion(cual) {
+  registrarPasoHistorial('cfg-' + cual);
   if (settingsMenuList) settingsMenuList.classList.add('hidden');
   ocultarTodosLosPanelesConfiguracion();
 
@@ -7114,12 +7180,17 @@ const superPendingListsOverview = document.getElementById('super-pending-lists-o
 const superPendingListsContainer = document.getElementById('super-pending-lists-container');
 const superActivePendingDetail = document.getElementById('super-active-pending-detail');
 const btnBackToPendingLists = document.getElementById('btn-back-to-pending-lists');
+const btnToggleModifyActiveList = document.getElementById('btn-toggle-modify-active-list');
 const btnRenameActiveList = document.getElementById('btn-rename-active-list');
 const activePendingListTitle = document.getElementById('active-pending-list-title');
 const activePendingListStatus = document.getElementById('active-pending-list-status');
 const activePendingTotalBadge = document.getElementById('active-pending-total-badge');
 const superStartShoppingBox = document.getElementById('super-start-shopping-box');
 const btnConfirmStartShopping = document.getElementById('btn-confirm-start-shopping');
+const btnModifyPendingList = document.getElementById('btn-modify-pending-list');
+const superModifyListBox = document.getElementById('super-modify-list-box');
+const btnFinishModifyingList = document.getElementById('btn-finish-modifying-list');
+const inputModifyPendingListName = document.getElementById('input-modify-pending-list-name');
 const inputPendingExtraItem = document.getElementById('input-pending-extra-item');
 const inputPendingExtraQty = document.getElementById('input-pending-extra-qty');
 const checkPendingExtraEdible = document.getElementById('check-pending-extra-edible');
@@ -7150,6 +7221,7 @@ const btnPaySuperCancel = document.getElementById('btn-pay-super-cancel');
 const STORAGE_SUPER_PRICES_KEY = 'agenda_familiar_precios_super_v1';
 let vistaSuperActual = 'home'; // 'home' | 'confeccion' | 'pendientes'
 let listaPendienteAbiertaId = null;
+let modoModificarListaPendiente = false;
 let itemEnEdicionModalRef = null; // { listaId, itemId }
 
 if (checkSuperEdible && superEdibleLabel) {
@@ -7643,9 +7715,11 @@ function estimarUnidadesMultiplicador(cantTexto) {
 }
 
 function mostrarPantallaSuper(cual) {
+  registrarPasoHistorial('super-' + (cual || 'home'));
   vistaSuperActual = cual || 'home';
   if (cual !== 'pendientes') {
     listaPendienteAbiertaId = null;
+    modoModificarListaPendiente = false;
   }
   renderizarSupermercado();
   if (cual === 'confeccion' && inputSuperItem) {
@@ -7659,6 +7733,7 @@ if (cardSuperConfeccionar) {
 if (cardSuperPendientes) {
   cardSuperPendientes.addEventListener('click', () => {
     listaPendienteAbiertaId = null;
+    modoModificarListaPendiente = false;
     mostrarPantallaSuper('pendientes');
   });
 }
@@ -7668,6 +7743,7 @@ if (btnBackFromConfeccion) {
 if (btnGoToPendientesFromConf) {
   btnGoToPendientesFromConf.addEventListener('click', () => {
     listaPendienteAbiertaId = null;
+    modoModificarListaPendiente = false;
     mostrarPantallaSuper('pendientes');
   });
 }
@@ -7680,6 +7756,7 @@ if (btnNewListFromPendientes) {
 if (btnBackToPendingLists) {
   btnBackToPendingLists.addEventListener('click', () => {
     listaPendienteAbiertaId = null;
+    modoModificarListaPendiente = false;
     renderizarSupermercado();
   });
 }
@@ -7793,8 +7870,8 @@ if (btnSaveSuperListToPending) {
     normalizarEstructuraSupermercado();
 
     listaPendienteAbiertaId = null;
-    vistaSuperActual = 'pendientes';
-    renderizarSupermercado();
+    modoModificarListaPendiente = false;
+    mostrarPantallaSuper('pendientes');
     guardarEnNube();
   });
 }
@@ -7811,6 +7888,53 @@ function cambiarNombreListaSuper(listaObj) {
   guardarEnNube();
 }
 
+function activarModoModificarListaPendiente(activar) {
+  modoModificarListaPendiente = Boolean(activar);
+  if (modoModificarListaPendiente) {
+    registrarPasoHistorial('super-modificar-lista');
+  }
+  renderizarSupermercado();
+  if (modoModificarListaPendiente && inputPendingExtraItem) {
+    inputPendingExtraItem.focus();
+  }
+}
+
+if (btnToggleModifyActiveList) {
+  btnToggleModifyActiveList.addEventListener('click', () => {
+    activarModoModificarListaPendiente(!modoModificarListaPendiente);
+  });
+}
+
+if (btnModifyPendingList) {
+  btnModifyPendingList.addEventListener('click', () => {
+    activarModoModificarListaPendiente(true);
+  });
+}
+
+if (btnFinishModifyingList) {
+  btnFinishModifyingList.addEventListener('click', () => {
+    modoModificarListaPendiente = false;
+    renderizarSupermercado();
+    guardarEnNube();
+  });
+}
+
+if (inputModifyPendingListName) {
+  inputModifyPendingListName.addEventListener('input', () => {
+    const pendientes = obtenerListasPendientesSuper();
+    const activa = pendientes.find(l => l.id === listaPendienteAbiertaId);
+    if (!activa) return;
+    activa.nombre = inputModifyPendingListName.value;
+    activa.updatedAt = Date.now();
+    if (activePendingListTitle) {
+      activePendingListTitle.textContent = `📋 ${activa.nombre || 'Lista de Supermercado'}`;
+    }
+  });
+  inputModifyPendingListName.addEventListener('change', () => {
+    guardarEnNube();
+  });
+}
+
 if (btnRenameActiveList) {
   btnRenameActiveList.addEventListener('click', () => {
     const pendientes = obtenerListasPendientesSuper();
@@ -7825,43 +7949,64 @@ if (btnConfirmStartShopping) {
     const activa = pendientes.find(l => l.id === listaPendienteAbiertaId);
     if (!activa) return;
     activa.compraIniciada = true;
+    modoModificarListaPendiente = false;
     activa.updatedAt = Date.now();
     renderizarSupermercado();
     guardarEnNube();
   });
 }
 
-if (btnAddPendingExtraItem) {
-  btnAddPendingExtraItem.addEventListener('click', () => {
-    const pendientes = obtenerListasPendientesSuper();
-    const activa = pendientes.find(l => l.id === listaPendienteAbiertaId);
-    if (!activa || !inputPendingExtraItem) return;
-    const texto = inputPendingExtraItem.value.trim();
-    if (!texto) {
-      inputPendingExtraItem.focus();
-      return;
-    }
-    const cant = inputPendingExtraQty ? (inputPendingExtraQty.value.trim() || '1 u.') : '1 u.';
-    const esCom = checkPendingExtraEdible ? checkPendingExtraEdible.checked : true;
-    const precioMem = obtenerPrecioRecordadoSuper(texto);
+function agregarProductoExtraAListaPendiente() {
+  const pendientes = obtenerListasPendientesSuper();
+  const activa = pendientes.find(l => l.id === listaPendienteAbiertaId);
+  if (!activa || !inputPendingExtraItem) return;
+  const texto = inputPendingExtraItem.value.trim();
+  if (!texto) {
+    inputPendingExtraItem.focus();
+    return;
+  }
+  const cant = inputPendingExtraQty ? (inputPendingExtraQty.value.trim() || '1 u.') : '1 u.';
+  const esCom = checkPendingExtraEdible ? checkPendingExtraEdible.checked : true;
+  const precioMem = obtenerPrecioRecordadoSuper(texto);
 
-    activa.items.push({
-      id: 'sup-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
-      texto: texto,
-      cantidad: cant,
-      unidadesCalculo: estimarUnidadesMultiplicador(cant),
-      precioUnitario: precioMem || 0,
-      subtotal: 0,
-      comestible: esCom,
-      tildado: false,
-      autor: usuarioActivo ? usuarioActivo.nombre : 'Alejandro',
-      updatedAt: Date.now()
-    });
-    activa.updatedAt = Date.now();
-    inputPendingExtraItem.value = '';
-    if (inputPendingExtraQty) inputPendingExtraQty.value = '';
-    renderizarSupermercado();
-    guardarEnNube();
+  activa.items.push({
+    id: 'sup-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+    texto: texto,
+    cantidad: cant,
+    unidadesCalculo: estimarUnidadesMultiplicador(cant),
+    precioUnitario: precioMem || 0,
+    subtotal: 0,
+    comestible: esCom,
+    tildado: false,
+    autor: usuarioActivo ? usuarioActivo.nombre : 'Alejandro',
+    updatedAt: Date.now()
+  });
+  activa.updatedAt = Date.now();
+  inputPendingExtraItem.value = '';
+  if (inputPendingExtraQty) inputPendingExtraQty.value = '';
+  renderizarSupermercado();
+  if (inputPendingExtraItem) inputPendingExtraItem.focus();
+  guardarEnNube();
+}
+
+if (btnAddPendingExtraItem) {
+  btnAddPendingExtraItem.addEventListener('click', agregarProductoExtraAListaPendiente);
+}
+if (inputPendingExtraItem) {
+  inputPendingExtraItem.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (inputPendingExtraQty) inputPendingExtraQty.focus();
+      else agregarProductoExtraAListaPendiente();
+    }
+  });
+}
+if (inputPendingExtraQty) {
+  inputPendingExtraQty.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      agregarProductoExtraAListaPendiente();
+    }
   });
 }
 
@@ -8231,6 +8376,7 @@ function renderizarSupermercado() {
   const listaActiva = pendientes.find(l => l.id === listaPendienteAbiertaId) || null;
   if (!listaActiva) {
     listaPendienteAbiertaId = null;
+    modoModificarListaPendiente = false;
   }
 
   if (superPendingListsOverview) {
@@ -8268,8 +8414,8 @@ function renderizarSupermercado() {
             <button type="button" class="btn-buy-finish" style="padding:8px 14px; font-size:0.9rem;" data-action="open-list">
               ${lista.compraIniciada ? '🛒 Continuar compra' : '🛍️ Abrir lista'}
             </button>
-            <button type="button" class="btn-secondary" style="padding:8px 12px; font-size:0.86rem;" data-action="rename-list" title="Cambiar nombre de la lista">
-              ✏️ Nombre
+            <button type="button" class="btn-buy-finish" style="padding:8px 12px; font-size:0.86rem; background:#f59e0b; color:#1e293b; font-weight:700;" data-action="modify-list" title="Modificar productos, cantidades o nombre de esta lista">
+              ✏️ Modificar
             </button>
             <button type="button" class="btn-delete" data-action="delete-list" title="Eliminar esta lista">✕</button>
           </div>
@@ -8277,13 +8423,19 @@ function renderizarSupermercado() {
 
         card.querySelectorAll('[data-action="open-list"]').forEach(btn => {
           btn.addEventListener('click', () => {
+            registrarPasoHistorial('super-open-pending');
             listaPendienteAbiertaId = lista.id;
+            modoModificarListaPendiente = false;
             renderizarSupermercado();
           });
         });
 
-        card.querySelector('[data-action="rename-list"]').addEventListener('click', () => {
-          cambiarNombreListaSuper(lista);
+        card.querySelector('[data-action="modify-list"]').addEventListener('click', () => {
+          registrarPasoHistorial('super-open-pending');
+          listaPendienteAbiertaId = lista.id;
+          modoModificarListaPendiente = true;
+          renderizarSupermercado();
+          if (inputPendingExtraItem) inputPendingExtraItem.focus();
         });
 
         card.querySelector('[data-action="delete-list"]').addEventListener('click', () => {
@@ -8309,17 +8461,35 @@ function renderizarSupermercado() {
     const totalMonto = calcularTotalListaPendiente(listaActiva);
 
     if (activePendingListStatus) {
-      activePendingListStatus.textContent = listaActiva.compraIniciada
-        ? `🟢 Compra en curso — ${tildadosItems} de ${totalItems} producto(s) en el carrito`
-        : `⏳ Lista en espera (${totalItems} producto${totalItems === 1 ? '' : 's'})`;
+      if (modoModificarListaPendiente) {
+        activePendingListStatus.textContent = `✏️ Modificando lista (${totalItems} producto${totalItems === 1 ? '' : 's'}) — Podés agregar, quitar o cambiar cantidades`;
+      } else {
+        activePendingListStatus.textContent = listaActiva.compraIniciada
+          ? `🟢 Compra en curso — ${tildadosItems} de ${totalItems} producto(s) en el carrito`
+          : `⏳ Lista en espera (${totalItems} producto${totalItems === 1 ? '' : 's'})`;
+      }
     }
     if (activePendingTotalBadge) {
       activePendingTotalBadge.textContent = formatearMonedaSuper(totalMonto);
     }
 
-    // Mostrar u ocultar pregunta "¿Iniciar compra?"
+    if (btnToggleModifyActiveList) {
+      btnToggleModifyActiveList.textContent = modoModificarListaPendiente
+        ? '✅ Guardar modificaciones'
+        : '✏️ Modificar lista';
+      btnToggleModifyActiveList.style.background = modoModificarListaPendiente ? '#10b981' : '#f59e0b';
+      btnToggleModifyActiveList.style.color = modoModificarListaPendiente ? '#052e16' : '#1e293b';
+    }
+
+    // Mostrar u ocultar pregunta "¿Iniciar compra?" y panel de modificación
     if (superStartShoppingBox) {
-      superStartShoppingBox.style.display = listaActiva.compraIniciada ? 'none' : 'flex';
+      superStartShoppingBox.style.display = (listaActiva.compraIniciada || modoModificarListaPendiente) ? 'none' : 'flex';
+    }
+    if (superModifyListBox) {
+      superModifyListBox.classList.toggle('hidden', !modoModificarListaPendiente);
+      if (modoModificarListaPendiente && inputModifyPendingListName && document.activeElement !== inputModifyPendingListName) {
+        inputModifyPendingListName.value = listaActiva.nombre || '';
+      }
     }
 
     if (superCheckoutSummaryLine) {
@@ -8333,7 +8503,7 @@ function renderizarSupermercado() {
 
     superActivePendingItems.innerHTML = '';
     if (totalItems === 0) {
-      superActivePendingItems.innerHTML = `<div class="empty-state">No quedan productos en esta lista.</div>`;
+      superActivePendingItems.innerHTML = `<div class="empty-state">No hay productos en esta lista. Usá el botón <b>✏️ Modificar lista</b> arriba para agregar productos.</div>`;
     } else {
       listaActiva.items.forEach(item => {
         const fila = document.createElement('div');
@@ -8352,56 +8522,134 @@ function renderizarSupermercado() {
         const textoComestible = esComestible ? '✓ 🍎 Comestible' : '🧴 No comestible';
         const claseComestible = esComestible ? 'is-edible' : 'not-edible';
 
-        fila.innerHTML = `
-          <div class="super-sketch-left">
-            <div class="super-sketch-line">
-              <span class="super-sketch-label">Producto:</span>
-              <span class="super-sketch-val-main task-text">${escaparHTML(item.texto)}</span>
+        if (modoModificarListaPendiente) {
+          fila.innerHTML = `
+            <div class="super-sketch-left" style="width:100%;">
+              <div class="form-row" style="margin-bottom:8px; gap:8px; align-items:flex-end;">
+                <div class="form-group flex-grow" style="margin-bottom:0;">
+                  <label style="font-size:0.78rem; color:#93c5fd;">Producto</label>
+                  <input type="text" data-action="input-mod-texto" value="${escaparHTML(item.texto)}" style="padding:7px 10px; font-size:0.95rem;">
+                </div>
+                <div class="form-group" style="min-width:130px; flex:0 1 150px; margin-bottom:0;">
+                  <label style="font-size:0.78rem; color:#fde68a;">Cantidad</label>
+                  <input type="text" data-action="input-mod-cant" value="${escaparHTML(cantTexto)}" style="padding:7px 10px; font-size:0.95rem; font-weight:700;">
+                </div>
+              </div>
+              <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                <button type="button" class="super-sketch-edible-btn ${claseComestible}" data-action="toggle-edible">
+                  ${textoComestible}
+                </button>
+              </div>
             </div>
-            <div class="super-sketch-line">
-              <span class="super-sketch-label">Cantidad:</span>
-              <strong>${escaparHTML(cantTexto)}</strong>
+            <div class="super-sketch-right">
+              <button type="button" class="super-delete-square" data-action="delete" title="Quitar de la lista">✕</button>
             </div>
-            <div class="super-sketch-line">
-              <span class="super-sketch-label">Precio:</span>
-              ${item.tildado
-                ? `<strong style="color:#34d399;">Unit.: ${formatearMonedaSuper(precioUnitMostrar)} ➔ Subtotal: ${formatearMonedaSuper(subtotalItem)}</strong>`
-                : (precioRec !== null
-                    ? `<span style="color:#93c5fd;">🧠 Precio recordado: <strong>${formatearMonedaSuper(precioRec)}</strong> (se pedirá al tildar)</span>`
-                    : `<span style="color:#94a3b8;">Se pedirá al tildar el producto</span>`
-                  )
-              }
-            </div>
-            <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:4px;">
-              <button type="button" class="super-sketch-edible-btn ${claseComestible}" data-action="toggle-edible">
-                ${textoComestible}
-              </button>
-              ${item.tildado ? `<button type="button" class="btn-secondary" style="padding:4px 10px; font-size:0.8rem;" data-action="edit-price">✏️ Cambiar precio/cant.</button>` : ''}
-            </div>
-          </div>
-          <div class="super-sketch-right">
-            <button type="button" class="super-check-btn ${item.tildado ? 'checked' : ''}" data-action="check" title="Tildar producto e ingresar precio y cantidad">
-              ${item.tildado ? '✓' : ''}
-            </button>
-            <button type="button" class="super-delete-square" data-action="delete" title="Eliminar de la lista">✕</button>
-          </div>
-        `;
+          `;
 
-        fila.querySelector('[data-action="check"]').addEventListener('click', () => {
-          if (!listaActiva.compraIniciada) {
-            if (!confirm('¿Iniciar compra ahora para empezar a tildar productos?')) return;
-            listaActiva.compraIniciada = true;
-            listaActiva.updatedAt = Date.now();
-            renderizarSupermercado();
+          const inpModTexto = fila.querySelector('[data-action="input-mod-texto"]');
+          const inpModCant = fila.querySelector('[data-action="input-mod-cant"]');
+
+          if (inpModTexto) {
+            inpModTexto.addEventListener('input', () => {
+              item.texto = inpModTexto.value;
+              item.updatedAt = Date.now();
+              listaActiva.updatedAt = Date.now();
+            });
+            inpModTexto.addEventListener('change', () => {
+              item.texto = inpModTexto.value.trim() || item.texto;
+              guardarEnNube();
+            });
           }
-          abrirModalPrecioProductoSuper(listaActiva, item);
-        });
 
-        const btnEditPrice = fila.querySelector('[data-action="edit-price"]');
-        if (btnEditPrice) {
-          btnEditPrice.addEventListener('click', () => {
+          if (inpModCant) {
+            inpModCant.addEventListener('input', () => {
+              item.cantidad = inpModCant.value;
+              item.unidadesCalculo = estimarUnidadesMultiplicador(item.cantidad);
+              if (item.tildado && Number(item.precioUnitario) > 0) {
+                item.subtotal = Math.round(item.unidadesCalculo * Number(item.precioUnitario) * 100) / 100;
+              }
+              item.updatedAt = Date.now();
+              listaActiva.updatedAt = Date.now();
+            });
+            inpModCant.addEventListener('change', () => {
+              item.cantidad = inpModCant.value.trim() || '1 u.';
+              guardarEnNube();
+            });
+          }
+        } else {
+          fila.innerHTML = `
+            <div class="super-sketch-left">
+              <div class="super-sketch-line">
+                <span class="super-sketch-label">Producto:</span>
+                <span class="super-sketch-val-main task-text">${escaparHTML(item.texto)}</span>
+              </div>
+              <div class="super-sketch-line">
+                <span class="super-sketch-label">Cantidad:</span>
+                <strong>${escaparHTML(cantTexto)}</strong>
+              </div>
+              <div class="super-sketch-line">
+                <span class="super-sketch-label">Precio:</span>
+                ${item.tildado
+                  ? `<strong style="color:#34d399;">Unit.: ${formatearMonedaSuper(precioUnitMostrar)} ➔ Subtotal: ${formatearMonedaSuper(subtotalItem)}</strong>`
+                  : (precioRec !== null
+                      ? `<span style="color:#93c5fd;">🧠 Precio recordado: <strong>${formatearMonedaSuper(precioRec)}</strong> (se pedirá al tildar)</span>`
+                      : `<span style="color:#94a3b8;">Se pedirá al tildar el producto</span>`
+                    )
+                }
+              </div>
+              <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:4px;">
+                <button type="button" class="super-sketch-edible-btn ${claseComestible}" data-action="toggle-edible">
+                  ${textoComestible}
+                </button>
+                <button type="button" class="btn-secondary" style="padding:4px 10px; font-size:0.8rem;" data-action="quick-edit-qty">
+                  ✏️ Cambiar cantidad
+                </button>
+                ${item.tildado ? `<button type="button" class="btn-secondary" style="padding:4px 10px; font-size:0.8rem;" data-action="edit-price">💲 Precio</button>` : ''}
+              </div>
+            </div>
+            <div class="super-sketch-right">
+              <button type="button" class="super-check-btn ${item.tildado ? 'checked' : ''}" data-action="check" title="Tildar producto e ingresar precio y cantidad">
+                ${item.tildado ? '✓' : ''}
+              </button>
+              <button type="button" class="super-delete-square" data-action="delete" title="Eliminar de la lista">✕</button>
+            </div>
+          `;
+
+          fila.querySelector('[data-action="check"]').addEventListener('click', () => {
+            if (!listaActiva.compraIniciada) {
+              if (!confirm('¿Iniciar compra ahora para empezar a tildar productos?')) return;
+              listaActiva.compraIniciada = true;
+              listaActiva.updatedAt = Date.now();
+              renderizarSupermercado();
+            }
             abrirModalPrecioProductoSuper(listaActiva, item);
           });
+
+          const btnQuickQty = fila.querySelector('[data-action="quick-edit-qty"]');
+          if (btnQuickQty) {
+            btnQuickQty.addEventListener('click', () => {
+              const nuevaCant = prompt(`Cambiar cantidad para "${item.texto}":`, item.cantidad || '1 u.');
+              if (nuevaCant === null) return;
+              const limpia = nuevaCant.trim();
+              if (!limpia) return;
+              item.cantidad = limpia;
+              item.unidadesCalculo = estimarUnidadesMultiplicador(limpia);
+              if (item.tildado && Number(item.precioUnitario) > 0) {
+                item.subtotal = Math.round(item.unidadesCalculo * Number(item.precioUnitario) * 100) / 100;
+              }
+              item.updatedAt = Date.now();
+              listaActiva.updatedAt = Date.now();
+              renderizarSupermercado();
+              guardarEnNube();
+            });
+          }
+
+          const btnEditPrice = fila.querySelector('[data-action="edit-price"]');
+          if (btnEditPrice) {
+            btnEditPrice.addEventListener('click', () => {
+              abrirModalPrecioProductoSuper(listaActiva, item);
+            });
+          }
         }
 
         fila.querySelector('[data-action="toggle-edible"]').addEventListener('click', () => {
