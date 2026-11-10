@@ -1833,8 +1833,7 @@ function capturarEstadoNavegacionActual() {
     vistaSuperActual: typeof vistaSuperActual !== 'undefined' ? vistaSuperActual : 'home',
     listaPendienteAbiertaId: typeof listaPendienteAbiertaId !== 'undefined' ? listaPendienteAbiertaId : null,
     modoModificarListaPendiente: typeof modoModificarListaPendiente !== 'undefined' ? Boolean(modoModificarListaPendiente) : false,
-    idRutinaGymActiva: typeof idRutinaGymActiva !== 'undefined' ? idRutinaGymActiva : null,
-    pestanaGymActiva: typeof pestanaGymActiva !== 'undefined' ? pestanaGymActiva : 'routines'
+    idRutinaGymActiva: typeof idRutinaGymActiva !== 'undefined' ? idRutinaGymActiva : null
   };
 }
 
@@ -1880,7 +1879,6 @@ function restaurarEstadoNavegacionGuardado() {
     if (st.idDeudorActivo) idDeudorActivo = st.idDeudorActivo;
     if (st.idListaPresupuestoActiva) idListaPresupuestoActiva = st.idListaPresupuestoActiva;
     if (st.idRutinaGymActiva) idRutinaGymActiva = st.idRutinaGymActiva;
-    if (st.pestanaGymActiva && typeof pestanaGymActiva !== 'undefined') pestanaGymActiva = st.pestanaGymActiva;
 
     switch (st.route) {
       case 'tasks-agenda-menu':
@@ -1963,9 +1961,6 @@ function restaurarEstadoNavegacionGuardado() {
       case 'extras-gimnasio':
         irAExtras();
         abrirHerramientaExtras('workout');
-        if (typeof cambiarPestanaGym === 'function') {
-          cambiarPestanaGym(st.pestanaGymActiva || 'routines');
-        }
         break;
       case 'extras-gemini':
         irAExtras();
@@ -10187,29 +10182,9 @@ function renderizarTarjetasDePlan(diasPlan, tiempoTexto) {
   });
 }
 
-function asegurarEstructuraPasosLocal(entObj) {
-  if (!entObj || typeof entObj !== 'object') return;
-  if (!entObj.pasosData || typeof entObj.pasosData !== 'object') {
-    entObj.pasosData = {
-      metaDiaria: 8000,
-      dias: {},
-      sesiones: []
-    };
-  }
-  if (!entObj.pasosData.metaDiaria || Number(entObj.pasosData.metaDiaria) < 500) {
-    entObj.pasosData.metaDiaria = 8000;
-  }
-  if (!entObj.pasosData.dias || typeof entObj.pasosData.dias !== 'object') {
-    entObj.pasosData.dias = {};
-  }
-  if (!Array.isArray(entObj.pasosData.sesiones)) {
-    entObj.pasosData.sesiones = [];
-  }
-}
-
 function normalizarEstructuraEntrenamientoLocal() {
   if (!entrenamiento || typeof entrenamiento !== 'object') {
-    entrenamiento = { rutinas: [], rutinaActivaId: null, borradasRutinas: [], pasosData: { metaDiaria: 8000, dias: {}, sesiones: [] } };
+    entrenamiento = { rutinas: [], rutinaActivaId: null, borradasRutinas: [] };
     return entrenamiento;
   }
 
@@ -10219,7 +10194,6 @@ function normalizarEstructuraEntrenamientoLocal() {
     }
     const setBorradas = new Set(entrenamiento.borradasRutinas);
     entrenamiento.rutinas = entrenamiento.rutinas.filter(r => r && typeof r === 'object' && !setBorradas.has(r.id));
-    asegurarEstructuraPasosLocal(entrenamiento);
     return entrenamiento;
   }
 
@@ -10254,14 +10228,12 @@ function normalizarEstructuraEntrenamientoLocal() {
     entrenamiento = {
       rutinas: [rutinaMigrada],
       rutinaActivaId: rutinaMigrada.id,
-      borradasRutinas: [],
-      pasosData: legacy.pasosData || { metaDiaria: 8000, dias: {}, sesiones: [] }
+      borradasRutinas: []
     };
-    asegurarEstructuraPasosLocal(entrenamiento);
     return entrenamiento;
   }
 
-  entrenamiento = { rutinas: [], rutinaActivaId: null, borradasRutinas: [], pasosData: { metaDiaria: 8000, dias: {}, sesiones: [] } };
+  entrenamiento = { rutinas: [], rutinaActivaId: null, borradasRutinas: [] };
   return entrenamiento;
 }
 
@@ -10509,10 +10481,6 @@ function renderizarEntrenamiento() {
   } else {
     workoutRoutineBox.classList.add('hidden');
   }
-
-  if (typeof renderizarPanelPasosYCaminatas === 'function') {
-    renderizarPanelPasosYCaminatas();
-  }
 }
 
 function generarRutinaEntrenamiento(esOtraVariante) {
@@ -10695,481 +10663,6 @@ if (btnDeleteWorkout) {
 
     if (workoutShareModalBox) workoutShareModalBox.classList.add('hidden');
     renderizarEntrenamiento();
-    guardarEnNube();
-  });
-}
-
-// ==========================================
-// CONTADOR DE PASOS Y CAMINATAS (100% INDEPENDIENTE EN GIMNASIO)
-// ==========================================
-const btnGymTabRoutines = document.getElementById('btn-gym-tab-routines');
-const btnGymTabSteps = document.getElementById('btn-gym-tab-steps');
-const gymTabStepsBadge = document.getElementById('gym-tab-steps-badge');
-const workoutStepsPanel = document.getElementById('workout-steps-panel');
-const workoutRoutinesMainPanel = document.getElementById('workout-routines-main-panel');
-
-const stepsTodayStatusPill = document.getElementById('steps-today-status-pill');
-const btnChangeStepsGoal = document.getElementById('btn-change-steps-goal');
-const stepsGoalLabel = document.getElementById('steps-goal-label');
-const stepsTodayBigNumber = document.getElementById('steps-today-big-number');
-const stepsTodayGoalInline = document.getElementById('steps-today-goal-inline');
-const stepsTodayPercent = document.getElementById('steps-today-percent');
-const stepsProgressBarFill = document.getElementById('steps-progress-bar-fill');
-const stepsTodayKm = document.getElementById('steps-today-km');
-const stepsTodayKcal = document.getElementById('steps-today-kcal');
-const stepsTodayMinutes = document.getElementById('steps-today-minutes');
-
-const stepsSensorStatusBadge = document.getElementById('steps-sensor-status-badge');
-const stepsLiveSessionBox = document.getElementById('steps-live-session-box');
-const stepsLiveStateLabel = document.getElementById('steps-live-state-label');
-const stepsLiveTimer = document.getElementById('steps-live-timer');
-const stepsLiveCount = document.getElementById('steps-live-count');
-const stepsLiveKm = document.getElementById('steps-live-km');
-const stepsLiveKcal = document.getElementById('steps-live-kcal');
-
-const btnStartLiveWalk = document.getElementById('btn-start-live-walk');
-const btnPauseLiveWalk = document.getElementById('btn-pause-live-walk');
-const btnStopLiveWalk = document.getElementById('btn-stop-live-walk');
-
-const inputManualSteps = document.getElementById('input-manual-steps');
-const btnAddManualSteps = document.getElementById('btn-add-manual-steps');
-const btnResetTodaySteps = document.getElementById('btn-reset-today-steps');
-const stepsWeeklyHistoryList = document.getElementById('steps-weekly-history-list');
-const stepsWalksSessionsList = document.getElementById('steps-walks-sessions-list');
-
-let pestanaGymActiva = 'routines'; // 'routines' | 'steps'
-let caminataEnVivoActiva = false;
-let caminataPausada = false;
-let pasosSesionActual = 0;
-let segundosSesionActual = 0;
-let timerIntervalCaminata = null;
-let wakeLockCaminata = null;
-let ultimoPasoTimestamp = 0;
-let magnitudFiltroAnterior = 9.8;
-
-function cambiarPestanaGym(cual) {
-  pestanaGymActiva = cual === 'steps' ? 'steps' : 'routines';
-  if (btnGymTabRoutines) btnGymTabRoutines.classList.toggle('active', pestanaGymActiva === 'routines');
-  if (btnGymTabSteps) btnGymTabSteps.classList.toggle('active', pestanaGymActiva === 'steps');
-  if (workoutRoutinesMainPanel) workoutRoutinesMainPanel.classList.toggle('hidden', pestanaGymActiva !== 'routines');
-  if (workoutStepsPanel) workoutStepsPanel.classList.toggle('hidden', pestanaGymActiva !== 'steps');
-  if (btnNewWorkoutToggle) btnNewWorkoutToggle.classList.toggle('hidden', pestanaGymActiva !== 'routines');
-  renderizarPanelPasosYCaminatas();
-  guardarEstadoNavegacionActual();
-}
-
-if (btnGymTabRoutines) {
-  btnGymTabRoutines.addEventListener('click', () => cambiarPestanaGym('routines'));
-}
-if (btnGymTabSteps) {
-  btnGymTabSteps.addEventListener('click', () => cambiarPestanaGym('steps'));
-}
-
-function obtenerRegistroPasosDia(isoDate) {
-  const est = normalizarEstructuraEntrenamientoLocal();
-  asegurarEstructuraPasosLocal(est);
-  const clave = isoDate || HOY_ISO;
-  if (!est.pasosData.dias[clave] || typeof est.pasosData.dias[clave] !== 'object') {
-    est.pasosData.dias[clave] = {
-      pasos: 0,
-      minutosActivos: 0,
-      updatedAt: Date.now()
-    };
-  }
-  return est.pasosData.dias[clave];
-}
-
-function calcularKmDesdePasos(pasos) {
-  // Zancada promedio: 0.75 metros por paso
-  return ((Number(pasos) || 0) * 0.00075);
-}
-
-function calcularKcalDesdePasos(pasos) {
-  // Promedio: ~0.045 kcal por paso (45 kcal cada 1.000 pasos)
-  return Math.round((Number(pasos) || 0) * 0.045);
-}
-
-function formatearSegundosACronometro(totalSeg) {
-  const segs = Math.max(0, Math.floor(Number(totalSeg) || 0));
-  const h = Math.floor(segs / 3600);
-  const m = Math.floor((segs % 3600) / 60);
-  const s = segs % 60;
-  if (h > 0) {
-    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-  }
-  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-}
-
-function renderizarPanelPasosYCaminatas() {
-  const est = normalizarEstructuraEntrenamientoLocal();
-  asegurarEstructuraPasosLocal(est);
-  const meta = Number(est.pasosData.metaDiaria) || 8000;
-  const regHoy = obtenerRegistroPasosDia(HOY_ISO);
-  const pasosHoy = Math.max(0, Math.round(Number(regHoy.pasos) || 0));
-  const minutosHoy = Math.max(0, Math.round((Number(regHoy.minutosActivos) || 0) + (caminataEnVivoActiva ? segundosSesionActual / 60 : 0)));
-  const kmHoy = calcularKmDesdePasos(pasosHoy);
-  const kcalHoy = calcularKcalDesdePasos(pasosHoy);
-  const porcentaje = Math.min(100, Math.round((pasosHoy / meta) * 100));
-
-  if (gymTabStepsBadge) {
-    gymTabStepsBadge.textContent = `${pasosHoy.toLocaleString('es-AR')} hoy`;
-  }
-
-  // Actualizar también el contador de Uso Diario
-  const extraWorkoutCounter = document.getElementById('extra-workout-counter');
-  if (extraWorkoutCounter) {
-    const ruts = est.rutinas.length;
-    const txtRut = ruts === 0 ? 'Sin rutinas' : (ruts === 1 ? '1 rutina' : `${ruts} rutinas`);
-    extraWorkoutCounter.textContent = `${txtRut} · 👟 ${pasosHoy.toLocaleString('es-AR')} pasos hoy`;
-  }
-
-  if (stepsGoalLabel) stepsGoalLabel.textContent = meta.toLocaleString('es-AR');
-  if (stepsTodayBigNumber) stepsTodayBigNumber.textContent = pasosHoy.toLocaleString('es-AR');
-  if (stepsTodayGoalInline) stepsTodayGoalInline.textContent = meta.toLocaleString('es-AR');
-  if (stepsTodayPercent) stepsTodayPercent.textContent = `${porcentaje}%`;
-  if (stepsProgressBarFill) {
-    stepsProgressBarFill.style.width = `${porcentaje}%`;
-    stepsProgressBarFill.style.background = pasosHoy >= meta
-      ? 'linear-gradient(90deg, #f59e0b, #10b981)'
-      : 'linear-gradient(90deg, #10b981, #34d399)';
-  }
-
-  if (stepsTodayStatusPill) {
-    if (pasosHoy >= meta) {
-      stepsTodayStatusPill.className = 'priority-pill pill-verde';
-      stepsTodayStatusPill.textContent = '🏆 ¡Meta diaria alcanzada!';
-    } else {
-      const faltan = meta - pasosHoy;
-      stepsTodayStatusPill.className = 'priority-pill pill-simple';
-      stepsTodayStatusPill.textContent = `🎯 Faltan ${faltan.toLocaleString('es-AR')} pasos para tu meta`;
-    }
-  }
-
-  if (stepsTodayKm) stepsTodayKm.textContent = kmHoy.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' km';
-  if (stepsTodayKcal) stepsTodayKcal.textContent = kcalHoy.toLocaleString('es-AR') + ' kcal';
-  if (stepsTodayMinutes) stepsTodayMinutes.textContent = minutosHoy + ' min';
-
-  // Actualizar vista de caminata en vivo si está activa
-  if (stepsLiveSessionBox) {
-    stepsLiveSessionBox.classList.toggle('hidden', !caminataEnVivoActiva);
-  }
-  if (btnStartLiveWalk) {
-    btnStartLiveWalk.classList.toggle('hidden', caminataEnVivoActiva);
-  }
-  if (btnPauseLiveWalk) {
-    btnPauseLiveWalk.classList.toggle('hidden', !caminataEnVivoActiva);
-    btnPauseLiveWalk.textContent = caminataPausada ? '▶️ Reanudar' : '⏸️ Pausar';
-  }
-  if (btnStopLiveWalk) {
-    btnStopLiveWalk.classList.toggle('hidden', !caminataEnVivoActiva);
-  }
-  if (caminataEnVivoActiva) {
-    if (stepsLiveStateLabel) {
-      stepsLiveStateLabel.textContent = caminataPausada
-        ? '⏸️ Caminata en pausa'
-        : '🟢 Contando pasos en vivo con el sensor del celular...';
-    }
-    if (stepsLiveTimer) stepsLiveTimer.textContent = formatearSegundosACronometro(segundosSesionActual);
-    if (stepsLiveCount) stepsLiveCount.textContent = pasosSesionActual.toLocaleString('es-AR');
-    if (stepsLiveKm) {
-      stepsLiveKm.textContent = calcularKmDesdePasos(pasosSesionActual).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' km';
-    }
-    if (stepsLiveKcal) {
-      stepsLiveKcal.textContent = calcularKcalDesdePasos(pasosSesionActual).toLocaleString('es-AR') + ' kcal';
-    }
-  }
-
-  // Historial de los últimos 7 días
-  if (stepsWeeklyHistoryList) {
-    stepsWeeklyHistoryList.innerHTML = '';
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(hoyDate);
-      d.setDate(d.getDate() - i);
-      const iso = obtenerFechaISO(d);
-      const reg = est.pasosData.dias[iso] || { pasos: 0, minutosActivos: 0 };
-      const pDia = Math.max(0, Math.round(Number(reg.pasos) || 0));
-      const kmDia = calcularKmDesdePasos(pDia).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-      const kcalDia = calcularKcalDesdePasos(pDia);
-      const cumplio = pDia >= meta;
-      const pctDia = Math.min(100, Math.round((pDia / meta) * 100));
-
-      const nombreDia = i === 0
-        ? 'Hoy'
-        : (i === 1 ? 'Ayer' : d.toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric', month: 'short' }));
-
-      const fila = document.createElement('div');
-      fila.style.cssText = 'display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 12px; border-radius:10px; background:rgba(15,23,42,0.7); border:1px solid rgba(255,255,255,0.07); flex-wrap:wrap;';
-      fila.innerHTML = `
-        <div style="min-width:110px;">
-          <strong style="color:${i === 0 ? '#34d399' : '#f8fafc'}; font-size:0.94rem; text-transform:capitalize;">${escaparHTML(nombreDia)}</strong>
-          <div style="font-size:0.78rem; color:#94a3b8;">${kmDia} km · ${kcalDia} kcal</div>
-        </div>
-        <div style="flex:1; min-width:120px; max-width:220px; height:8px; background:rgba(255,255,255,0.08); border-radius:999px; overflow:hidden;">
-          <div style="width:${pctDia}%; height:100%; background:${cumplio ? '#10b981' : '#3b82f6'}; border-radius:999px;"></div>
-        </div>
-        <div style="text-align:right; min-width:110px;">
-          <strong style="color:${cumplio ? '#34d399' : '#e2e8f0'}; font-size:0.95rem;">${cumplio ? '🏆 ' : '👟 '}${pDia.toLocaleString('es-AR')}</strong>
-          <span style="font-size:0.78rem; color:#94a3b8;"> pasos</span>
-        </div>
-      `;
-      stepsWeeklyHistoryList.appendChild(fila);
-    }
-  }
-
-  // Sesiones de caminata guardadas
-  if (stepsWalksSessionsList) {
-    stepsWalksSessionsList.innerHTML = '';
-    const sesiones = Array.isArray(est.pasosData.sesiones) ? est.pasosData.sesiones : [];
-    if (sesiones.length === 0) {
-      stepsWalksSessionsList.innerHTML = `<div class="empty-state" style="padding:14px;">Todavía no guardaste sesiones de caminata en vivo. Tocá <b>▶️ Iniciar Caminata en Vivo</b> arriba cuando salgas a caminar.</div>`;
-    } else {
-      sesiones.slice(0, 15).forEach(ses => {
-        const card = document.createElement('div');
-        card.className = 'task-item prio-simple';
-        const fechaTxt = ses.fechaHora
-          ? new Date(ses.fechaHora).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
-          : (ses.fechaISO || HOY_ISO);
-        const pSes = Number(ses.pasos) || 0;
-        const kmSes = calcularKmDesdePasos(pSes).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        const kcalSes = calcularKcalDesdePasos(pSes);
-        const durTxt = formatearSegundosACronometro(ses.duracionSeg || 0);
-
-        card.innerHTML = `
-          <div class="task-info" style="flex:1;">
-            <span class="priority-pill pill-verde">🏃 Caminata (${durTxt})</span>
-            <strong class="task-text" style="margin-left:6px;">${pSes.toLocaleString('es-AR')} pasos · ${kmSes} km · ${kcalSes} kcal</strong>
-            <small style="color:#94a3b8; margin-left:6px;">(${escaparHTML(fechaTxt)})</small>
-          </div>
-          <div class="task-actions">
-            <button type="button" class="btn-delete" title="Eliminar registro de caminata">✕</button>
-          </div>
-        `;
-        card.querySelector('.btn-delete').addEventListener('click', () => {
-          if (!confirm('¿Eliminar este registro del historial de caminatas?')) return;
-          est.pasosData.sesiones = est.pasosData.sesiones.filter(x => x.id !== ses.id);
-          renderizarPanelPasosYCaminatas();
-          guardarEnNube();
-        });
-        stepsWalksSessionsList.appendChild(card);
-      });
-    }
-  }
-}
-
-async function activarWakeLockCaminata() {
-  if ('wakeLock' in navigator) {
-    try {
-      wakeLockCaminata = await navigator.wakeLock.request('screen');
-    } catch (e) {}
-  }
-}
-
-function liberarWakeLockCaminata() {
-  if (wakeLockCaminata) {
-    try {
-      wakeLockCaminata.release();
-    } catch (e) {}
-    wakeLockCaminata = null;
-  }
-}
-
-function procesarMovimientoAcelerometro(event) {
-  if (!caminataEnVivoActiva || caminataPausada) return;
-  const acc = event.accelerationIncludingGravity || event.acceleration;
-  if (!acc) return;
-
-  const x = Number(acc.x) || 0;
-  const y = Number(acc.y) || 0;
-  const z = Number(acc.z) || 0;
-  const magnitud = Math.sqrt(x * x + y * y + z * z);
-
-  // Filtro suavizado y detección de pico de paso humano (anti-rebote de 330 ms)
-  const delta = Math.abs(magnitud - magnitudFiltroAnterior);
-  magnitudFiltroAnterior = magnitud * 0.7 + magnitudFiltroAnterior * 0.3;
-
-  const ahora = Date.now();
-  if (delta > 2.35 && (ahora - ultimoPasoTimestamp) > 330) {
-    ultimoPasoTimestamp = ahora;
-    pasosSesionActual += 1;
-    const regHoy = obtenerRegistroPasosDia(HOY_ISO);
-    regHoy.pasos = (Number(regHoy.pasos) || 0) + 1;
-    regHoy.updatedAt = ahora;
-
-    if (stepsLiveCount) stepsLiveCount.textContent = pasosSesionActual.toLocaleString('es-AR');
-    if (stepsLiveKm) {
-      stepsLiveKm.textContent = calcularKmDesdePasos(pasosSesionActual).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' km';
-    }
-    if (stepsLiveKcal) {
-      stepsLiveKcal.textContent = calcularKcalDesdePasos(pasosSesionActual).toLocaleString('es-AR') + ' kcal';
-    }
-    if (stepsTodayBigNumber) {
-      stepsTodayBigNumber.textContent = regHoy.pasos.toLocaleString('es-AR');
-    }
-    if (gymTabStepsBadge) {
-      gymTabStepsBadge.textContent = `${regHoy.pasos.toLocaleString('es-AR')} hoy`;
-    }
-  }
-}
-
-async function iniciarCaminataEnVivo() {
-  // Solicitar permiso de sensor en iOS 13+ si corresponde
-  if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
-    try {
-      const estadoPermiso = await DeviceMotionEvent.requestPermission();
-      if (estadoPermiso !== 'granted') {
-        alert('Para contar tus pasos en vivo necesitás permitir el acceso al sensor de movimiento de tu celular.');
-        return;
-      }
-    } catch (e) {}
-  }
-
-  caminataEnVivoActiva = true;
-  caminataPausada = false;
-  pasosSesionActual = 0;
-  segundosSesionActual = 0;
-  ultimoPasoTimestamp = 0;
-
-  window.addEventListener('devicemotion', procesarMovimientoAcelerometro, true);
-  await activarWakeLockCaminata();
-
-  if (stepsSensorStatusBadge) {
-    stepsSensorStatusBadge.className = 'priority-pill pill-verde';
-    stepsSensorStatusBadge.textContent = '🟢 Sensor activo';
-  }
-
-  if (timerIntervalCaminata) clearInterval(timerIntervalCaminata);
-  timerIntervalCaminata = setInterval(() => {
-    if (caminataEnVivoActiva && !caminataPausada) {
-      segundosSesionActual += 1;
-      if (stepsLiveTimer) {
-        stepsLiveTimer.textContent = formatearSegundosACronometro(segundosSesionActual);
-      }
-      if (segundosSesionActual % 15 === 0) {
-        renderizarPanelPasosYCaminatas();
-        guardarCacheDatosUsuarioLocal();
-      }
-    }
-  }, 1000);
-
-  renderizarPanelPasosYCaminatas();
-}
-
-function pausarOReanudarCaminataEnVivo() {
-  if (!caminataEnVivoActiva) return;
-  caminataPausada = !caminataPausada;
-  if (stepsSensorStatusBadge) {
-    stepsSensorStatusBadge.className = caminataPausada ? 'priority-pill pill-intermedio' : 'priority-pill pill-verde';
-    stepsSensorStatusBadge.textContent = caminataPausada ? '⏸️ En pausa' : '🟢 Sensor activo';
-  }
-  renderizarPanelPasosYCaminatas();
-}
-
-function finalizarYGuardarCaminataEnVivo() {
-  if (!caminataEnVivoActiva) return;
-  window.removeEventListener('devicemotion', procesarMovimientoAcelerometro, true);
-  if (timerIntervalCaminata) {
-    clearInterval(timerIntervalCaminata);
-    timerIntervalCaminata = null;
-  }
-  liberarWakeLockCaminata();
-
-  const est = normalizarEstructuraEntrenamientoLocal();
-  asegurarEstructuraPasosLocal(est);
-  const regHoy = obtenerRegistroPasosDia(HOY_ISO);
-  const minSumados = Math.max(1, Math.round(segundosSesionActual / 60));
-  regHoy.minutosActivos = (Number(regHoy.minutosActivos) || 0) + minSumados;
-  regHoy.updatedAt = Date.now();
-
-  if (pasosSesionActual > 0 || segundosSesionActual >= 10) {
-    est.pasosData.sesiones.unshift({
-      id: 'walk-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
-      fechaISO: HOY_ISO,
-      fechaHora: Date.now(),
-      pasos: pasosSesionActual,
-      duracionSeg: segundosSesionActual
-    });
-  }
-
-  caminataEnVivoActiva = false;
-  caminataPausada = false;
-  if (stepsSensorStatusBadge) {
-    stepsSensorStatusBadge.className = 'priority-pill pill-hora';
-    stepsSensorStatusBadge.textContent = '📱 Sensor listo';
-  }
-
-  renderizarPanelPasosYCaminatas();
-  guardarEnNube();
-}
-
-function sumarPasosManualesAHoy(cantidad) {
-  const n = Math.round(Number(cantidad) || 0);
-  if (n <= 0) return;
-  const regHoy = obtenerRegistroPasosDia(HOY_ISO);
-  regHoy.pasos = Math.max(0, (Number(regHoy.pasos) || 0) + n);
-  regHoy.minutosActivos = Math.max(0, (Number(regHoy.minutosActivos) || 0) + Math.round(n / 100));
-  regHoy.updatedAt = Date.now();
-  renderizarPanelPasosYCaminatas();
-  guardarEnNube();
-}
-
-if (btnStartLiveWalk) btnStartLiveWalk.addEventListener('click', iniciarCaminataEnVivo);
-if (btnPauseLiveWalk) btnPauseLiveWalk.addEventListener('click', pausarOReanudarCaminataEnVivo);
-if (btnStopLiveWalk) btnStopLiveWalk.addEventListener('click', finalizarYGuardarCaminataEnVivo);
-
-document.querySelectorAll('.btn-quick-add-steps').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const cant = parseInt(btn.getAttribute('data-steps') || '0', 10);
-    sumarPasosManualesAHoy(cant);
-  });
-});
-
-if (btnAddManualSteps) {
-  btnAddManualSteps.addEventListener('click', () => {
-    const val = inputManualSteps ? parseInt(inputManualSteps.value, 10) : 0;
-    if (!val || val <= 0) {
-      if (inputManualSteps) inputManualSteps.focus();
-      return;
-    }
-    sumarPasosManualesAHoy(val);
-    if (inputManualSteps) inputManualSteps.value = '';
-  });
-}
-
-if (inputManualSteps) {
-  inputManualSteps.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      if (btnAddManualSteps) btnAddManualSteps.click();
-    }
-  });
-}
-
-if (btnResetTodaySteps) {
-  btnResetTodaySteps.addEventListener('click', () => {
-    if (!confirm('¿Querés poner en 0 los pasos registrados hoy?')) return;
-    const regHoy = obtenerRegistroPasosDia(HOY_ISO);
-    regHoy.pasos = 0;
-    regHoy.minutosActivos = 0;
-    regHoy.updatedAt = Date.now();
-    renderizarPanelPasosYCaminatas();
-    guardarEnNube();
-  });
-}
-
-if (btnChangeStepsGoal) {
-  btnChangeStepsGoal.addEventListener('click', () => {
-    const est = normalizarEstructuraEntrenamientoLocal();
-    asegurarEstructuraPasosLocal(est);
-    const actual = est.pasosData.metaDiaria || 8000;
-    const nueva = prompt('Ingresá tu meta diaria de pasos (ej: 6000, 8000, 10000):', String(actual));
-    if (nueva === null) return;
-    const num = parseInt(nueva.replace(/\D/g, ''), 10);
-    if (!num || num < 500) {
-      alert('Ingresá una meta válida de al menos 500 pasos.');
-      return;
-    }
-    est.pasosData.metaDiaria = num;
-    renderizarPanelPasosYCaminatas();
     guardarEnNube();
   });
 }
