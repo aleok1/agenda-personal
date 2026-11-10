@@ -83,8 +83,90 @@ export default async function handler(req, res) {
     });
 
     sincronizarDeudasConYoDebo(raw);
+    asegurarEstructuraAntigravityChats(raw);
 
     return { sha, db: raw };
+  }
+
+  function asegurarEstructuraAntigravityChats(db) {
+    if (!db || typeof db !== 'object') return;
+    if (!db.antigravityChats || typeof db.antigravityChats !== 'object') {
+      db.antigravityChats = { canales: {} };
+    }
+    if (!db.antigravityChats.canales || typeof db.antigravityChats.canales !== 'object') {
+      db.antigravityChats.canales = {};
+    }
+
+    const defaults = {
+      'mod-app': {
+        id: 'mod-app',
+        numero: 1,
+        icono: '📱',
+        titulo: '1. Modificaciones App',
+        subtitulo: 'Acceso directo a este chat de Antigravity (Agenda Familiar)',
+        chatId: 'dad694e4-db9e-465d-9c96-1681368747ac',
+        proyecto: 'agenda-personal'
+      },
+      'mod-app-optica': {
+        id: 'mod-app-optica',
+        numero: 2,
+        icono: '👓',
+        titulo: '2. Modificaciones App Óptica',
+        subtitulo: 'Acceso directo al chat de Antigravity para la App de Óptica Argentina',
+        chatId: '6a8098bd-3742-4795-b13f-ea3454cab71f',
+        proyecto: 'app-optica'
+      },
+      'mod-web-optica': {
+        id: 'mod-web-optica',
+        numero: 3,
+        icono: '🌐',
+        titulo: '3. Modificaciones Web Óptica',
+        subtitulo: 'Acceso directo al chat de Antigravity para la Web de Óptica Argentina',
+        chatId: '0c9c8eda-e8d1-4bcd-92b1-6fed095616d6',
+        proyecto: 'web-optica'
+      },
+      'nuevo-general': {
+        id: 'nuevo-general',
+        numero: 4,
+        icono: '💬',
+        titulo: '4. Nuevo Chat General',
+        subtitulo: 'Acceso a nuevo chat general para consultas o proyectos en Antigravity',
+        chatId: 'nuevo-chat-general',
+        proyecto: 'general'
+      }
+    };
+
+    Object.keys(defaults).forEach(key => {
+      const def = defaults[key];
+      if (!db.antigravityChats.canales[key] || typeof db.antigravityChats.canales[key] !== 'object') {
+        db.antigravityChats.canales[key] = {
+          ...def,
+          mensajes: [
+            {
+              id: 'msg-welcome-' + key,
+              autor: 'antigravity',
+              autorNombre: '🤖 Antigravity',
+              texto: `¡Hola Alejandro! Este es tu canal conectado con Antigravity para "${def.titulo}" (Chat ID: ${def.chatId}). Escribí acá tus pedidos o modificaciones y te responderé directamente en esta pantalla.`,
+              fechaHora: Date.now(),
+              estado: 'entregado',
+              leidoPorUsuario: true
+            }
+          ]
+        };
+      } else {
+        const c = db.antigravityChats.canales[key];
+        c.id = key;
+        c.numero = def.numero;
+        c.icono = def.icono;
+        c.titulo = c.titulo || def.titulo;
+        c.subtitulo = c.subtitulo || def.subtitulo;
+        c.chatId = c.chatId || def.chatId;
+        c.proyecto = c.proyecto || def.proyecto;
+        if (!Array.isArray(c.mensajes)) c.mensajes = [];
+      }
+    });
+
+    return db.antigravityChats;
   }
 
   function sincronizarDeudasConYoDebo(db) {
@@ -475,6 +557,7 @@ export default async function handler(req, res) {
         yaConfiguroCasa: Boolean(u.yaConfiguroCasa),
         tiempoBloqueoMin: u.tiempoBloqueoMin || 60,
         tnaConfig: u.tnaConfig || null,
+        antigravityChats: esDev ? db.antigravityChats : null,
         borrados: u.borrados || [],
         usuarios: resumenPublicoUsuarios(db.usuarios)
       });
@@ -484,6 +567,155 @@ export default async function handler(req, res) {
       const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
       const { sha, db } = await leerBaseDeDatos();
       const accion = body.accion || 'sincronizar_usuario';
+
+      // =========================================================
+      // ACCIONES EXCLUSIVAS DE PUENTE Y CHATS CON ANTIGRAVITY (SOLO ALEJANDRO 40218898)
+      // =========================================================
+      if (accion === 'ag_puente_pendientes') {
+        if (body.bridgeKey !== 'ag-local-bridge-40218898') {
+          return res.status(403).json({ error: 'Acceso no autorizado al puente Antigravity' });
+        }
+        asegurarEstructuraAntigravityChats(db);
+        const pendientes = [];
+        Object.values(db.antigravityChats.canales).forEach(canal => {
+          (canal.mensajes || []).forEach(m => {
+            if (m.autor === 'alejandro' && m.estado === 'pendiente_pc') {
+              pendientes.push({
+                canalId: canal.id,
+                canalTitulo: canal.titulo,
+                chatId: canal.chatId,
+                mensajeId: m.id,
+                texto: m.texto,
+                fechaHora: m.fechaHora
+              });
+            }
+          });
+        });
+        return res.status(200).json({
+          ok: true,
+          pendientes,
+          antigravityChats: db.antigravityChats
+        });
+      }
+
+      if (accion === 'ag_enviar_mensaje' || accion === 'ag_marcar_leido' || accion === 'ag_configurar_canal' || accion === 'ag_limpiar_canal') {
+        const esBridgePC = body.bridgeKey === 'ag-local-bridge-40218898';
+        let uAdmin = db.usuarios['alejandro'] || Object.values(db.usuarios).find(x => String(x.dni || '').replace(/\D/g, '') === '40218898');
+
+        if (!esBridgePC) {
+          const uReq = db.usuarios[body.usuarioId];
+          const esAlejandro = uReq && (uReq.id === 'alejandro' || String(uReq.dni || '').replace(/\D/g, '') === '40218898');
+          if (!esAlejandro) {
+            return res.status(403).json({ error: 'Función exclusiva de Alejandro (DNI 40218898)' });
+          }
+          if (uReq.password && body.password && uReq.password !== String(body.password || '')) {
+            return res.status(401).json({ error: 'Sesión no válida' });
+          }
+          uAdmin = uReq;
+        }
+
+        asegurarEstructuraAntigravityChats(db);
+        const canalId = String(body.canalId || 'mod-app');
+        const canal = db.antigravityChats.canales[canalId];
+        if (!canal) {
+          return res.status(404).json({ error: 'Canal de Antigravity no encontrado' });
+        }
+
+        if (accion === 'ag_marcar_leido') {
+          let huboCambios = false;
+          (canal.mensajes || []).forEach(m => {
+            if (!m.leidoPorUsuario) {
+              m.leidoPorUsuario = true;
+              huboCambios = true;
+            }
+          });
+          if (huboCambios) {
+            await guardarBaseDeDatos(db, sha, `Marcar leído canal Antigravity ${canal.titulo}`);
+          }
+          return res.status(200).json({ ok: true, antigravityChats: db.antigravityChats });
+        }
+
+        if (accion === 'ag_configurar_canal') {
+          if (body.nuevoChatId !== undefined) {
+            canal.chatId = String(body.nuevoChatId || '').trim() || canal.chatId;
+          }
+          if (body.nuevoTitulo !== undefined && String(body.nuevoTitulo).trim()) {
+            canal.titulo = String(body.nuevoTitulo).trim();
+          }
+          if (body.nuevoSubtitulo !== undefined && String(body.nuevoSubtitulo).trim()) {
+            canal.subtitulo = String(body.nuevoSubtitulo).trim();
+          }
+          await guardarBaseDeDatos(db, sha, `Configurar canal Antigravity ${canal.titulo}`);
+          return res.status(200).json({ ok: true, antigravityChats: db.antigravityChats });
+        }
+
+        if (accion === 'ag_limpiar_canal') {
+          canal.mensajes = [
+            {
+              id: 'msg-welcome-' + canalId + '-' + Date.now(),
+              autor: 'antigravity',
+              autorNombre: '🤖 Antigravity',
+              texto: `Historial limpiado. Canal "${canal.titulo}" listo (ID vinculado: ${canal.chatId}).`,
+              fechaHora: Date.now(),
+              estado: 'entregado',
+              leidoPorUsuario: true
+            }
+          ];
+          await guardarBaseDeDatos(db, sha, `Limpiar historial canal Antigravity ${canal.titulo}`);
+          return res.status(200).json({ ok: true, antigravityChats: db.antigravityChats });
+        }
+
+        // ag_enviar_mensaje
+        const texto = String(body.texto || '').trim();
+        if (!texto) {
+          return res.status(400).json({ error: 'El mensaje no puede estar vacío' });
+        }
+
+        const esRespuestaAntigravity = esBridgePC && body.autor === 'antigravity';
+        const nuevoMsg = {
+          id: 'agmsg-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+          autor: esRespuestaAntigravity ? 'antigravity' : 'alejandro',
+          autorNombre: esRespuestaAntigravity ? '🤖 Antigravity' : '👑 Alejandro',
+          texto: texto,
+          fechaHora: Date.now(),
+          estado: esRespuestaAntigravity ? 'respondido' : 'pendiente_pc',
+          leidoPorUsuario: !esRespuestaAntigravity
+        };
+
+        if (esRespuestaAntigravity) {
+          (canal.mensajes || []).forEach(m => {
+            if (m.autor === 'alejandro' && m.estado === 'pendiente_pc') {
+              m.estado = 'respondido';
+            }
+          });
+        }
+
+        canal.mensajes.push(nuevoMsg);
+        if (canal.mensajes.length > 120) {
+          canal.mensajes = canal.mensajes.slice(-120);
+        }
+
+        await guardarBaseDeDatos(db, sha, `Mensaje en Antigravity (${canal.titulo})`);
+
+        // Si respondió Antigravity desde la PC, enviar Push Notification al celular de Alejandro
+        if (esRespuestaAntigravity && uAdmin && Array.isArray(uAdmin.pushSubscriptions) && uAdmin.pushSubscriptions.length > 0) {
+          const payload = {
+            title: `🤖 Antigravity (${canal.titulo})`,
+            body: texto.length > 120 ? texto.slice(0, 117) + '...' : texto,
+            tag: 'ag-reply-' + canal.id,
+            url: '/'
+          };
+          for (const sub of uAdmin.pushSubscriptions) {
+            try { await sendWebPushNotification(sub, payload); } catch (e) {}
+          }
+        }
+
+        return res.status(200).json({
+          ok: true,
+          mensaje: nuevoMsg,
+          antigravityChats: db.antigravityChats
+        });
+      }
 
       if (accion === 'guardar_dni') {
         const u = db.usuarios[body.usuarioId];
@@ -633,6 +865,7 @@ export default async function handler(req, res) {
           tiempoBloqueoMin: u.tiempoBloqueoMin || 60,
           tnaConfig: u.tnaConfig || null,
           configTna: db.configTna || { mercadopago: 31.5, uala: 19.0 },
+          antigravityChats: esDev ? db.antigravityChats : null,
           vinculos: u.vinculos || [],
           solicitudesVinculoRecibidas: (db.solicitudesVinculo || []).filter(s => (s.paraUsuarioId === u.id || (u.dni && String(s.paraDni).replace(/\D/g, '') === String(u.dni).replace(/\D/g, ''))) && s.estado === 'pendiente'),
           solicitudesVinculoEnviadas: (db.solicitudesVinculo || []).filter(s => s.deUsuarioId === u.id && s.estado === 'pendiente'),
@@ -910,6 +1143,7 @@ export default async function handler(req, res) {
           tiempoBloqueoMin: u.tiempoBloqueoMin || 60,
           tnaConfig: u.tnaConfig || null,
           configTna: db.configTna || { mercadopago: 31.5, uala: 19.0 },
+          antigravityChats: esDev ? db.antigravityChats : null,
           vinculos: u.vinculos || [],
           solicitudesVinculoRecibidas: (db.solicitudesVinculo || []).filter(s => (s.paraUsuarioId === u.id || (u.dni && String(s.paraDni).replace(/\D/g, '') === String(u.dni).replace(/\D/g, ''))) && s.estado === 'pendiente'),
           solicitudesVinculoEnviadas: (db.solicitudesVinculo || []).filter(s => s.deUsuarioId === u.id && s.estado === 'pendiente'),
@@ -946,6 +1180,7 @@ export default async function handler(req, res) {
           tiempoBloqueoMin: u.tiempoBloqueoMin || 60,
           tnaConfig: u.tnaConfig || null,
           configTna: db.configTna || { mercadopago: 31.5, uala: 19.0 },
+          antigravityChats: esDev ? db.antigravityChats : null,
           vinculos: u.vinculos || [],
           solicitudesVinculoRecibidas: (db.solicitudesVinculo || []).filter(s => (s.paraUsuarioId === u.id || (u.dni && String(s.paraDni).replace(/\D/g, '') === String(u.dni).replace(/\D/g, ''))) && s.estado === 'pendiente'),
           solicitudesVinculoEnviadas: (db.solicitudesVinculo || []).filter(s => s.deUsuarioId === u.id && s.estado === 'pendiente'),
@@ -2013,6 +2248,7 @@ export default async function handler(req, res) {
         yoDebo: u.yoDebo || [],
         superCompartidoCon: u.superCompartidoCon,
         tnaConfig: u.tnaConfig || null,
+        antigravityChats: esDev ? db.antigravityChats : null,
         vinculos: u.vinculos || [],
         solicitudesVinculoRecibidas: (db.solicitudesVinculo || []).filter(s => (s.paraUsuarioId === u.id || (u.dni && String(s.paraDni).replace(/\D/g, '') === String(u.dni).replace(/\D/g, ''))) && s.estado === 'pendiente'),
         solicitudesVinculoEnviadas: (db.solicitudesVinculo || []).filter(s => s.deUsuarioId === u.id && s.estado === 'pendiente'),
