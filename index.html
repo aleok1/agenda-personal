@@ -11,11 +11,11 @@
   <link rel="icon" type="image/svg+xml" href="logo.svg">
   <link rel="apple-touch-icon" href="logo.svg">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="styles.css?v=20261110_04">
+  <link rel="stylesheet" href="styles.css?v=20261110_05">
   <!-- ESCUDO DE DIAGNÓSTICO TEMPRANO Y CAPTURA DE ERRORES PÚBLICOS -->
   <script>
     (function() {
-      window.__APP_VERSION = '20261110_04';
+      window.__APP_VERSION = '20261110_05';
       window.__ERRORES_APP = [];
 
       function copiarTexto(texto) {
@@ -586,6 +586,22 @@
           <div class="card-title">4. Configuraci&oacute;n</div>
           <div class="card-desc">Contrase&ntilde;as, Notificaciones, Huella, Tiempo de bloqueo, V&iacute;nculos y Perfil</div>
           <div class="card-badge" style="border-color: #94a3b8; color: #cbd5e1;">Ajustes</div>
+        </button>
+      </div>
+
+      <!-- BLOQUE GENERAL EXCLUSIVO DE ALEJANDRO (DNI 40218898): ACCESOS A ANTIGRAVITY -->
+      <div id="home-antigravity-block" class="hidden" style="margin-top: 22px;">
+        <button type="button" id="btn-open-antigravity" class="big-card" style="width: 100%; background: linear-gradient(135deg, rgba(88, 28, 135, 0.55), rgba(15, 23, 42, 0.95)); border: 2px solid #a855f7; box-shadow: 0 10px 30px rgba(168, 85, 247, 0.25); display: flex; flex-direction: column; align-items: flex-start; text-align: left; padding: 20px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 12px; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <div class="card-icon" style="margin-bottom: 0; font-size: 2.2rem;">🤖</div>
+              <div>
+                <div class="card-title" style="color: #e9d5ff; font-size: 1.3rem;">Accesos a Antigravity</div>
+                <div class="card-desc" style="margin-bottom: 0; color: #cbd5e1;">Comunicaci&oacute;n directa con tus 4 chats de Antigravity (Exclusivo Alejandro)</div>
+              </div>
+            </div>
+            <div class="card-badge" id="home-antigravity-badge" style="background: rgba(168, 85, 247, 0.25); border: 1px solid #c084fc; color: #f3e8ff; font-weight: 700;">4 canales activos</div>
+          </div>
         </button>
       </div>
     </section>
@@ -2587,6 +2603,118 @@
       </div>
     </section>
 
+    <!-- ========================================================== -->
+    <!-- PANTALLA EXCLUSIVA DE ALEJANDRO (40218898): ACCESOS A ANTIGRAVITY -->
+    <!-- ========================================================== -->
+    <section id="view-antigravity" class="view hidden">
+      <!-- PANEL 1: MENÚ CON LOS 4 BOTONES DE ACCESO A CHATS -->
+      <div id="ag-menu-panel">
+        <div class="tasks-top-bar">
+          <div>
+            <h2 style="color: #e9d5ff; display: flex; align-items: center; gap: 8px;">🤖 Accesos a Antigravity</h2>
+            <p class="subtitle-text">Elegí con cuál de tus 4 chats de Antigravity querés comunicarte desde la app (Exclusivo Alejandro):</p>
+          </div>
+          <button type="button" id="btn-back-from-antigravity" class="btn-secondary">
+            ← Volver a Mi Menú
+          </button>
+        </div>
+
+        <div class="home-grid" style="margin-top: 16px;">
+          <!-- BOTÓN 1: MODIFICACIONES APP -->
+          <button type="button" class="big-card ag-channel-card" data-channel="mod-app" style="border-color: #10b981; background: linear-gradient(135deg, rgba(6, 78, 59, 0.45), rgba(15, 23, 42, 0.92));">
+            <div class="card-icon">📱</div>
+            <div class="card-title">1. Modificaciones App</div>
+            <div class="card-desc">Acceso directo a este chat de Antigravity (Agenda Familiar)</div>
+            <div class="card-badge" id="ag-badge-mod-app" style="border-color: #34d399; color: #6ee7b7;">Abrir chat</div>
+          </button>
+
+          <!-- BOTÓN 2: MODIFICACIONES APP ÓPTICA -->
+          <button type="button" class="big-card ag-channel-card" data-channel="mod-app-optica" style="border-color: #3b82f6; background: linear-gradient(135deg, rgba(30, 58, 138, 0.45), rgba(15, 23, 42, 0.92));">
+            <div class="card-icon">👓</div>
+            <div class="card-title">2. Modificaciones App Óptica</div>
+            <div class="card-desc">Acceso directo al chat de desarrollo de la App de Óptica Argentina</div>
+            <div class="card-badge" id="ag-badge-mod-app-optica" style="border-color: #60a5fa; color: #93c5fd;">Abrir chat</div>
+          </button>
+
+          <!-- BOTÓN 3: MODIFICACIONES WEB ÓPTICA -->
+          <button type="button" class="big-card ag-channel-card" data-channel="mod-web-optica" style="border-color: #f59e0b; background: linear-gradient(135deg, rgba(120, 53, 15, 0.45), rgba(15, 23, 42, 0.92));">
+            <div class="card-icon">🌐</div>
+            <div class="card-title">3. Modificaciones Web Óptica</div>
+            <div class="card-desc">Acceso directo al chat de desarrollo de la Web de Óptica Argentina</div>
+            <div class="card-badge" id="ag-badge-mod-web-optica" style="border-color: #fbbf24; color: #fde68a;">Abrir chat</div>
+          </button>
+
+          <!-- BOTÓN 4: NUEVO CHAT GENERAL -->
+          <button type="button" class="big-card ag-channel-card" data-channel="nuevo-general" style="border-color: #a855f7; background: linear-gradient(135deg, rgba(88, 28, 135, 0.45), rgba(15, 23, 42, 0.92));">
+            <div class="card-icon">💬</div>
+            <div class="card-title">4. Nuevo Chat General</div>
+            <div class="card-desc">Acceso a un chat general con Antigravity para nuevas consultas o proyectos</div>
+            <div class="card-badge" id="ag-badge-nuevo-general" style="border-color: #c084fc; color: #e9d5ff;">Abrir chat</div>
+          </button>
+        </div>
+      </div>
+
+      <!-- PANEL 2: SALA DE CHAT DIRECTO DEL CANAL SELECCIONADO -->
+      <div id="ag-chat-panel" class="hidden">
+        <div class="tasks-top-bar" style="margin-bottom: 12px;">
+          <div>
+            <button type="button" id="btn-back-to-ag-menu" class="btn-back" style="margin-bottom: 8px;">
+              ← Volver a los 4 Accesos de Antigravity
+            </button>
+            <h2 id="ag-chat-room-title" style="color: #e9d5ff;">🤖 Chat con Antigravity</h2>
+            <p class="subtitle-text" id="ag-chat-room-subtitle" style="font-size: 0.84rem;">Conectado con Antigravity en tu PC</p>
+          </div>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+            <button type="button" id="btn-ag-toggle-config" class="btn-secondary" style="font-size: 0.82rem; padding: 7px 12px;" title="Ver o cambiar el ID de conversación de Antigravity vinculado a este botón">
+              🔗 ID de Chat
+            </button>
+            <button type="button" id="btn-ag-refresh-chat" class="btn-secondary" style="font-size: 0.82rem; padding: 7px 12px;" title="Actualizar mensajes">
+              🔄 Actualizar
+            </button>
+            <button type="button" id="btn-ag-clear-chat" class="btn-delete" style="font-size: 0.82rem; padding: 7px 12px;" title="Limpiar historial de este canal">
+              🗑️ Limpiar
+            </button>
+          </div>
+        </div>
+
+        <!-- CUADRO PARA CONFIGURAR O CAMBIAR EL ID DEL CHAT DE ANTIGRAVITY -->
+        <div id="ag-config-chat-box" class="task-form-box hidden" style="margin-bottom: 14px; border-color: #a855f7; background: rgba(88, 28, 135, 0.2);">
+          <h4 style="color: #e9d5ff; margin-bottom: 6px;">🔗 Vincular ID de Conversación de Antigravity</h4>
+          <p class="subtitle-text" style="font-size: 0.83rem; margin-bottom: 10px;">
+            Este canal ya tiene configurado el ID de tu conversación en Antigravity. Si abrís un chat nuevo en la PC y querés vincularlo acá, pegá su ID o nombre:
+          </p>
+          <div class="form-row" style="gap: 10px;">
+            <div class="form-group flex-grow" style="margin-bottom: 0;">
+              <label for="input-ag-chat-id">ID de Conversación en Antigravity</label>
+              <input type="text" id="input-ag-chat-id" placeholder="Ej: dad694e4-db9e-465d-9c96-1681368747ac" autocomplete="off">
+            </div>
+            <div style="display: flex; align-items: flex-end; gap: 8px;">
+              <button type="button" id="btn-ag-save-chat-id" class="btn-primary" style="background: #9333ea; border-color: #7e22ce; font-weight: 700;">
+                Guardar ID
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- CONTENEDOR DE MENSAJES ESTILO CHAT -->
+        <div id="ag-chat-messages" style="background: rgba(15, 23, 42, 0.88); border: 1.5px solid #475569; border-radius: 14px; padding: 16px; min-height: 340px; max-height: 58vh; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; margin-bottom: 14px;">
+        </div>
+
+        <!-- BARRA PARA ESCRIBIR MENSAJE -->
+        <div class="task-form-box" style="padding: 14px; border-color: #a855f7; background: rgba(15, 23, 42, 0.95); margin-bottom: 0;">
+          <div style="display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap;">
+            <div class="form-group flex-grow" style="margin-bottom: 0;">
+              <label for="input-ag-message" style="color: #d8b4fe; font-weight: 700; font-size: 0.85rem;">✍️ Escribile a Antigravity:</label>
+              <textarea id="input-ag-message" rows="2" placeholder="Escribí acá tu pedido, modificación o consulta y apretá Enter..." style="width: 100%; padding: 11px 14px; border-radius: 10px; border: 1px solid #64748b; background: #1e293b; color: #f8fafc; font-family: inherit; font-size: 0.98rem; resize: vertical;"></textarea>
+            </div>
+            <button type="button" id="btn-send-ag-message" class="btn-primary" style="background: linear-gradient(135deg, #9333ea, #7e22ce); border-color: #a855f7; font-weight: 800; padding: 12px 22px; height: 48px; display: flex; align-items: center; gap: 6px;">
+              🚀 Enviar
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- PANTALLA PÚBLICA PARA PERSONAS EXTERNAS (?modo=externo) -->
     <section id="view-external" class="view hidden">
       <div class="task-form-box" style="max-width: 680px; margin: 10px auto;">
@@ -2741,6 +2869,6 @@
     </section>
   </main>
 
-  <script src="app.js?v=20261110_04"></script>
+  <script src="app.js?v=20261110_05"></script>
 </body>
 </html>
