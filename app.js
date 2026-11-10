@@ -792,6 +792,7 @@ async function intentarIngresoConPassword(u, pass, eraAutomatico) {
     borrados = Array.isArray(data.borrados) ? data.borrados : [];
     borradosListas = Array.isArray(data.borradosListas) ? data.borradosListas : [];
     if (data.tnaConfig) usuarioActivo.tnaConfig = data.tnaConfig;
+    if (data.antigravityChats) antigravityChats = data.antigravityChats;
     usuarioActivo.vinculos = Array.isArray(data.vinculos) ? data.vinculos : [];
     solicitudesVinculoRecibidas = Array.isArray(data.solicitudesVinculoRecibidas) ? data.solicitudesVinculoRecibidas : [];
     solicitudesVinculoEnviadas = Array.isArray(data.solicitudesVinculoEnviadas) ? data.solicitudesVinculoEnviadas : [];
@@ -1711,6 +1712,7 @@ function guardarCacheDatosUsuarioLocal() {
       tareasCompartidas: Array.isArray(tareasCompartidas) ? tareasCompartidas : [],
       solicitudesVinculoRecibidas: Array.isArray(solicitudesVinculoRecibidas) ? solicitudesVinculoRecibidas : [],
       solicitudesVinculoEnviadas: Array.isArray(solicitudesVinculoEnviadas) ? solicitudesVinculoEnviadas : [],
+      antigravityChats: antigravityChats || null,
       borrados: Array.isArray(borrados) ? borrados : [],
       borradosListas: Array.isArray(borradosListas) ? borradosListas : []
     };
@@ -1757,6 +1759,7 @@ function restaurarDesdeCacheLocalAlRecargar(u, pass) {
     tareasCompartidas = Array.isArray(cache.tareasCompartidas) ? cache.tareasCompartidas : [];
     solicitudesVinculoRecibidas = Array.isArray(cache.solicitudesVinculoRecibidas) ? cache.solicitudesVinculoRecibidas : [];
     solicitudesVinculoEnviadas = Array.isArray(cache.solicitudesVinculoEnviadas) ? cache.solicitudesVinculoEnviadas : [];
+    if (cache.antigravityChats) antigravityChats = cache.antigravityChats;
     borrados = Array.isArray(cache.borrados) ? cache.borrados : [];
     borradosListas = Array.isArray(cache.borradosListas) ? cache.borradosListas : [];
 
@@ -1790,6 +1793,12 @@ function capturarEstadoNavegacionActual() {
     route = 'assistant';
   } else if (viewSettings && !viewSettings.classList.contains('hidden')) {
     route = 'settings';
+  } else if (typeof viewAntigravity !== 'undefined' && viewAntigravity && !viewAntigravity.classList.contains('hidden')) {
+    if (typeof agChatPanel !== 'undefined' && agChatPanel && !agChatPanel.classList.contains('hidden') && typeof canalAntigravityActivo !== 'undefined' && canalAntigravityActivo) {
+      route = 'antigravity-chat';
+    } else {
+      route = 'antigravity-menu';
+    }
   } else if (viewExtras && !viewExtras.classList.contains('hidden')) {
     if (typeof subviewSuper !== 'undefined' && subviewSuper && !subviewSuper.classList.contains('hidden')) {
       if (typeof vistaSuperActual !== 'undefined' && vistaSuperActual === 'confeccion') {
@@ -1833,7 +1842,8 @@ function capturarEstadoNavegacionActual() {
     vistaSuperActual: typeof vistaSuperActual !== 'undefined' ? vistaSuperActual : 'home',
     listaPendienteAbiertaId: typeof listaPendienteAbiertaId !== 'undefined' ? listaPendienteAbiertaId : null,
     modoModificarListaPendiente: typeof modoModificarListaPendiente !== 'undefined' ? Boolean(modoModificarListaPendiente) : false,
-    idRutinaGymActiva: typeof idRutinaGymActiva !== 'undefined' ? idRutinaGymActiva : null
+    idRutinaGymActiva: typeof idRutinaGymActiva !== 'undefined' ? idRutinaGymActiva : null,
+    canalAntigravityActivo: typeof canalAntigravityActivo !== 'undefined' ? canalAntigravityActivo : null
   };
 }
 
@@ -1910,6 +1920,17 @@ function restaurarEstadoNavegacionGuardado() {
         break;
       case 'settings':
         irAConfiguracion();
+        break;
+      case 'antigravity-menu':
+        if (typeof irAAntigravity === 'function') irAAntigravity();
+        break;
+      case 'antigravity-chat':
+        if (typeof irAAntigravity === 'function') {
+          irAAntigravity();
+          if (st.canalAntigravityActivo && typeof abrirCanalAntigravity === 'function') {
+            abrirCanalAntigravity(st.canalAntigravityActivo);
+          }
+        }
         break;
       case 'extras':
         irAExtras();
@@ -2002,7 +2023,12 @@ function entrarAMenuDeUsuarioActivo(restaurarVistaGuardada = false) {
   if (viewAssistant) viewAssistant.classList.add('hidden');
   if (viewExtras) viewExtras.classList.add('hidden');
   if (viewSettings) viewSettings.classList.add('hidden');
+  if (typeof viewAntigravity !== 'undefined' && viewAntigravity) viewAntigravity.classList.add('hidden');
   viewHome.classList.remove('hidden');
+
+  if (typeof actualizarVisibilidadBloqueAntigravity === 'function') {
+    actualizarVisibilidadBloqueAntigravity();
+  }
 
   btnSwitchUser.textContent = '🔒 Bloquear';
   btnSwitchUser.title = 'Bloquear mi agenda (requiere huella o contraseña para volver)';
@@ -2082,6 +2108,8 @@ function volverAPantallaUsuarios(forzarDni) {
   if (viewAssistant) viewAssistant.classList.add('hidden');
   if (viewExtras) viewExtras.classList.add('hidden');
   if (viewSettings) viewSettings.classList.add('hidden');
+  if (typeof viewAntigravity !== 'undefined' && viewAntigravity) viewAntigravity.classList.add('hidden');
+  if (typeof homeAntigravityBlock !== 'undefined' && homeAntigravityBlock) homeAntigravityBlock.classList.add('hidden');
   const hp = document.getElementById('housemates-prompt-box');
   if (hp) hp.classList.add('hidden');
   if (modalRegisterDni) modalRegisterDni.classList.add('hidden');
@@ -2630,6 +2658,15 @@ async function sincronizarDesdeNube() {
     if (Array.isArray(cloud.tareasCompartidas)) tareasCompartidas = cloud.tareasCompartidas;
     if (cloud.dni) usuarioActivo.dni = cloud.dni;
     if (cloud.tnaConfig) usuarioActivo.tnaConfig = cloud.tnaConfig;
+    if (cloud.antigravityChats) {
+      antigravityChats = cloud.antigravityChats;
+      if (typeof renderizarCanalesAntigravity === 'function') {
+        renderizarCanalesAntigravity();
+      }
+      if (typeof renderizarSalaChatAntigravity === 'function' && typeof viewAntigravity !== 'undefined' && viewAntigravity && !viewAntigravity.classList.contains('hidden')) {
+        renderizarSalaChatAntigravity(false);
+      }
+    }
     if (Array.isArray(cloud.vinculos)) usuarioActivo.vinculos = cloud.vinculos;
     if (Array.isArray(cloud.solicitudesVinculoRecibidas)) solicitudesVinculoRecibidas = cloud.solicitudesVinculoRecibidas;
     if (Array.isArray(cloud.solicitudesVinculoEnviadas)) solicitudesVinculoEnviadas = cloud.solicitudesVinculoEnviadas;
@@ -2849,7 +2886,12 @@ function irAInicio() {
   if (viewAssistant) viewAssistant.classList.add('hidden');
   if (viewExtras) viewExtras.classList.add('hidden');
   if (viewSettings) viewSettings.classList.add('hidden');
+  if (typeof viewAntigravity !== 'undefined' && viewAntigravity) viewAntigravity.classList.add('hidden');
   viewHome.classList.remove('hidden');
+
+  if (typeof actualizarVisibilidadBloqueAntigravity === 'function') {
+    actualizarVisibilidadBloqueAntigravity();
+  }
   btnHome.classList.add('hidden');
   actualizarContadoresYAlertas();
 }
@@ -3025,6 +3067,7 @@ function irAConfiguracion() {
   if (viewDebts) viewDebts.classList.add('hidden');
   if (viewAssistant) viewAssistant.classList.add('hidden');
   if (viewExtras) viewExtras.classList.add('hidden');
+  if (typeof viewAntigravity !== 'undefined' && viewAntigravity) viewAntigravity.classList.add('hidden');
   if (viewSettings) viewSettings.classList.remove('hidden');
   btnHome.classList.remove('hidden');
 
@@ -3167,6 +3210,18 @@ window.addEventListener('popstate', () => {
         history.pushState({ vista: 'settings' }, '');
         return;
       }
+    }
+
+    // 4B. Si está adentro de Accesos a Antigravity
+    if (typeof viewAntigravity !== 'undefined' && viewAntigravity && !viewAntigravity.classList.contains('hidden')) {
+      if (typeof agChatPanel !== 'undefined' && agChatPanel && !agChatPanel.classList.contains('hidden')) {
+        if (typeof volverAMenuAntigravity === 'function') volverAMenuAntigravity();
+        history.pushState({ vista: 'antigravity-menu' }, '');
+        return;
+      }
+      irAInicio();
+      history.pushState({ vista: 'home' }, '');
+      return;
     }
 
     // 5. Si está adentro de Tareas, Agenda o Tareas Compartidas, volver al menú de Tareas y Agenda
@@ -11290,6 +11345,7 @@ async function iniciarSesionConDni(forzarRegistroHuella = false) {
     borrados = Array.isArray(data.borrados) ? data.borrados : [];
     borradosListas = Array.isArray(data.borradosListas) ? data.borradosListas : [];
     if (data.tnaConfig) usuarioActivo.tnaConfig = data.tnaConfig;
+    if (data.antigravityChats) antigravityChats = data.antigravityChats;
     usuarioActivo.vinculos = Array.isArray(data.vinculos) ? data.vinculos : [];
     solicitudesVinculoRecibidas = Array.isArray(data.solicitudesVinculoRecibidas) ? data.solicitudesVinculoRecibidas : [];
     solicitudesVinculoEnviadas = Array.isArray(data.solicitudesVinculoEnviadas) ? data.solicitudesVinculoEnviadas : [];
@@ -12071,6 +12127,491 @@ function togglePasswordInputVisibility(id) {
   const b = document.getElementById(btnId);
   if (b) b.addEventListener('click', () => togglePasswordInputVisibility(inpId));
 });
+
+// =========================================================================
+// ACCESOS A ANTIGRAVITY (EXCLUSIVO DE ALEJANDRO DNI 40218898)
+// =========================================================================
+const homeAntigravityBlock = document.getElementById('home-antigravity-block');
+const btnOpenAntigravity = document.getElementById('btn-open-antigravity');
+const homeAntigravityBadge = document.getElementById('home-antigravity-badge');
+const viewAntigravity = document.getElementById('view-antigravity');
+const agMenuPanel = document.getElementById('ag-menu-panel');
+const agChatPanel = document.getElementById('ag-chat-panel');
+const btnBackFromAntigravity = document.getElementById('btn-back-from-antigravity');
+const btnBackToAgMenu = document.getElementById('btn-back-to-ag-menu');
+const agChatRoomTitle = document.getElementById('ag-chat-room-title');
+const agChatRoomSubtitle = document.getElementById('ag-chat-room-subtitle');
+const btnAgToggleConfig = document.getElementById('btn-ag-toggle-config');
+const btnAgRefreshChat = document.getElementById('btn-ag-refresh-chat');
+const btnAgClearChat = document.getElementById('btn-ag-clear-chat');
+const agConfigChatBox = document.getElementById('ag-config-chat-box');
+const inputAgChatId = document.getElementById('input-ag-chat-id');
+const btnAgSaveChatId = document.getElementById('btn-ag-save-chat-id');
+const agChatMessages = document.getElementById('ag-chat-messages');
+const inputAgMessage = document.getElementById('input-ag-message');
+const btnSendAgMessage = document.getElementById('btn-send-ag-message');
+
+let antigravityChats = null;
+let canalAntigravityActivo = null;
+
+const CANALES_ANTIGRAVITY_DEFAULT = {
+  'mod-app': {
+    id: 'mod-app',
+    numero: 1,
+    icono: '📱',
+    titulo: '1. Modificaciones App',
+    subtitulo: 'Acceso directo a este chat de Antigravity (Agenda Familiar)',
+    chatId: 'dad694e4-db9e-465d-9c96-1681368747ac',
+    mensajes: []
+  },
+  'mod-app-optica': {
+    id: 'mod-app-optica',
+    numero: 2,
+    icono: '👓',
+    titulo: '2. Modificaciones App Óptica',
+    subtitulo: 'Acceso directo al chat de Antigravity para la App de Óptica Argentina',
+    chatId: '6a8098bd-3742-4795-b13f-ea3454cab71f',
+    mensajes: []
+  },
+  'mod-web-optica': {
+    id: 'mod-web-optica',
+    numero: 3,
+    icono: '🌐',
+    titulo: '3. Modificaciones Web Óptica',
+    subtitulo: 'Acceso directo al chat de Antigravity para la Web de Óptica Argentina',
+    chatId: '0c9c8eda-e8d1-4bcd-92b1-6fed095616d6',
+    mensajes: []
+  },
+  'nuevo-general': {
+    id: 'nuevo-general',
+    numero: 4,
+    icono: '💬',
+    titulo: '4. Nuevo Chat General',
+    subtitulo: 'Acceso a nuevo chat general para consultas o proyectos en Antigravity',
+    chatId: 'nuevo-chat-general',
+    mensajes: []
+  }
+};
+
+function esUsuarioAlejandroExclusivo() {
+  if (!usuarioActivo) return false;
+  const dniLimpio = String(usuarioActivo.dni || '').replace(/\D/g, '');
+  return Boolean(usuarioActivo.id === 'alejandro' || dniLimpio === '40218898' || usuarioActivo.esAdmin);
+}
+
+function asegurarEstructuraLocalAntigravity() {
+  if (!antigravityChats || typeof antigravityChats !== 'object') {
+    antigravityChats = { canales: {} };
+  }
+  if (!antigravityChats.canales || typeof antigravityChats.canales !== 'object') {
+    antigravityChats.canales = {};
+  }
+  Object.keys(CANALES_ANTIGRAVITY_DEFAULT).forEach(key => {
+    const def = CANALES_ANTIGRAVITY_DEFAULT[key];
+    if (!antigravityChats.canales[key] || typeof antigravityChats.canales[key] !== 'object') {
+      antigravityChats.canales[key] = {
+        ...def,
+        mensajes: [
+          {
+            id: 'msg-welcome-' + key,
+            autor: 'antigravity',
+            autorNombre: '🤖 Antigravity',
+            texto: `¡Hola Alejandro! Este es tu canal conectado con Antigravity para "${def.titulo}" (Chat ID: ${def.chatId}). Escribí acá tus pedidos o modificaciones y te responderé directamente en esta pantalla.`,
+            fechaHora: Date.now(),
+            estado: 'entregado',
+            leidoPorUsuario: true
+          }
+        ]
+      };
+    } else {
+      const c = antigravityChats.canales[key];
+      c.id = key;
+      c.icono = def.icono;
+      c.titulo = c.titulo || def.titulo;
+      c.subtitulo = c.subtitulo || def.subtitulo;
+      c.chatId = c.chatId || def.chatId;
+      if (!Array.isArray(c.mensajes)) c.mensajes = [];
+    }
+  });
+  return antigravityChats;
+}
+
+function actualizarVisibilidadBloqueAntigravity() {
+  if (!homeAntigravityBlock) return;
+  if (esUsuarioAlejandroExclusivo()) {
+    homeAntigravityBlock.classList.remove('hidden');
+    renderizarCanalesAntigravity();
+  } else {
+    homeAntigravityBlock.classList.add('hidden');
+    if (viewAntigravity) viewAntigravity.classList.add('hidden');
+  }
+}
+
+function renderizarCanalesAntigravity() {
+  if (!esUsuarioAlejandroExclusivo()) return;
+  const est = asegurarEstructuraLocalAntigravity();
+  let totalSinLeer = 0;
+  let totalPendientesPC = 0;
+
+  Object.keys(CANALES_ANTIGRAVITY_DEFAULT).forEach(key => {
+    const canal = est.canales[key];
+    const badgeEl = document.getElementById('ag-badge-' + key);
+    if (!canal || !badgeEl) return;
+
+    const msgs = Array.isArray(canal.mensajes) ? canal.mensajes : [];
+    const sinLeer = msgs.filter(m => m.autor === 'antigravity' && m.leidoPorUsuario === false).length;
+    const pendientes = msgs.filter(m => m.autor === 'alejandro' && m.estado === 'pendiente_pc').length;
+
+    totalSinLeer += sinLeer;
+    totalPendientesPC += pendientes;
+
+    if (sinLeer > 0) {
+      badgeEl.textContent = `🟢 ${sinLeer} respuesta${sinLeer === 1 ? '' : 's'} nueva${sinLeer === 1 ? '' : 's'}`;
+      badgeEl.style.background = 'rgba(16, 185, 129, 0.25)';
+      badgeEl.style.borderColor = '#10b981';
+      badgeEl.style.color = '#6ee7b7';
+    } else if (pendientes > 0) {
+      badgeEl.textContent = `⏳ ${pendientes} enviado${pendientes === 1 ? '' : 's'} a PC`;
+      badgeEl.style.background = 'rgba(245, 158, 11, 0.22)';
+      badgeEl.style.borderColor = '#f59e0b';
+      badgeEl.style.color = '#fde68a';
+    } else {
+      badgeEl.textContent = `Abrir chat (${msgs.length} msj)`;
+      badgeEl.style.background = '';
+    }
+  });
+
+  if (homeAntigravityBadge) {
+    if (totalSinLeer > 0) {
+      homeAntigravityBadge.textContent = `🟢 ${totalSinLeer} respuesta${totalSinLeer === 1 ? '' : 's'} de Antigravity`;
+      homeAntigravityBadge.style.background = 'rgba(16, 185, 129, 0.3)';
+      homeAntigravityBadge.style.borderColor = '#34d399';
+      homeAntigravityBadge.style.color = '#d1fae5';
+    } else if (totalPendientesPC > 0) {
+      homeAntigravityBadge.textContent = `⏳ ${totalPendientesPC} pendiente${totalPendientesPC === 1 ? '' : 's'} en PC`;
+    } else {
+      homeAntigravityBadge.textContent = '4 canales activos';
+      homeAntigravityBadge.style.background = 'rgba(168, 85, 247, 0.25)';
+      homeAntigravityBadge.style.borderColor = '#c084fc';
+      homeAntigravityBadge.style.color = '#f3e8ff';
+    }
+  }
+}
+
+function irAAntigravity() {
+  if (!esUsuarioAlejandroExclusivo()) return;
+  registrarPasoHistorial('antigravity-menu');
+  viewHome.classList.add('hidden');
+  if (viewTasksAgendaMenu) viewTasksAgendaMenu.classList.add('hidden');
+  if (viewEconomyMenu) viewEconomyMenu.classList.add('hidden');
+  viewTasks.classList.add('hidden');
+  viewAgenda.classList.add('hidden');
+  if (viewSharedTasks) viewSharedTasks.classList.add('hidden');
+  viewWallet.classList.add('hidden');
+  if (viewDebts) viewDebts.classList.add('hidden');
+  if (viewAssistant) viewAssistant.classList.add('hidden');
+  if (viewExtras) viewExtras.classList.add('hidden');
+  if (viewSettings) viewSettings.classList.add('hidden');
+  if (viewAntigravity) viewAntigravity.classList.remove('hidden');
+  btnHome.classList.remove('hidden');
+
+  volverAMenuAntigravity(true);
+}
+
+function volverAMenuAntigravity(sinHistorial) {
+  if (!sinHistorial) {
+    registrarPasoHistorial('antigravity-menu');
+  }
+  canalAntigravityActivo = null;
+  if (agChatPanel) agChatPanel.classList.add('hidden');
+  if (agConfigChatBox) agConfigChatBox.classList.add('hidden');
+  if (agMenuPanel) agMenuPanel.classList.remove('hidden');
+  renderizarCanalesAntigravity();
+  guardarEstadoNavegacionActual();
+}
+
+async function abrirCanalAntigravity(canalId) {
+  if (!esUsuarioAlejandroExclusivo()) return;
+  const est = asegurarEstructuraLocalAntigravity();
+  const canal = est.canales[canalId];
+  if (!canal) return;
+
+  canalAntigravityActivo = canalId;
+  registrarPasoHistorial('antigravity-chat-' + canalId);
+
+  if (agMenuPanel) agMenuPanel.classList.add('hidden');
+  if (agConfigChatBox) agConfigChatBox.classList.add('hidden');
+  if (agChatPanel) agChatPanel.classList.remove('hidden');
+
+  renderizarSalaChatAntigravity(true);
+  guardarEstadoNavegacionActual();
+
+  if (inputAgMessage) {
+    setTimeout(() => inputAgMessage.focus(), 80);
+  }
+
+  // Marcar como leídos los mensajes de Antigravity en este canal
+  const habiaNoLeidos = (canal.mensajes || []).some(m => m.autor === 'antigravity' && m.leidoPorUsuario === false);
+  if (habiaNoLeidos) {
+    (canal.mensajes || []).forEach(m => { m.leidoPorUsuario = true; });
+    renderizarCanalesAntigravity();
+    try {
+      await fetch(API_SYNC_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          accion: 'ag_marcar_leido',
+          usuarioId: usuarioActivo.id,
+          password: usuarioActivo.password,
+          canalId: canalId
+        })
+      });
+    } catch (e) {}
+  }
+}
+
+function renderizarSalaChatAntigravity(forzarScrollAbajo = false) {
+  if (!esUsuarioAlejandroExclusivo() || !canalAntigravityActivo || !agChatMessages) return;
+  const est = asegurarEstructuraLocalAntigravity();
+  const canal = est.canales[canalAntigravityActivo];
+  if (!canal) return;
+
+  if (agChatRoomTitle) {
+    agChatRoomTitle.textContent = `${canal.icono || '🤖'} ${canal.titulo}`;
+  }
+  if (agChatRoomSubtitle) {
+    agChatRoomSubtitle.textContent = `${canal.subtitulo} · ID: ${canal.chatId}`;
+  }
+  if (inputAgChatId && document.activeElement !== inputAgChatId) {
+    inputAgChatId.value = canal.chatId || '';
+  }
+
+  const estabaAbajo = (agChatMessages.scrollHeight - agChatMessages.scrollTop - agChatMessages.clientHeight) < 80;
+  agChatMessages.innerHTML = '';
+
+  const mensajes = Array.isArray(canal.mensajes) ? canal.mensajes : [];
+  if (mensajes.length === 0) {
+    agChatMessages.innerHTML = `<div class="empty-state">Todavía no hay mensajes en este canal. Escribí abajo para hablar con Antigravity.</div>`;
+    return;
+  }
+
+  mensajes.forEach(m => {
+    const esMio = m.autor === 'alejandro';
+    const fila = document.createElement('div');
+    fila.style.cssText = `display: flex; flex-direction: column; align-items: ${esMio ? 'flex-end' : 'flex-start'}; width: 100%;`;
+
+    const burbuja = document.createElement('div');
+    burbuja.style.cssText = esMio
+      ? 'max-width: 85%; background: linear-gradient(135deg, #6d28d9, #4c1d95); border: 1px solid #a855f7; color: #f8fafc; padding: 11px 14px; border-radius: 14px 14px 3px 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.25); word-break: break-word; white-space: pre-wrap; line-height: 1.45;'
+      : 'max-width: 88%; background: rgba(30, 41, 59, 0.95); border: 1px solid #10b981; color: #e2e8f0; padding: 11px 14px; border-radius: 14px 14px 14px 3px; box-shadow: 0 4px 12px rgba(0,0,0,0.25); word-break: break-word; white-space: pre-wrap; line-height: 1.45;';
+
+    const fechaStr = m.fechaHora
+      ? new Date(m.fechaHora).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+      : '';
+
+    let estadoBadge = '';
+    if (esMio) {
+      estadoBadge = m.estado === 'respondido'
+        ? '<span style="color:#6ee7b7; font-size:0.74rem; margin-left:6px;">✓✓ Recibido y procesado en PC</span>'
+        : '<span style="color:#fde68a; font-size:0.74rem; margin-left:6px;">⏳ Enviado a Antigravity PC...</span>';
+    }
+
+    burbuja.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:4px; font-size:0.76rem; color:${esMio ? '#e9d5ff' : '#34d399'}; font-weight:700;">
+        <span>${esMio ? '👑 Alejandro' : '🤖 Antigravity'}</span>
+        <span style="font-weight:400; opacity:0.85;">${escaparHTML(fechaStr)}</span>
+      </div>
+      <div style="font-size:0.95rem;">${escaparHTML(m.texto || '')}</div>
+      ${esMio ? `<div style="text-align:right; margin-top:4px;">${estadoBadge}</div>` : ''}
+    `;
+
+    fila.appendChild(burbuja);
+    agChatMessages.appendChild(fila);
+  });
+
+  if (forzarScrollAbajo || estabaAbajo) {
+    agChatMessages.scrollTop = agChatMessages.scrollHeight;
+  }
+}
+
+async function enviarMensajeAntigravity() {
+  if (!esUsuarioAlejandroExclusivo() || !canalAntigravityActivo || !inputAgMessage) return;
+  const texto = inputAgMessage.value.trim();
+  if (!texto) {
+    inputAgMessage.focus();
+    return;
+  }
+
+  const canalId = canalAntigravityActivo;
+  inputAgMessage.value = '';
+  if (btnSendAgMessage) {
+    btnSendAgMessage.disabled = true;
+    btnSendAgMessage.textContent = '⏳ Enviando...';
+  }
+
+  // Agregar optimísticamente a la vista local
+  const est = asegurarEstructuraLocalAntigravity();
+  const canal = est.canales[canalId];
+  const tempMsg = {
+    id: 'agmsg-local-' + Date.now(),
+    autor: 'alejandro',
+    autorNombre: '👑 Alejandro',
+    texto: texto,
+    fechaHora: Date.now(),
+    estado: 'pendiente_pc',
+    leidoPorUsuario: true
+  };
+  if (canal) {
+    canal.mensajes.push(tempMsg);
+  }
+  renderizarSalaChatAntigravity(true);
+  renderizarCanalesAntigravity();
+  guardarCacheDatosUsuarioLocal();
+
+  try {
+    const res = await fetch(API_SYNC_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        accion: 'ag_enviar_mensaje',
+        usuarioId: usuarioActivo.id,
+        password: usuarioActivo.password,
+        canalId: canalId,
+        texto: texto
+      })
+    });
+    const data = await res.json();
+    if (res.ok && data.antigravityChats) {
+      antigravityChats = data.antigravityChats;
+      guardarCacheDatosUsuarioLocal();
+      renderizarSalaChatAntigravity(true);
+      renderizarCanalesAntigravity();
+    }
+  } catch (e) {
+    console.warn('Error al enviar mensaje a Antigravity:', e);
+  } finally {
+    if (btnSendAgMessage) {
+      btnSendAgMessage.disabled = false;
+      btnSendAgMessage.textContent = '🚀 Enviar';
+    }
+    if (inputAgMessage) inputAgMessage.focus();
+  }
+}
+
+if (btnOpenAntigravity) {
+  btnOpenAntigravity.addEventListener('click', irAAntigravity);
+}
+
+if (btnBackFromAntigravity) {
+  btnBackFromAntigravity.addEventListener('click', irAInicio);
+}
+
+if (btnBackToAgMenu) {
+  btnBackToAgMenu.addEventListener('click', () => volverAMenuAntigravity(false));
+}
+
+document.querySelectorAll('.ag-channel-card').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const cid = btn.getAttribute('data-channel');
+    if (cid) abrirCanalAntigravity(cid);
+  });
+});
+
+if (btnSendAgMessage) {
+  btnSendAgMessage.addEventListener('click', enviarMensajeAntigravity);
+}
+
+if (inputAgMessage) {
+  inputAgMessage.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      enviarMensajeAntigravity();
+    }
+  });
+}
+
+if (btnAgToggleConfig) {
+  btnAgToggleConfig.addEventListener('click', () => {
+    if (agConfigChatBox) {
+      agConfigChatBox.classList.toggle('hidden');
+      if (!agConfigChatBox.classList.contains('hidden') && inputAgChatId) {
+        inputAgChatId.focus();
+      }
+    }
+  });
+}
+
+if (btnAgSaveChatId) {
+  btnAgSaveChatId.addEventListener('click', async () => {
+    if (!esUsuarioAlejandroExclusivo() || !canalAntigravityActivo || !inputAgChatId) return;
+    const nuevoId = inputAgChatId.value.trim();
+    if (!nuevoId) return;
+
+    btnAgSaveChatId.disabled = true;
+    btnAgSaveChatId.textContent = 'Guardando...';
+    try {
+      const res = await fetch(API_SYNC_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          accion: 'ag_configurar_canal',
+          usuarioId: usuarioActivo.id,
+          password: usuarioActivo.password,
+          canalId: canalAntigravityActivo,
+          nuevoChatId: nuevoId
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.antigravityChats) {
+        antigravityChats = data.antigravityChats;
+        guardarCacheDatosUsuarioLocal();
+        renderizarSalaChatAntigravity(false);
+        if (agConfigChatBox) agConfigChatBox.classList.add('hidden');
+        alert('✓ ¡ID de Conversación de Antigravity actualizado para este canal!');
+      }
+    } catch (e) {
+      alert('Error de conexión al guardar el ID del chat.');
+    } finally {
+      btnAgSaveChatId.disabled = false;
+      btnAgSaveChatId.textContent = 'Guardar ID';
+    }
+  });
+}
+
+if (btnAgRefreshChat) {
+  btnAgRefreshChat.addEventListener('click', async () => {
+    btnAgRefreshChat.textContent = '⏳...';
+    await sincronizarDesdeNube();
+    renderizarSalaChatAntigravity(true);
+    btnAgRefreshChat.textContent = '🔄 Actualizar';
+  });
+}
+
+if (btnAgClearChat) {
+  btnAgClearChat.addEventListener('click', async () => {
+    if (!esUsuarioAlejandroExclusivo() || !canalAntigravityActivo) return;
+    if (!confirm('¿Querés limpiar los mensajes anteriores de este canal?')) return;
+    try {
+      const res = await fetch(API_SYNC_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          accion: 'ag_limpiar_canal',
+          usuarioId: usuarioActivo.id,
+          password: usuarioActivo.password,
+          canalId: canalAntigravityActivo
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.antigravityChats) {
+        antigravityChats = data.antigravityChats;
+        guardarCacheDatosUsuarioLocal();
+        renderizarSalaChatAntigravity(true);
+        renderizarCanalesAntigravity();
+      }
+    } catch (e) {}
+  });
+}
 
 // ==========================================
 // INICIALIZACIÓN
