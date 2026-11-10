@@ -11,11 +11,11 @@
   <link rel="icon" type="image/svg+xml" href="logo.svg">
   <link rel="apple-touch-icon" href="logo.svg">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="styles.css?v=20261110_02">
+  <link rel="stylesheet" href="styles.css?v=20261110_03">
   <!-- ESCUDO DE DIAGNÓSTICO TEMPRANO Y CAPTURA DE ERRORES PÚBLICOS -->
   <script>
     (function() {
-      window.__APP_VERSION = '20261110_02';
+      window.__APP_VERSION = '20261110_03';
       window.__ERRORES_APP = [];
 
       function copiarTexto(texto) {
@@ -1850,13 +1850,154 @@
         <button type="button" id="btn-back-workout-to-uso" class="btn-back" style="margin-bottom: 10px;">&larr; Volver a Uso Diario</button>
         <div class="tasks-top-bar" style="flex-wrap: wrap; gap: 10px;">
           <div>
-            <h2>💪 4. Entrenamiento — Mis Rutinas de Gimnasio</h2>
-            <p class="subtitle-text">Podés tener más de una rutina guardada y compartir cualquiera con tus amigos de la app (<b>Mancuernas + Máquina Multigym con poleas</b>)</p>
+            <h2>💪 4. Entrenamiento — Gimnasio y Caminatas</h2>
+            <p class="subtitle-text">Tus rutinas personalizadas y tu contador de pasos y caminatas 100% independiente</p>
           </div>
           <button type="button" id="btn-new-workout-toggle" class="btn-add-plus" title="Armar una nueva rutina de entrenamiento">
             <span class="plus-symbol">+</span> Nueva Rutina
           </button>
         </div>
+
+        <!-- PESTAÑAS INTERNAS DE GIMNASIO: RUTINAS VS CONTADOR DE PASOS Y CAMINATAS -->
+        <div class="lists-switcher-wrap" style="margin-bottom: 16px;">
+          <div class="lists-pill-selector" style="display:flex; gap:10px; flex-wrap:wrap;">
+            <button type="button" id="btn-gym-tab-routines" class="btn-list-pill active" style="flex:1 1 200px; justify-content:center; padding:11px 16px; font-size:0.98rem;">
+              🏋️‍♂️ Mis Rutinas de Gimnasio
+            </button>
+            <button type="button" id="btn-gym-tab-steps" class="btn-list-pill" style="flex:1 1 200px; justify-content:center; padding:11px 16px; font-size:0.98rem;">
+              👟 Pasos y Caminatas <span id="gym-tab-steps-badge" style="margin-left:6px; font-size:0.82rem; padding:2px 8px; border-radius:999px; background:rgba(16,185,129,0.2); color:#6ee7b7;">0 hoy</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- SECCIÓN B: CONTADOR DE PASOS Y CAMINATAS (100% INDEPENDIENTE) -->
+        <div id="workout-steps-panel" class="hidden">
+          <!-- TARJETA PRINCIPAL DE PROGRESO DIARIO -->
+          <div class="task-form-box" style="margin-bottom: 18px; border-color: #10b981; background: linear-gradient(145deg, rgba(6, 78, 59, 0.35), rgba(15, 23, 42, 0.95));">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+              <div>
+                <span class="priority-pill pill-simple" id="steps-today-status-pill">🎯 Meta del día</span>
+                <h3 style="margin:6px 0 0 0; color:#f8fafc; font-size:1.25rem;">👟 Registro de Pasos de Hoy</h3>
+              </div>
+              <button type="button" id="btn-change-steps-goal" class="btn-secondary" style="padding:6px 12px; font-size:0.84rem; border-color:#34d399; color:#6ee7b7;">
+                🎯 Meta: <strong id="steps-goal-label">8.000</strong> pasos ✏️
+              </button>
+            </div>
+
+            <div style="text-align:center; padding: 14px 10px; background: rgba(2, 6, 23, 0.55); border-radius: 14px; border: 1px solid rgba(16, 185, 129, 0.3); margin-bottom: 14px;">
+              <div id="steps-today-big-number" style="font-size: 2.8rem; font-weight: 900; color: #34d399; line-height: 1.05;">0</div>
+              <div style="color: #94a3b8; font-size: 0.92rem; margin-top: 4px;">
+                de <strong id="steps-today-goal-inline" style="color:#e2e8f0;">8.000</strong> pasos (<span id="steps-today-percent">0%</span>)
+              </div>
+
+              <!-- Barra de progreso -->
+              <div style="width:100%; max-width:440px; height:12px; background:rgba(255,255,255,0.08); border-radius:999px; margin:12px auto 4px auto; overflow:hidden; border:1px solid rgba(255,255,255,0.1);">
+                <div id="steps-progress-bar-fill" style="width:0%; height:100%; background:linear-gradient(90deg, #10b981, #34d399); border-radius:999px; transition:width 0.3s ease;"></div>
+              </div>
+            </div>
+
+            <!-- Estadísticas rápidas del día -->
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap:10px;">
+              <div style="background:rgba(15,23,42,0.75); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:10px; text-align:center;">
+                <div style="font-size:0.78rem; color:#94a3b8;">📍 Distancia hoy</div>
+                <strong id="steps-today-km" style="font-size:1.15rem; color:#60a5fa;">0,00 km</strong>
+              </div>
+              <div style="background:rgba(15,23,42,0.75); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:10px; text-align:center;">
+                <div style="font-size:0.78rem; color:#94a3b8;">🔥 Calorías est.</div>
+                <strong id="steps-today-kcal" style="font-size:1.15rem; color:#fbbf24;">0 kcal</strong>
+              </div>
+              <div style="background:rgba(15,23,42,0.75); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:10px; text-align:center;">
+                <div style="font-size:0.78rem; color:#94a3b8;">⏱️ Tiempo activo</div>
+                <strong id="steps-today-minutes" style="font-size:1.15rem; color:#a78bfa;">0 min</strong>
+              </div>
+            </div>
+          </div>
+
+          <!-- MODO CAMINATA EN VIVO CON EL SENSOR DEL CELULAR -->
+          <div class="task-form-box" style="margin-bottom: 18px; border-color: #3b82f6; background: rgba(15, 23, 42, 0.92);">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px; margin-bottom:10px;">
+              <div>
+                <h3 style="margin:0; color:#60a5fa; font-size:1.12rem;">🏃 Contador de Caminata en Vivo (Sensor del Celular)</h3>
+                <p class="subtitle-text" style="margin:4px 0 0 0; font-size:0.86rem;">
+                  Activá el contador al salir a caminar o correr: usa el sensor de movimiento de tu celular y mantiene la pantalla activa para contar cada paso en tiempo real.
+                </p>
+              </div>
+              <span id="steps-sensor-status-badge" class="priority-pill pill-hora">📱 Sensor listo</span>
+            </div>
+
+            <!-- Panel en vivo cuando hay una caminata activa -->
+            <div id="steps-live-session-box" class="hidden" style="background:rgba(2, 6, 23, 0.7); border:1px solid #3b82f6; border-radius:12px; padding:14px; margin:12px 0;">
+              <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
+                <span style="color:#93c5fd; font-weight:700; font-size:0.92rem;" id="steps-live-state-label">🟢 Caminata en curso...</span>
+                <span id="steps-live-timer" style="font-family:monospace; font-size:1.35rem; font-weight:800; color:#f8fafc; background:rgba(59,130,246,0.2); padding:4px 12px; border-radius:8px;">00:00</span>
+              </div>
+              <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:8px; text-align:center;">
+                <div style="padding:8px; background:rgba(255,255,255,0.03); border-radius:8px;">
+                  <div style="font-size:0.75rem; color:#94a3b8;">Pasos sesión</div>
+                  <strong id="steps-live-count" style="font-size:1.45rem; color:#34d399;">0</strong>
+                </div>
+                <div style="padding:8px; background:rgba(255,255,255,0.03); border-radius:8px;">
+                  <div style="font-size:0.75rem; color:#94a3b8;">Distancia</div>
+                  <strong id="steps-live-km" style="font-size:1.2rem; color:#60a5fa;">0,00 km</strong>
+                </div>
+                <div style="padding:8px; background:rgba(255,255,255,0.03); border-radius:8px;">
+                  <div style="font-size:0.75rem; color:#94a3b8;">Calorías</div>
+                  <strong id="steps-live-kcal" style="font-size:1.2rem; color:#fbbf24;">0 kcal</strong>
+                </div>
+              </div>
+            </div>
+
+            <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:12px;">
+              <button type="button" id="btn-start-live-walk" class="btn-buy-finish" style="flex:1 1 220px; justify-content:center; padding:12px 18px; font-size:1rem;">
+                ▶️ Iniciar Caminata en Vivo
+              </button>
+              <button type="button" id="btn-pause-live-walk" class="btn-secondary hidden" style="flex:1 1 140px; justify-content:center; border-color:#f59e0b; color:#fbbf24; font-weight:700;">
+                ⏸️ Pausar
+              </button>
+              <button type="button" id="btn-stop-live-walk" class="btn-primary hidden" style="flex:1 1 180px; justify-content:center; background:#10b981; border-color:#059669; font-weight:700;">
+                ⏹️ Finalizar y Guardar Caminata
+              </button>
+            </div>
+          </div>
+
+          <!-- SUMAR PASOS MANUALMENTE EN 1 TOQUE -->
+          <div class="task-form-box" style="margin-bottom: 18px;">
+            <h3 style="margin:0 0 6px 0; color:#e2e8f0; font-size:1.02rem;">➕ Sumar o ajustar pasos del día</h3>
+            <p class="subtitle-text" style="margin:0 0 12px 0; font-size:0.84rem;">
+              Si caminaste con el celular guardado o querés sumar pasos rápido a tu cuenta de hoy:
+            </p>
+            <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;">
+              <button type="button" class="btn-secondary btn-quick-add-steps" data-steps="250" style="padding:7px 12px; font-size:0.86rem;">+250 pasos</button>
+              <button type="button" class="btn-secondary btn-quick-add-steps" data-steps="500" style="padding:7px 12px; font-size:0.86rem;">+500 pasos</button>
+              <button type="button" class="btn-secondary btn-quick-add-steps" data-steps="1000" style="padding:7px 12px; font-size:0.86rem;">+1.000 pasos</button>
+              <button type="button" class="btn-secondary btn-quick-add-steps" data-steps="2500" style="padding:7px 12px; font-size:0.86rem;">+2.500 pasos</button>
+            </div>
+            <div class="form-row" style="align-items:flex-end; gap:8px; margin-bottom:0;">
+              <div class="form-group flex-grow" style="margin-bottom:0;">
+                <label for="input-manual-steps" style="font-size:0.82rem;">Cantidad personalizada de pasos</label>
+                <input type="number" id="input-manual-steps" min="1" step="1" placeholder="Ej: 1500">
+              </div>
+              <button type="button" id="btn-add-manual-steps" class="btn-add-plus" style="padding:10px 16px;">
+                <span class="plus-symbol">+</span> Sumar a hoy
+              </button>
+              <button type="button" id="btn-reset-today-steps" class="btn-secondary" style="padding:10px 12px; font-size:0.82rem; color:#fca5a5; border-color:rgba(239,68,68,0.4);" title="Poner en cero los pasos de hoy">
+                🔄 Reiniciar hoy
+              </button>
+            </div>
+          </div>
+
+          <!-- HISTORIAL DE CAMINATAS Y ÚLTIMOS 7 DÍAS -->
+          <div class="task-form-box" style="margin-bottom: 18px;">
+            <h3 style="margin:0 0 10px 0; color:#e2e8f0; font-size:1.05rem;">📅 Tu Historial de los Últimos 7 Días</h3>
+            <div id="steps-weekly-history-list" style="display:flex; flex-direction:column; gap:8px; margin-bottom:16px;"></div>
+
+            <h3 style="margin:14px 0 10px 0; color:#e2e8f0; font-size:1.02rem; padding-top:12px; border-top:1px solid rgba(255,255,255,0.08);">🏃 Sesiones de Caminata Guardadas</h3>
+            <div id="steps-walks-sessions-list" style="display:flex; flex-direction:column; gap:8px;"></div>
+          </div>
+        </div>
+
+        <!-- SECCIÓN A: CONTENEDOR DE RUTINAS DE GIMNASIO -->
+        <div id="workout-routines-main-panel">
 
         <!-- SELECTOR DE MÚLTIPLES RUTINAS EN FORMATO PÍLDORAS -->
         <div id="workout-routines-switcher-wrap" class="lists-switcher-wrap hidden" style="margin-bottom: 16px;">
@@ -1999,6 +2140,7 @@
             </div>
           </div>
           <div id="workout-routine-content" class="workout-days-container"></div>
+        </div>
         </div>
       </div>
 
@@ -2741,6 +2883,6 @@
     </section>
   </main>
 
-  <script src="app.js?v=20261110_02"></script>
+  <script src="app.js?v=20261110_03"></script>
 </body>
 </html>
