@@ -2968,6 +2968,15 @@ filterChips.forEach(chip => {
   });
 });
 
+let idTareaEditandoPrioridad = null;
+
+document.addEventListener('click', (e) => {
+  if (idTareaEditandoPrioridad !== null && !e.target.closest('[data-priority-wrap]')) {
+    idTareaEditandoPrioridad = null;
+    renderizarTareas();
+  }
+});
+
 function renderizarTareas() {
   tasksList.innerHTML = '';
 
@@ -3001,11 +3010,22 @@ function renderizarTareas() {
       ? `<button class="btn-delete" data-action="reject" style="background:rgba(239, 68, 68, 0.2); border-color:#ef4444; color:#fca5a5;" title="Rechazar y avisar al autor">✕ Rechazar</button>`
       : `<button class="btn-delete" data-action="delete">✕ Eliminar</button>`;
 
+    const estaEditandoPrio = (idTareaEditandoPrioridad === tarea.id);
+    const bloquePrioridadHtml = estaEditandoPrio
+      ? `<div data-priority-wrap="1" style="display:inline-flex; gap:6px; align-items:center; flex-wrap:wrap;">
+          ${['simple', 'intermedio', 'urgente'].map(p => `
+            <span class="priority-pill pill-${p}" data-action="set-priority" data-prio="${p}" style="cursor:pointer; user-select:none; ${tarea.prioridad === p ? 'outline:2px solid #ffffff; transform:scale(1.05);' : 'opacity:0.85;'}">
+              ${ETIQUETA_PRIORIDAD[p]}
+            </span>
+          `).join('')}
+        </div>`
+      : `<span class="priority-pill pill-${tarea.prioridad}" data-priority-wrap="1" data-action="open-priority" style="cursor:pointer; user-select:none;" title="Tocá para cambiar la prioridad">
+          ${ETIQUETA_PRIORIDAD[tarea.prioridad]}
+        </span>`;
+
     fila.innerHTML = `
       <div class="task-info">
-        <span class="priority-pill pill-${tarea.prioridad}">
-          ${ETIQUETA_PRIORIDAD[tarea.prioridad]}
-        </span>
+        ${bloquePrioridadHtml}
         <div>
           <span class="task-text">${escaparHTML(tarea.texto)}</span>
           ${etiquetaAutor}
@@ -3019,6 +3039,31 @@ function renderizarTareas() {
         ${botonRechazar}
       </div>
     `;
+
+    const btnOpenPrio = fila.querySelector('[data-action="open-priority"]');
+    if (btnOpenPrio) {
+      btnOpenPrio.addEventListener('click', (e) => {
+        e.stopPropagation();
+        idTareaEditandoPrioridad = tarea.id;
+        renderizarTareas();
+      });
+    }
+
+    fila.querySelectorAll('[data-action="set-priority"]').forEach(pillBtn => {
+      pillBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const nuevaPrio = pillBtn.dataset.prio;
+        idTareaEditandoPrioridad = null;
+        if (nuevaPrio && nuevaPrio !== tarea.prioridad) {
+          tarea.prioridad = nuevaPrio;
+          tarea.updatedAt = Date.now();
+          renderizarTareas();
+          guardarEnNube();
+        } else {
+          renderizarTareas();
+        }
+      });
+    });
 
     fila.querySelector('[data-action="toggle"]').addEventListener('click', () => {
       const eraRealizada = tarea.realizada;
