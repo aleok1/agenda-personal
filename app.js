@@ -104,12 +104,19 @@ let tipoMovimientoActual = 'gasto';
 let medioPagoActual = 'efectivo';
 let sincronizando = false;
 let navegandoPorHistorial = false;
+let bloqueandoGuardadoNav = false;
+
+const STORAGE_NAV_STATE_PREFIX = 'agenda_nav_state_v1_';
+const STORAGE_USER_DATA_CACHE_PREFIX = 'agenda_datos_cache_v1_';
 
 function registrarPasoHistorial(vistaNombre) {
   if (navegandoPorHistorial || ES_MODO_EXTERNO) return;
   try {
     history.pushState({ vista: vistaNombre }, '');
   } catch (e) {}
+  if (!bloqueandoGuardadoNav) {
+    setTimeout(guardarEstadoNavegacionActual, 0);
+  }
 }
 
 // Elementos del DOM
@@ -502,6 +509,8 @@ async function cargarListaDeUsuarios() {
         } catch (e) {}
       }
       if (!u) u = { id: recordadoId, nombre: 'Alejandro', tienePassword: true };
+      // Restaurar instantáneamente desde caché local en 0ms para volver a la página donde estaba sin parpadeo
+      restaurarDesdeCacheLocalAlRecargar(u, passSesion);
       intentarIngresoConPassword(u, passSesion, true);
       return;
     }
@@ -746,6 +755,8 @@ async function intentarIngresoConPassword(u, pass, eraAutomatico) {
     }
 
     // Login exitoso
+    const yaEstabaEnPantallaRestaurada = Boolean(eraAutomatico && usuarioActivo && usuarioActivo.id === u.id && viewUsers.classList.contains('hidden'));
+    const deudorPrevioId = idDeudorActivo;
     localStorage.setItem('agenda_usuario_recordado', u.id);
     const esDev = Boolean(u.id === 'alejandro' || (u.dni && String(u.dni).replace(/\D/g, '') === '40218898') || (data.dni && String(data.dni).replace(/\D/g, '') === '40218898'));
     usuarioActivo = {
@@ -775,7 +786,7 @@ async function intentarIngresoConPassword(u, pass, eraAutomatico) {
     listasPresupuestos = Array.isArray(data.listasPresupuestos) ? data.listasPresupuestos : [];
     deudores = Array.isArray(data.deudores) ? data.deudores : [];
     yoDebo = Array.isArray(data.yoDebo) ? data.yoDebo : [];
-    idDeudorActivo = null;
+    idDeudorActivo = yaEstabaEnPantallaRestaurada ? deudorPrevioId : null;
     superCompartidoCon = Array.isArray(data.superCompartidoCon) ? data.superCompartidoCon : [];
     yaConfiguroCasa = Boolean(data.yaConfiguroCasa);
     borrados = Array.isArray(data.borrados) ? data.borrados : [];
@@ -785,10 +796,35 @@ async function intentarIngresoConPassword(u, pass, eraAutomatico) {
     solicitudesVinculoRecibidas = Array.isArray(data.solicitudesVinculoRecibidas) ? data.solicitudesVinculoRecibidas : [];
     solicitudesVinculoEnviadas = Array.isArray(data.solicitudesVinculoEnviadas) ? data.solicitudesVinculoEnviadas : [];
 
+    guardarCacheDatosUsuarioLocal();
     registrarActividadSesion();
     loginPasswordBox.classList.add('hidden');
     if (dniLoginBox) dniLoginBox.classList.add('hidden');
-    entrarAMenuDeUsuarioActivo();
+
+    if (yaEstabaEnPantallaRestaurada) {
+      // Ya estaba en la pantalla restaurada tras recargar: actualizar componentes sin sacarlo de su pantalla
+      limpiarTareasVencidas();
+      actualizarContadoresYAlertas();
+      actualizarContadoresTareasAgendaMenu();
+      actualizarContadoresEconomiaMenu();
+      renderizarTareas();
+      renderizarTareasCompartidas();
+      renderizarCalendario();
+      renderizarRecordatoriosDelDia();
+      renderizarBilletera();
+      renderizarSupermercado();
+      renderizarHeladera();
+      renderizarEntrenamiento();
+      renderizarListasPresupuestos();
+      if (subtabDeudaActiva === 'yo-debo') {
+        renderizarYoDebo();
+      } else {
+        renderizarDeudores(true);
+      }
+      actualizarEstadoSync('☁️ Sincronizado', 'verde');
+    } else {
+      entrarAMenuDeUsuarioActivo(true);
+    }
   } catch (e) {
     loginErrorMsg.textContent = 'Error de conexión. Intentá nuevamente.';
     loginErrorMsg.classList.remove('hidden');
@@ -1645,6 +1681,312 @@ function verificarNotificacionesPendientes(esIngresoInicial) {
   }
 }
 
+function guardarCacheDatosUsuarioLocal() {
+  if (ES_MODO_EXTERNO || !usuarioActivo || !usuarioActivo.id) return;
+  try {
+    const cacheObj = {
+      savedAt: Date.now(),
+      usuario: {
+        id: usuarioActivo.id,
+        nombre: usuarioActivo.nombre,
+        dni: usuarioActivo.dni || null,
+        esAdmin: Boolean(usuarioActivo.esAdmin),
+        avatar: usuarioActivo.avatar || '👤',
+        tiempoBloqueoMin: usuarioActivo.tiempoBloqueoMin || 60,
+        tnaConfig: usuarioActivo.tnaConfig || null,
+        vinculos: Array.isArray(usuarioActivo.vinculos) ? usuarioActivo.vinculos : []
+      },
+      tareas: Array.isArray(tareas) ? tareas : [],
+      avisosTareas: Array.isArray(avisosTareas) ? avisosTareas : [],
+      recordatorios: Array.isArray(recordatorios) ? recordatorios : [],
+      movimientos: Array.isArray(movimientos) ? movimientos : [],
+      supermercado: Array.isArray(supermercado) ? supermercado : [],
+      heladera: Array.isArray(heladera) ? heladera : [],
+      entrenamiento: entrenamiento || null,
+      listasPresupuestos: Array.isArray(listasPresupuestos) ? listasPresupuestos : [],
+      deudores: Array.isArray(deudores) ? deudores : [],
+      yoDebo: Array.isArray(yoDebo) ? yoDebo : [],
+      superCompartidoCon: Array.isArray(superCompartidoCon) ? superCompartidoCon : [],
+      yaConfiguroCasa: Boolean(yaConfiguroCasa),
+      tareasCompartidas: Array.isArray(tareasCompartidas) ? tareasCompartidas : [],
+      solicitudesVinculoRecibidas: Array.isArray(solicitudesVinculoRecibidas) ? solicitudesVinculoRecibidas : [],
+      solicitudesVinculoEnviadas: Array.isArray(solicitudesVinculoEnviadas) ? solicitudesVinculoEnviadas : [],
+      borrados: Array.isArray(borrados) ? borrados : [],
+      borradosListas: Array.isArray(borradosListas) ? borradosListas : []
+    };
+    localStorage.setItem(STORAGE_USER_DATA_CACHE_PREFIX + usuarioActivo.id, JSON.stringify(cacheObj));
+  } catch (e) {}
+}
+
+function restaurarDesdeCacheLocalAlRecargar(u, pass) {
+  if (!u || !u.id) return false;
+  try {
+    const raw = localStorage.getItem(STORAGE_USER_DATA_CACHE_PREFIX + u.id);
+    if (!raw) return false;
+    const cache = JSON.parse(raw);
+    if (!cache || !cache.usuario) return false;
+
+    const esDev = Boolean(u.id === 'alejandro' || (u.dni && String(u.dni).replace(/\D/g, '') === '40218898') || (cache.usuario.dni && String(cache.usuario.dni).replace(/\D/g, '') === '40218898'));
+    usuarioActivo = {
+      id: u.id,
+      nombre: cache.usuario.nombre || u.nombre,
+      dni: cache.usuario.dni || u.dni || null,
+      esAdmin: esDev,
+      avatar: esDev ? '👑' : (cache.usuario.avatar || u.avatar || '👤'),
+      password: pass,
+      tiempoBloqueoMin: cache.usuario.tiempoBloqueoMin || Number(localStorage.getItem('agenda_bloqueo_' + u.id)) || 60,
+      tnaConfig: cache.usuario.tnaConfig || null,
+      vinculos: Array.isArray(cache.usuario.vinculos) ? cache.usuario.vinculos : []
+    };
+
+    tareas = Array.isArray(cache.tareas) ? cache.tareas : [];
+    avisosTareas = Array.isArray(cache.avisosTareas) ? cache.avisosTareas : [];
+    recordatorios = Array.isArray(cache.recordatorios) ? cache.recordatorios : [];
+    movimientos = Array.isArray(cache.movimientos) ? cache.movimientos : [];
+    supermercado = Array.isArray(cache.supermercado) ? cache.supermercado : [];
+    heladera = Array.isArray(cache.heladera) ? cache.heladera : [];
+    entrenamiento = cache.entrenamiento ? normalizarEstructuraEntrenamiento(cache.entrenamiento) : null;
+    listasPresupuestos = Array.isArray(cache.listasPresupuestos) ? cache.listasPresupuestos : [];
+    deudores = Array.isArray(cache.deudores) ? cache.deudores : [];
+    yoDebo = Array.isArray(cache.yoDebo) ? cache.yoDebo : [];
+    superCompartidoCon = Array.isArray(cache.superCompartidoCon) ? cache.superCompartidoCon : [];
+    yaConfiguroCasa = Boolean(cache.yaConfiguroCasa);
+    tareasCompartidas = Array.isArray(cache.tareasCompartidas) ? cache.tareasCompartidas : [];
+    solicitudesVinculoRecibidas = Array.isArray(cache.solicitudesVinculoRecibidas) ? cache.solicitudesVinculoRecibidas : [];
+    solicitudesVinculoEnviadas = Array.isArray(cache.solicitudesVinculoEnviadas) ? cache.solicitudesVinculoEnviadas : [];
+    borrados = Array.isArray(cache.borrados) ? cache.borrados : [];
+    borradosListas = Array.isArray(cache.borradosListas) ? cache.borradosListas : [];
+
+    entrarAMenuDeUsuarioActivo(true);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+function capturarEstadoNavegacionActual() {
+  if (!usuarioActivo || !usuarioActivo.id) return null;
+  if (!viewUsers.classList.contains('hidden')) return null;
+
+  let route = 'home';
+  if (viewTasksAgendaMenu && !viewTasksAgendaMenu.classList.contains('hidden')) {
+    route = 'tasks-agenda-menu';
+  } else if (viewTasks && !viewTasks.classList.contains('hidden')) {
+    route = 'tasks';
+  } else if (viewAgenda && !viewAgenda.classList.contains('hidden')) {
+    route = 'agenda';
+  } else if (viewSharedTasks && !viewSharedTasks.classList.contains('hidden')) {
+    route = 'shared-tasks';
+  } else if (viewEconomyMenu && !viewEconomyMenu.classList.contains('hidden')) {
+    route = 'economy-menu';
+  } else if (viewWallet && !viewWallet.classList.contains('hidden')) {
+    route = 'wallet';
+  } else if (viewDebts && !viewDebts.classList.contains('hidden')) {
+    route = 'debts';
+  } else if (viewAssistant && !viewAssistant.classList.contains('hidden')) {
+    route = 'assistant';
+  } else if (viewSettings && !viewSettings.classList.contains('hidden')) {
+    route = 'settings';
+  } else if (viewExtras && !viewExtras.classList.contains('hidden')) {
+    if (subviewSupermarket && !subviewSupermarket.classList.contains('hidden')) {
+      if (superConfeccionarScreen && !superConfeccionarScreen.classList.contains('hidden')) {
+        route = 'extras-super-confeccionar';
+      } else if (superPendientesScreen && !superPendientesScreen.classList.contains('hidden')) {
+        if (superPendientesActiveView && !superPendientesActiveView.classList.contains('hidden') && idListaSuperPendienteActiva) {
+          route = 'extras-super-pendientes-activa';
+        } else {
+          route = 'extras-super-pendientes';
+        }
+      } else {
+        route = 'extras-super';
+      }
+    } else if (subviewBudgets && !subviewBudgets.classList.contains('hidden')) {
+      if (budgetActiveListContainer && !budgetActiveListContainer.classList.contains('hidden') && idListaPresupuestoActiva) {
+        route = 'extras-presupuestos-detalle';
+      } else {
+        route = 'extras-presupuestos';
+      }
+    } else if (subviewFridge && !subviewFridge.classList.contains('hidden')) {
+      route = 'extras-heladera';
+    } else if (subviewGym && !subviewGym.classList.contains('hidden')) {
+      route = 'extras-gimnasio';
+    } else {
+      route = 'extras';
+    }
+  }
+
+  return {
+    route: route,
+    timestamp: Date.now(),
+    filtroActual: typeof filtroActual !== 'undefined' ? filtroActual : 'todas',
+    fechaSeleccionada: typeof fechaSeleccionada !== 'undefined' ? fechaSeleccionada : null,
+    mesActual: typeof mesActual !== 'undefined' ? mesActual : null,
+    anioActual: typeof anioActual !== 'undefined' ? anioActual : null,
+    subtabCompartidasActiva: typeof subtabCompartidasActiva !== 'undefined' ? subtabCompartidasActiva : 'pendientes',
+    idTareaCompartidaActiva: typeof idTareaCompartidaActiva !== 'undefined' ? idTareaCompartidaActiva : null,
+    subtabBilleteraActiva: typeof subtabBilleteraActiva !== 'undefined' ? subtabBilleteraActiva : 'movimientos',
+    subtabDeudaActiva: typeof subtabDeudaActiva !== 'undefined' ? subtabDeudaActiva : 'me-deben',
+    idDeudorActivo: typeof idDeudorActivo !== 'undefined' ? idDeudorActivo : null,
+    idListaPresupuestoActiva: typeof idListaPresupuestoActiva !== 'undefined' ? idListaPresupuestoActiva : null,
+    idListaSuperPendienteActiva: typeof idListaSuperPendienteActiva !== 'undefined' ? idListaSuperPendienteActiva : null,
+    modoCompraListaPendiente: typeof modoCompraListaPendiente !== 'undefined' ? Boolean(modoCompraListaPendiente) : false,
+    idListaSuperEditando: typeof idListaSuperEditando !== 'undefined' ? idListaSuperEditando : null
+  };
+}
+
+function guardarEstadoNavegacionActual() {
+  if (ES_MODO_EXTERNO || bloqueandoGuardadoNav || !usuarioActivo || !usuarioActivo.id) return;
+  try {
+    const estado = capturarEstadoNavegacionActual();
+    if (!estado) return;
+    localStorage.setItem(STORAGE_NAV_STATE_PREFIX + usuarioActivo.id, JSON.stringify(estado));
+  } catch (e) {}
+}
+
+window.addEventListener('beforeunload', () => {
+  guardarEstadoNavegacionActual();
+});
+window.addEventListener('pagehide', () => {
+  guardarEstadoNavegacionActual();
+});
+document.addEventListener('click', () => {
+  if (!usuarioActivo || bloqueandoGuardadoNav) return;
+  setTimeout(guardarEstadoNavegacionActual, 40);
+});
+
+function restaurarEstadoNavegacionGuardado() {
+  if (ES_MODO_EXTERNO || !usuarioActivo || !usuarioActivo.id) return false;
+  try {
+    const raw = localStorage.getItem(STORAGE_NAV_STATE_PREFIX + usuarioActivo.id);
+    if (!raw) return false;
+    const st = JSON.parse(raw);
+    if (!st || !st.route || st.route === 'home') return false;
+
+    // Restaurar variables de contexto antes de abrir la pantalla
+    if (st.filtroActual) {
+      filtroActual = st.filtroActual;
+      document.querySelectorAll('#view-tasks .filter-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.filter === filtroActual);
+      });
+    }
+    if (st.fechaSeleccionada) fechaSeleccionada = st.fechaSeleccionada;
+    if (typeof st.mesActual === 'number') mesActual = st.mesActual;
+    if (typeof st.anioActual === 'number') anioActual = st.anioActual;
+    if (st.subtabCompartidasActiva) subtabCompartidasActiva = st.subtabCompartidasActiva;
+    if (st.idTareaCompartidaActiva) idTareaCompartidaActiva = st.idTareaCompartidaActiva;
+    if (st.subtabBilleteraActiva) subtabBilleteraActiva = st.subtabBilleteraActiva;
+    if (st.subtabDeudaActiva) subtabDeudaActiva = st.subtabDeudaActiva;
+    if (st.idDeudorActivo) idDeudorActivo = st.idDeudorActivo;
+    if (st.idListaPresupuestoActiva) idListaPresupuestoActiva = st.idListaPresupuestoActiva;
+    if (st.idListaSuperPendienteActiva) idListaSuperPendienteActiva = st.idListaSuperPendienteActiva;
+    if (typeof st.modoCompraListaPendiente === 'boolean') modoCompraListaPendiente = st.modoCompraListaPendiente;
+    if (st.idListaSuperEditando) idListaSuperEditando = st.idListaSuperEditando;
+
+    switch (st.route) {
+      case 'tasks-agenda-menu':
+        abrirMenuTareasAgenda();
+        break;
+      case 'tasks':
+        abrirSeccionTareas();
+        break;
+      case 'agenda':
+        abrirSeccionAgenda();
+        break;
+      case 'shared-tasks':
+        abrirSeccionTareasCompartidas();
+        if (idTareaCompartidaActiva && tareasCompartidas.some(x => x.id === idTareaCompartidaActiva)) {
+          abrirDetalleTareaCompartida(idTareaCompartidaActiva);
+        }
+        break;
+      case 'economy-menu':
+        abrirMenuEconomia();
+        break;
+      case 'wallet':
+        abrirSeccionBilletera();
+        if (st.subtabBilleteraActiva && st.subtabBilleteraActiva !== 'movimientos') {
+          cambiarSubtabBilletera(st.subtabBilleteraActiva);
+        }
+        break;
+      case 'debts':
+        abrirSeccionDeudores();
+        if (st.subtabDeudaActiva) {
+          cambiarSubtabDeudas(st.subtabDeudaActiva);
+        }
+        if (st.idDeudorActivo) {
+          if (st.subtabDeudaActiva === 'yo-debo' && yoDebo.some(d => d.id === st.idDeudorActivo)) {
+            abrirFichaYoDebo(st.idDeudorActivo);
+          } else if (deudores.some(d => d.id === st.idDeudorActivo)) {
+            seleccionarDeudor(st.idDeudorActivo);
+          }
+        }
+        break;
+      case 'assistant':
+        abrirSeccionAsistente();
+        break;
+      case 'settings':
+        abrirSeccionAjustes();
+        break;
+      case 'extras':
+        abrirSeccionExtras();
+        break;
+      case 'extras-super':
+        abrirSeccionExtras();
+        abrirSubvistaExtras('super');
+        break;
+      case 'extras-super-confeccionar':
+        abrirSeccionExtras();
+        abrirSubvistaExtras('super');
+        if (st.idListaSuperEditando && listasPresupuestos.some(l => l.id === st.idListaSuperEditando && l.esListaSuper && l.estadoSuper === 'pendiente')) {
+          abrirModificarListaPendienteSuper(st.idListaSuperEditando);
+        } else {
+          abrirPantallaSuper('confeccionar');
+        }
+        break;
+      case 'extras-super-pendientes':
+        abrirSeccionExtras();
+        abrirSubvistaExtras('super');
+        abrirPantallaSuper('pendientes');
+        break;
+      case 'extras-super-pendientes-activa':
+        abrirSeccionExtras();
+        abrirSubvistaExtras('super');
+        abrirPantallaSuper('pendientes');
+        if (st.idListaSuperPendienteActiva && listasPresupuestos.some(l => l.id === st.idListaSuperPendienteActiva && l.esListaSuper && l.estadoSuper === 'pendiente')) {
+          idListaSuperPendienteActiva = st.idListaSuperPendienteActiva;
+          modoCompraListaPendiente = Boolean(st.modoCompraListaPendiente);
+          renderizarVistaActivaListaPendienteSuper();
+        }
+        break;
+      case 'extras-presupuestos':
+        abrirSeccionExtras();
+        abrirSubvistaExtras('presupuestos');
+        break;
+      case 'extras-presupuestos-detalle':
+        abrirSeccionExtras();
+        abrirSubvistaExtras('presupuestos');
+        if (st.idListaPresupuestoActiva && listasPresupuestos.some(l => l.id === st.idListaPresupuestoActiva && !l.esListaSuper)) {
+          abrirDetalleListaPresupuesto(st.idListaPresupuestoActiva);
+        }
+        break;
+      case 'extras-heladera':
+        abrirSeccionExtras();
+        abrirSubvistaExtras('heladera');
+        break;
+      case 'extras-gimnasio':
+        abrirSeccionExtras();
+        abrirSubvistaExtras('gimnasio');
+        break;
+      default:
+        return false;
+    }
+
+    guardarEstadoNavegacionActual();
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
 function enviarRecordatoriosAlServiceWorker() {
   if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
     navigator.serviceWorker.controller.postMessage({
@@ -1654,7 +1996,10 @@ function enviarRecordatoriosAlServiceWorker() {
   }
 }
 
-function entrarAMenuDeUsuarioActivo() {
+function entrarAMenuDeUsuarioActivo(restaurarVistaGuardada = false) {
+  if (restaurarVistaGuardada) {
+    bloqueandoGuardadoNav = true;
+  }
   registrarPasoHistorial('home');
   viewUsers.classList.add('hidden');
   if (viewTasksAgendaMenu) viewTasksAgendaMenu.classList.add('hidden');
@@ -1721,6 +2066,14 @@ function entrarAMenuDeUsuarioActivo() {
       if (registerDniError) registerDniError.classList.add('hidden');
     } else {
       modalRegisterDni.classList.add('hidden');
+    }
+  }
+
+  if (restaurarVistaGuardada) {
+    bloqueandoGuardadoNav = false;
+    const seRestauro = restaurarEstadoNavegacionGuardado();
+    if (!seRestauro) {
+      guardarEstadoNavegacionActual();
     }
   }
 }
@@ -2311,6 +2664,7 @@ async function sincronizarDesdeNube() {
     }
     verificarPreguntaUnicaConvivencia();
     verificarNotificacionesPendientes(false);
+    guardarCacheDatosUsuarioLocal();
 
     if (seLimpiaronVencidas) {
       await guardarEnNube();
@@ -2327,6 +2681,7 @@ async function sincronizarDesdeNube() {
 async function guardarEnNube(avisoParaAutor) {
   if (ES_MODO_EXTERNO || !usuarioActivo) return;
   registrarActividadSesion();
+  guardarCacheDatosUsuarioLocal();
   actualizarContadoresYAlertas();
   actualizarEstadoSync('☁️ Guardando...', 'amarillo');
   try {
@@ -10950,6 +11305,7 @@ async function iniciarSesionConDni(forzarRegistroHuella = false) {
     solicitudesVinculoEnviadas = Array.isArray(data.solicitudesVinculoEnviadas) ? data.solicitudesVinculoEnviadas : [];
 
     registrarActividadSesion();
+    guardarCacheDatosUsuarioLocal();
     const checkBio = document.getElementById('check-enable-fingerprint-login');
     const activarBio = forzarRegistroHuella || (checkBio ? checkBio.checked : true);
     if (activarBio && window.PublicKeyCredential && !tieneHuellaGuardada(u.id)) {
@@ -10959,7 +11315,7 @@ async function iniciarSesionConDni(forzarRegistroHuella = false) {
     if (inputLoginDniPass) inputLoginDniPass.value = '';
     if (dniLoginBox) dniLoginBox.classList.add('hidden');
 
-    entrarAMenuDeUsuarioActivo();
+    entrarAMenuDeUsuarioActivo(true);
   } catch (e) {
     if (dniLoginError) {
       dniLoginError.textContent = 'Error de conexión. Intentá nuevamente.';
