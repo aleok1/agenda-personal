@@ -1,4 +1,4 @@
-// SW Version: 20261110_04
+// SW Version: 20261110_05
 self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
