@@ -261,11 +261,15 @@ const viewEconomyMenu = document.getElementById('view-economy-menu');
 const btnBackFromEconomyMenu = document.getElementById('btn-back-from-economy-menu');
 const btnSubWallet = document.getElementById('btn-sub-wallet');
 const btnSubDebts = document.getElementById('btn-sub-debts');
+const btnSubFinancialOps = document.getElementById('btn-sub-financial-ops');
 const viewDebts = document.getElementById('view-debts');
+const viewFinancialOps = document.getElementById('view-financial-ops');
 const btnBackToEconomyFromWallet = document.getElementById('btn-back-to-economy-from-wallet');
 const btnBackToEconomyFromDebts = document.getElementById('btn-back-to-economy-from-debts');
+const btnBackToEconomyFromFinops = document.getElementById('btn-back-to-economy-from-finops');
 const menuWalletCounter = document.getElementById('menu-wallet-counter');
 const menuDebtsCounter = document.getElementById('menu-debts-counter');
+const menuFinancialOpsCounter = document.getElementById('menu-financial-ops-counter');
 
 // Tareas Compartidas
 const viewSharedTasks = document.getElementById('view-shared-tasks');
@@ -1830,6 +1834,8 @@ function capturarEstadoNavegacionActual() {
     route = 'wallet';
   } else if (viewDebts && !viewDebts.classList.contains('hidden')) {
     route = 'debts';
+  } else if (viewFinancialOps && !viewFinancialOps.classList.contains('hidden')) {
+    route = 'financial-ops';
   } else if (viewAssistant && !viewAssistant.classList.contains('hidden')) {
     route = 'assistant';
   } else if (viewSettings && !viewSettings.classList.contains('hidden')) {
@@ -1956,6 +1962,9 @@ function restaurarEstadoNavegacionGuardado() {
           abrirDetalleDeudor(st.idDeudorActivo);
         }
         break;
+      case 'financial-ops':
+        if (typeof irAOperacionesFinancieras === 'function') irAOperacionesFinancieras();
+        break;
       case 'assistant':
         irAAsistente();
         break;
@@ -2061,6 +2070,7 @@ function entrarAMenuDeUsuarioActivo(restaurarVistaGuardada = false) {
   if (viewSharedTasks) viewSharedTasks.classList.add('hidden');
   viewWallet.classList.add('hidden');
   if (viewDebts) viewDebts.classList.add('hidden');
+  if (viewFinancialOps) viewFinancialOps.classList.add('hidden');
   if (viewAssistant) viewAssistant.classList.add('hidden');
   if (viewExtras) viewExtras.classList.add('hidden');
   if (viewSettings) viewSettings.classList.add('hidden');
@@ -2924,6 +2934,7 @@ function irAInicio() {
   if (viewSharedTasks) viewSharedTasks.classList.add('hidden');
   viewWallet.classList.add('hidden');
   if (viewDebts) viewDebts.classList.add('hidden');
+  if (viewFinancialOps) viewFinancialOps.classList.add('hidden');
   if (viewAssistant) viewAssistant.classList.add('hidden');
   if (viewExtras) viewExtras.classList.add('hidden');
   if (viewSettings) viewSettings.classList.add('hidden');
@@ -3029,6 +3040,7 @@ function irAMenuEconomia() {
   if (viewSharedTasks) viewSharedTasks.classList.add('hidden');
   viewWallet.classList.add('hidden');
   if (viewDebts) viewDebts.classList.add('hidden');
+  if (viewFinancialOps) viewFinancialOps.classList.add('hidden');
   if (viewAssistant) viewAssistant.classList.add('hidden');
   if (viewExtras) viewExtras.classList.add('hidden');
   if (viewSettings) viewSettings.classList.add('hidden');
@@ -3047,6 +3059,7 @@ function irABilletera() {
   viewAgenda.classList.add('hidden');
   if (viewSharedTasks) viewSharedTasks.classList.add('hidden');
   if (viewDebts) viewDebts.classList.add('hidden');
+  if (viewFinancialOps) viewFinancialOps.classList.add('hidden');
   if (viewAssistant) viewAssistant.classList.add('hidden');
   if (viewExtras) viewExtras.classList.add('hidden');
   if (viewSettings) viewSettings.classList.add('hidden');
@@ -3065,6 +3078,7 @@ function irADeudas(subtabDeseada) {
   viewAgenda.classList.add('hidden');
   if (viewSharedTasks) viewSharedTasks.classList.add('hidden');
   viewWallet.classList.add('hidden');
+  if (viewFinancialOps) viewFinancialOps.classList.add('hidden');
   if (viewAssistant) viewAssistant.classList.add('hidden');
   if (viewExtras) viewExtras.classList.add('hidden');
   if (viewSettings) viewSettings.classList.add('hidden');
@@ -3072,6 +3086,26 @@ function irADeudas(subtabDeseada) {
   if (viewDebts) viewDebts.classList.remove('hidden');
   btnHome.classList.remove('hidden');
   cambiarSubtabDeudas(subtabDeseada || subtabDeudaActiva || 'me-deben');
+}
+
+function irAOperacionesFinancieras() {
+  if (!usuarioActivo) { volverAPantallaUsuarios(); return; }
+  registrarPasoHistorial('financial-ops');
+  viewHome.classList.add('hidden');
+  if (viewEconomyMenu) viewEconomyMenu.classList.add('hidden');
+  if (viewTasksAgendaMenu) viewTasksAgendaMenu.classList.add('hidden');
+  viewTasks.classList.add('hidden');
+  viewAgenda.classList.add('hidden');
+  if (viewSharedTasks) viewSharedTasks.classList.add('hidden');
+  viewWallet.classList.add('hidden');
+  if (viewDebts) viewDebts.classList.add('hidden');
+  if (viewAssistant) viewAssistant.classList.add('hidden');
+  if (viewExtras) viewExtras.classList.add('hidden');
+  if (viewSettings) viewSettings.classList.add('hidden');
+  if (viewAntigravity) viewAntigravity.classList.add('hidden');
+  if (viewFinancialOps) viewFinancialOps.classList.remove('hidden');
+  btnHome.classList.remove('hidden');
+  iniciarModuloOperacionesFinancieras();
 }
 
 function irAAsistente() {
@@ -3294,10 +3328,11 @@ window.addEventListener('popstate', () => {
       return;
     }
 
-    // 6. Si está adentro de Billetera o Deudas, volver al menú de Economía
+    // 6. Si está adentro de Billetera, Deudas u Operaciones Financieras, volver al menú de Economía
     const enSubModuloEconomia =
       (viewWallet && !viewWallet.classList.contains('hidden')) ||
-      (viewDebts && !viewDebts.classList.contains('hidden'));
+      (viewDebts && !viewDebts.classList.contains('hidden')) ||
+      (viewFinancialOps && !viewFinancialOps.classList.contains('hidden'));
 
     if (enSubModuloEconomia && usuarioActivo) {
       irAMenuEconomia();
@@ -3362,8 +3397,10 @@ if (btnOpenWallet) btnOpenWallet.addEventListener('click', irAMenuEconomia);
 if (btnBackFromEconomyMenu) btnBackFromEconomyMenu.addEventListener('click', irAInicio);
 if (btnSubWallet) btnSubWallet.addEventListener('click', irABilletera);
 if (btnSubDebts) btnSubDebts.addEventListener('click', () => irADeudas('me-deben'));
+if (btnSubFinancialOps) btnSubFinancialOps.addEventListener('click', irAOperacionesFinancieras);
 if (btnBackToEconomyFromWallet) btnBackToEconomyFromWallet.addEventListener('click', irAMenuEconomia);
 if (btnBackToEconomyFromDebts) btnBackToEconomyFromDebts.addEventListener('click', irAMenuEconomia);
+if (btnBackToEconomyFromFinops) btnBackToEconomyFromFinops.addEventListener('click', irAMenuEconomia);
 
 if (btnOpenTasks) btnOpenTasks.addEventListener('click', irATareas);
 if (btnOpenAgenda) btnOpenAgenda.addEventListener('click', () => irAAgenda());
@@ -5904,7 +5941,10 @@ function actualizarContadoresEconomiaMenu() {
     menuDebtsCounter.textContent = `Me deben: ${formatearPesos(sumaDeudas)} · Debo: ${formatearPesos(sumaYoDebo)}`;
   }
   if (homeWalletCounter) {
-    homeWalletCounter.textContent = '2 opciones';
+    homeWalletCounter.textContent = '3 opciones';
+  }
+  if (menuFinancialOpsCounter) {
+    menuFinancialOpsCounter.textContent = 'IQ Option · En Vivo';
   }
 }
 
@@ -12669,6 +12709,875 @@ if (btnAgClearChat) {
         renderizarCanalesAntigravity();
       }
     } catch (e) {}
+  });
+}
+
+// ==========================================
+// MÓDULO 2C: OPERACIONES FINANCIERAS (IQ OPTION ANALYZER)
+// ==========================================
+const selectIqAsset = document.getElementById('select-iq-asset');
+const inputIqSearch = document.getElementById('input-iq-search');
+const iqCategoryChips = document.getElementById('iq-category-chips');
+const iqQuickAssetsBar = document.getElementById('iq-quick-assets-bar');
+const iqTimeframeSelector = document.getElementById('iq-timeframe-selector');
+const btnIqRefreshNow = document.getElementById('btn-iq-refresh-now');
+const chkIqAutorefresh = document.getElementById('chk-iq-autorefresh');
+const iqLastUpdateLabel = document.getElementById('iq-last-update-label');
+
+const iqHeroAssetBadge = document.getElementById('iq-hero-asset-badge');
+const iqHeroSubtitle = document.getElementById('iq-hero-subtitle');
+const iqHeroTfBadge = document.getElementById('iq-hero-tf-badge');
+const iqHeroPrice = document.getElementById('iq-hero-price');
+const iqHeroChange = document.getElementById('iq-hero-change');
+const iqHeroOhlc = document.getElementById('iq-hero-ohlc');
+const iqVerdictCard = document.getElementById('iq-verdict-card');
+const iqVerdictTitle = document.getElementById('iq-verdict-title');
+const iqVerdictBar = document.getElementById('iq-verdict-bar');
+const iqVerdictScore = document.getElementById('iq-verdict-score');
+const iqVerdictExp = document.getElementById('iq-verdict-exp');
+const iqSignalReasonsList = document.getElementById('iq-signal-reasons-list');
+
+const iqChartTitleAsset = document.getElementById('iq-chart-title-asset');
+const btnIqChartModeNative = document.getElementById('btn-iq-chart-mode-native');
+const btnIqChartModeTv = document.getElementById('btn-iq-chart-mode-tv');
+const iqNativeChartWrap = document.getElementById('iq-native-chart-wrap');
+const iqTvChartWrap = document.getElementById('iq-tv-chart-wrap');
+const iqCandlesCanvas = document.getElementById('iq-candles-canvas');
+
+const iqIndicatorsGrid = document.getElementById('iq-indicators-grid');
+const iqSessionsBox = document.getElementById('iq-sessions-box');
+const iqFundAssetName = document.getElementById('iq-fund-asset-name');
+const iqFundMacroText = document.getElementById('iq-fund-macro-text');
+const iqNewsSentimentBadge = document.getElementById('iq-news-sentiment-badge');
+const iqLiveNewsList = document.getElementById('iq-live-news-list');
+
+const btnIqRunAiReport = document.getElementById('btn-iq-run-ai-report');
+const iqAiReportBox = document.getElementById('iq-ai-report-box');
+const iqAiReportContent = document.getElementById('iq-ai-report-content');
+const btnCloseIqAiReport = document.getElementById('btn-close-iq-ai-report');
+
+const inputIqScreenshot = document.getElementById('input-iq-screenshot');
+const btnIqAnalyzeScreenshot = document.getElementById('btn-iq-analyze-screenshot');
+const btnIqClearScreenshot = document.getElementById('btn-iq-clear-screenshot');
+const iqScreenshotPreviewWrap = document.getElementById('iq-screenshot-preview-wrap');
+const iqScreenshotPreviewImg = document.getElementById('iq-screenshot-preview-img');
+
+let iqActivoSeleccionado = 'US 500';
+let iqTemporalidadSeleccionada = '5m';
+let iqCategoriaFiltro = 'ALL';
+let iqModoGrafico = 'native'; // 'native' o 'tv'
+let iqTimerAutoRefresco = null;
+let iqDatosMercadoActual = null;
+let iqScreenshotBase64 = null;
+let iqCatalogoCargado = null;
+
+const IQ_CATALOGO_DEFAULT = [
+  // Índices
+  { name: 'US 500', cat: 'Índices', sub: 'S&P 500 Index (EE.UU.)' },
+  { name: 'US 100', cat: 'Índices', sub: 'Nasdaq 100 Tecnológico (EE.UU.)' },
+  { name: 'US 30', cat: 'Índices', sub: 'Dow Jones Industrial (EE.UU.)' },
+  { name: 'US 2000', cat: 'Índices', sub: 'Russell 2000 Small Caps (EE.UU.)' },
+  { name: 'GER 30', cat: 'Índices', sub: 'DAX 30 / 40 (Alemania)' },
+  { name: 'UK 100', cat: 'Índices', sub: 'FTSE 100 (Reino Unido)' },
+  { name: 'JP 225', cat: 'Índices', sub: 'Nikkei 225 (Japón)' },
+  { name: 'FR 40', cat: 'Índices', sub: 'CAC 40 (Francia)' },
+  { name: 'SP 35', cat: 'Índices', sub: 'IBEX 35 (España)' },
+  { name: 'AUS 200', cat: 'Índices', sub: 'ASX 200 (Australia)' },
+  // Divisas
+  { name: 'EUR/USD', cat: 'Divisas', sub: 'Euro vs Dólar' },
+  { name: 'GBP/USD', cat: 'Divisas', sub: 'Libra Esterlina vs Dólar' },
+  { name: 'USD/JPY', cat: 'Divisas', sub: 'Dólar vs Yen' },
+  { name: 'EUR/JPY', cat: 'Divisas', sub: 'Euro vs Yen' },
+  { name: 'AUD/USD', cat: 'Divisas', sub: 'Dólar Australiano vs Dólar' },
+  { name: 'EUR/GBP', cat: 'Divisas', sub: 'Euro vs Libra' },
+  { name: 'USD/CAD', cat: 'Divisas', sub: 'Dólar vs Dólar Canadiense' },
+  { name: 'USD/CHF', cat: 'Divisas', sub: 'Dólar vs Franco Suizo' },
+  { name: 'GBP/JPY', cat: 'Divisas', sub: 'Libra vs Yen (El Dragón)' },
+  { name: 'NZD/USD', cat: 'Divisas', sub: 'Dólar Neozelandés vs Dólar' },
+  { name: 'USD/BRL', cat: 'Divisas', sub: 'Dólar vs Real Brasileño' },
+  // Materias Primas
+  { name: 'XAU/USD', cat: 'Materias Primas', sub: 'Oro / Gold vs Dólar' },
+  { name: 'XAG/USD', cat: 'Materias Primas', sub: 'Plata / Silver vs Dólar' },
+  { name: 'USO/USD', cat: 'Materias Primas', sub: 'Petróleo Crudo WTI (EE.UU.)' },
+  { name: 'UKO/USD', cat: 'Materias Primas', sub: 'Petróleo Brent (Europa)' },
+  // Cripto
+  { name: 'BTC/USD', cat: 'Cripto', sub: 'Bitcoin vs Dólar' },
+  { name: 'ETH/USD', cat: 'Cripto', sub: 'Ethereum vs Dólar' },
+  { name: 'SOL/USD', cat: 'Cripto', sub: 'Solana vs Dólar' },
+  { name: 'XRP/USD', cat: 'Cripto', sub: 'Ripple vs Dólar' },
+  // Acciones
+  { name: 'APPLE', cat: 'Acciones', sub: 'Apple Inc. (AAPL)' },
+  { name: 'TESLA', cat: 'Acciones', sub: 'Tesla Inc. (TSLA)' },
+  { name: 'NVIDIA', cat: 'Acciones', sub: 'NVIDIA Corp. (NVDA)' },
+  { name: 'AMAZON', cat: 'Acciones', sub: 'Amazon.com Inc. (AMZN)' },
+  { name: 'MICROSOFT', cat: 'Acciones', sub: 'Microsoft Corp. (MSFT)' },
+  { name: 'META', cat: 'Acciones', sub: 'Meta Platforms (META)' },
+  { name: 'GOOGLE', cat: 'Acciones', sub: 'Alphabet Inc. (GOOGL)' }
+];
+
+function iniciarModuloOperacionesFinancieras() {
+  poblarSelectorActivosIQ();
+  cargarAnalisisIQOption(true);
+
+  if (chkIqAutorefresh && chkIqAutorefresh.checked) {
+    activarAutoRefrescoIQ();
+  }
+}
+
+function activarAutoRefrescoIQ() {
+  if (iqTimerAutoRefresco) clearInterval(iqTimerAutoRefresco);
+  iqTimerAutoRefresco = setInterval(() => {
+    if (viewFinancialOps && !viewFinancialOps.classList.contains('hidden') && chkIqAutorefresh && chkIqAutorefresh.checked) {
+      cargarAnalisisIQOption(false);
+    }
+  }, 15000);
+}
+
+function poblarSelectorActivosIQ() {
+  if (!selectIqAsset) return;
+  const filtroTexto = (inputIqSearch ? inputIqSearch.value : '').trim().toLowerCase();
+  selectIqAsset.innerHTML = '';
+
+  const lista = (iqCatalogoCargado || IQ_CATALOGO_DEFAULT).filter(item => {
+    if (iqCategoriaFiltro !== 'ALL' && item.cat !== iqCategoriaFiltro) return false;
+    if (filtroTexto) {
+      return item.name.toLowerCase().includes(filtroTexto) || (item.sub && item.sub.toLowerCase().includes(filtroTexto));
+    }
+    return true;
+  });
+
+  if (lista.length === 0) {
+    const opt = document.createElement('option');
+    opt.value = iqActivoSeleccionado;
+    opt.textContent = `${iqActivoSeleccionado} (Personalizado)`;
+    selectIqAsset.appendChild(opt);
+    return;
+  }
+
+  lista.forEach(item => {
+    const opt = document.createElement('option');
+    opt.value = item.name;
+    opt.textContent = `${item.name} — ${item.sub} [${item.cat}]`;
+    if (item.name === iqActivoSeleccionado) opt.selected = true;
+    selectIqAsset.appendChild(opt);
+  });
+}
+
+async function cargarAnalisisIQOption(mostrarCargando = false) {
+  if (!selectIqAsset) return;
+  const asset = iqActivoSeleccionado;
+  const tf = iqTemporalidadSeleccionada;
+
+  if (mostrarCargando && iqLastUpdateLabel) {
+    iqLastUpdateLabel.textContent = `⏳ Conectando con feed en vivo de ${asset} (${tf})...`;
+  }
+
+  try {
+    const res = await fetch(`/api/iq-market?asset=${encodeURIComponent(asset)}&interval=${encodeURIComponent(tf)}`);
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`);
+    }
+    const data = await res.json();
+    if (!data.ok) {
+      throw new Error(data.error || 'Error al obtener datos');
+    }
+
+    iqDatosMercadoActual = data;
+    renderizarDatosIQOption(data);
+    if (iqLastUpdateLabel) {
+      const horaStr = new Date(data.timestamp).toLocaleTimeString();
+      iqLastUpdateLabel.textContent = `✓ Actualizado en vivo a las ${horaStr} (Próxima actualización en 15s)`;
+      iqLastUpdateLabel.style.color = '#34d399';
+    }
+  } catch (err) {
+    console.warn('Error al cargar datos de IQ Option:', err);
+    if (iqLastUpdateLabel) {
+      iqLastUpdateLabel.textContent = `⚠️ Falló actualización: ${err.message}. Reintentando...`;
+      iqLastUpdateLabel.style.color = '#f87171';
+    }
+  }
+}
+
+function renderizarDatosIQOption(data) {
+  if (!data) return;
+  const p = data.price || {};
+  const sig = data.signal || {};
+  const ind = data.indicators || {};
+  const sr = data.supportResistance || {};
+  const pat = data.candlePattern || {};
+  const fund = data.fundamental || {};
+  const asset = data.asset || {};
+  const dec = asset.decimals !== undefined ? asset.decimals : 2;
+
+  // 1. Hero / Encabezado
+  if (iqHeroAssetBadge) iqHeroAssetBadge.textContent = asset.iqName || iqActivoSeleccionado;
+  if (iqHeroSubtitle) iqHeroSubtitle.textContent = asset.subtitle || '';
+  if (iqHeroTfBadge) iqHeroTfBadge.textContent = `Vela ${data.interval || iqTemporalidadSeleccionada}`;
+  if (iqChartTitleAsset) iqChartTitleAsset.textContent = `${asset.iqName} · ${data.interval}`;
+  if (iqFundAssetName) iqFundAssetName.textContent = asset.iqName;
+
+  if (iqHeroPrice) {
+    iqHeroPrice.textContent = typeof p.current === 'number' ? p.current.toFixed(dec) : '--';
+  }
+  if (iqHeroChange) {
+    const pct = typeof p.changePct === 'number' ? p.changePct : 0;
+    const sign = pct >= 0 ? '+' : '';
+    const color = pct >= 0 ? '#34d399' : '#f87171';
+    iqHeroChange.innerHTML = `<span style="color:${color};">${sign}${pct.toFixed(2)}% (${sign}${(p.changeAbs || 0).toFixed(dec)})</span>`;
+  }
+  if (iqHeroOhlc) {
+    iqHeroOhlc.textContent = `Apertura: ${(p.open || 0).toFixed(dec)} · Máximo: ${(p.high || 0).toFixed(dec)} · Mínimo: ${(p.low || 0).toFixed(dec)}`;
+  }
+
+  // 2. Semáforo / Veredicto Operativo IQ Option
+  if (iqVerdictTitle) {
+    iqVerdictTitle.textContent = sig.action || 'ESPERAR';
+    iqVerdictTitle.style.color = sig.color || '#f8fafc';
+  }
+  if (iqVerdictCard) {
+    iqVerdictCard.style.borderColor = sig.color || '#475569';
+  }
+  if (iqVerdictBar) {
+    // Normalizar score de -100..+100 a 0%..100%
+    const norm = Math.max(0, Math.min(100, Math.round(((sig.score + 100) / 2))));
+    iqVerdictBar.style.width = `${norm}%`;
+    iqVerdictBar.style.background = sig.color || '#64748b';
+  }
+  if (iqVerdictScore) {
+    const s = sig.score >= 0 ? `+${sig.score}` : `${sig.score}`;
+    iqVerdictScore.textContent = `Fuerza Técnica: ${s}/100 (${sig.confidence}% conf.)`;
+  }
+  if (iqVerdictExp) {
+    iqVerdictExp.textContent = `⏱️ Expiración: ${data.expirationSuggested || '5 a 15 min'}`;
+  }
+
+  // Lista de razones / confluencias
+  if (iqSignalReasonsList) {
+    iqSignalReasonsList.innerHTML = '';
+    (sig.reasons || []).forEach(r => {
+      const item = document.createElement('div');
+      const icon = r.type === 'bull' ? '🟢' : (r.type === 'bear' ? '🔴' : '⚪');
+      const color = r.type === 'bull' ? '#6ee7b7' : (r.type === 'bear' ? '#fca5a5' : '#cbd5e1');
+      item.innerHTML = `<span>${icon}</span> <span style="color:${color};">${escaparHTML(r.text)}</span>`;
+      iqSignalReasonsList.appendChild(item);
+    });
+    if ((sig.reasons || []).length === 0) {
+      iqSignalReasonsList.innerHTML = '<span style="color:#94a3b8;">Sin divergencias extremas en esta vela.</span>';
+    }
+  }
+
+  // 3. Tablero de 8 Indicadores Técnicos
+  renderizarTarjetasIndicadores(ind, sr, pat, p.current, dec);
+
+  // 4. Gráfico de Velas Japonesas en Canvas
+  dibujarGraficoVelasIQ(data.chartCandles || [], sr, ind, dec);
+
+  // Si está activo TradingView, actualizar su iframe
+  if (iqModoGrafico === 'tv') {
+    renderizarWidgetTradingView(asset.tvSymbol || 'FOREXCOM:SPXUSD');
+  }
+
+  // 5. Análisis Fundamental y Sesiones
+  renderizarSeccionFundamental(fund);
+}
+
+function renderizarTarjetasIndicadores(ind, sr, pat, price, dec) {
+  if (!iqIndicatorsGrid) return;
+  iqIndicatorsGrid.innerHTML = '';
+
+  const cards = [
+    {
+      title: 'RSI (14)',
+      icon: '📈',
+      value: typeof ind.rsi === 'number' ? ind.rsi.toFixed(1) : '--',
+      badge: ind.rsi <= 30 ? 'Sobreventa (CALL)' : (ind.rsi >= 70 ? 'Sobrecompra (PUT)' : 'Neutral'),
+      badgeColor: ind.rsi <= 30 ? '#10b981' : (ind.rsi >= 70 ? '#ef4444' : '#64748b'),
+      desc: 'Nivel 30 = posible rebote al alza · Nivel 70 = posible corrección'
+    },
+    {
+      title: 'EMAs (9 y 21)',
+      icon: '〰️',
+      value: `EMA9: ${(ind.ema9 || 0).toFixed(dec)} · EMA21: ${(ind.ema21 || 0).toFixed(dec)}`,
+      badge: ind.ema9 > ind.ema21 ? 'Cruce Alcista' : 'Cruce Bajista',
+      badgeColor: ind.ema9 > ind.ema21 ? '#10b981' : '#ef4444',
+      desc: price > ind.ema9 ? 'Precio operando con fuerza sobre la EMA 9' : 'Precio rechazado por debajo de EMA 9'
+    },
+    {
+      title: 'Medias de Fondo (50/200)',
+      icon: '📊',
+      value: `SMA 50: ${(ind.sma50 || 0).toFixed(dec)}`,
+      badge: price > ind.sma50 ? 'Tendencia Alcista' : 'Tendencia Bajista',
+      badgeColor: price > ind.sma50 ? '#10b981' : '#ef4444',
+      desc: 'Tendencia macro del mercado en IQ Option'
+    },
+    {
+      title: 'MACD (12, 26, 9)',
+      icon: '⚡',
+      value: `Hist: ${(ind.macd?.histogram || 0).toFixed(dec)}`,
+      badge: ind.macd?.histogram > 0 ? 'Impulso Sube' : 'Impulso Baja',
+      badgeColor: ind.macd?.histogram > 0 ? '#10b981' : '#ef4444',
+      desc: `Línea: ${(ind.macd?.macd || 0).toFixed(dec)} | Señal: ${(ind.macd?.signal || 0).toFixed(dec)}`
+    },
+    {
+      title: 'Bandas Bollinger (20, 2)',
+      icon: '🎯',
+      value: `%B: ${(ind.bollinger?.percentB || 50).toFixed(1)}%`,
+      badge: ind.bollinger?.percentB <= 10 ? 'Piso de Banda' : (ind.bollinger?.percentB >= 90 ? 'Techo de Banda' : 'En Rango'),
+      badgeColor: ind.bollinger?.percentB <= 10 ? '#10b981' : (ind.bollinger?.percentB >= 90 ? '#ef4444' : '#64748b'),
+      desc: `Superior: ${(ind.bollinger?.upper || 0).toFixed(dec)} | Inferior: ${(ind.bollinger?.lower || 0).toFixed(dec)}`
+    },
+    {
+      title: 'Estocástico (14, 3)',
+      icon: '🔄',
+      value: `K: ${(ind.stoch?.k || 50).toFixed(1)} | D: ${(ind.stoch?.d || 50).toFixed(1)}`,
+      badge: ind.stoch?.k < 20 ? 'Giro Alcista' : (ind.stoch?.k > 80 ? 'Giro Bajista' : 'Zona Media'),
+      badgeColor: ind.stoch?.k < 20 ? '#10b981' : (ind.stoch?.k > 80 ? '#ef4444' : '#64748b'),
+      desc: 'Oscilador para puntos de entrada en opciones de expiración corta'
+    },
+    {
+      title: 'Soporte y Resistencia',
+      icon: '🧱',
+      value: `R1: ${(sr.resistance1 || 0).toFixed(dec)} | S1: ${(sr.support1 || 0).toFixed(dec)}`,
+      badge: 'Zonas Clave',
+      badgeColor: '#6366f1',
+      desc: `R2: ${(sr.resistance2 || 0).toFixed(dec)} | S2: ${(sr.support2 || 0).toFixed(dec)}`
+    },
+    {
+      title: 'Patrón de Vela (Acción Precio)',
+      icon: '🕯️',
+      value: pat.name || 'Estándar',
+      badge: pat.bias || 'NEUTRAL',
+      badgeColor: (pat.bias || '').includes('ALCISTA') ? '#10b981' : ((pat.bias || '').includes('BAJISTA') ? '#ef4444' : '#64748b'),
+      desc: pat.desc || 'Lectura de mechas y cuerpos de la vela inmediata.'
+    }
+  ];
+
+  cards.forEach(c => {
+    const el = document.createElement('div');
+    el.style.cssText = 'background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; justify-content: space-between;';
+    el.innerHTML = `
+      <div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+          <strong style="color:#cbd5e1; font-size:0.84rem; display:flex; align-items:center; gap:5px;">
+            <span>${c.icon}</span> ${escaparHTML(c.title)}
+          </strong>
+          <span style="background:${c.badgeColor}; color:#fff; font-size:0.72rem; font-weight:700; padding:2px 7px; border-radius:6px;">
+            ${escaparHTML(c.badge)}
+          </span>
+        </div>
+        <div style="font-size:1.02rem; font-weight:800; color:#f8fafc; margin:4px 0;">
+          ${escaparHTML(c.value)}
+        </div>
+      </div>
+      <div style="font-size:0.75rem; color:#94a3b8; line-height:1.35; margin-top:4px;">
+        ${escaparHTML(c.desc)}
+      </div>
+    `;
+    iqIndicatorsGrid.appendChild(el);
+  });
+}
+
+function renderizarSeccionFundamental(fund) {
+  if (!fund) return;
+
+  // 1. Sesiones bursátiles
+  if (iqSessionsBox) {
+    const s = fund.sessions || {};
+    const act = (s.activeNames || []).join(', ') || 'Ninguna (Cierre de mercado)';
+    let sesHtml = `
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:6px;">
+        <strong style="color:#fbbf24;">🕒 Sesiones Mundiales Activas:</strong>
+        <span style="background:rgba(245,158,11,0.2); color:#fde68a; font-weight:700; padding:2px 8px; border-radius:6px; font-size:0.78rem;">
+          ${escaparHTML(act)}
+        </span>
+      </div>
+      <div style="color:#cbd5e1; font-size:0.82rem; margin-bottom:4px;">${escaparHTML(s.liquidityNote || '')}</div>
+      <div style="display:flex; gap:12px; flex-wrap:wrap; font-size:0.75rem; color:#94a3b8; margin-top:4px;">
+    `;
+    (s.sessions || []).forEach(item => {
+      const dot = item.open ? '🟢' : '⚪';
+      sesHtml += `<span>${dot} <b>${item.name}</b> (${item.hoursArg})</span>`;
+    });
+    sesHtml += `</div>`;
+    iqSessionsBox.innerHTML = sesHtml;
+  }
+
+  // 2. Macro Drivers
+  if (iqFundMacroText) {
+    iqFundMacroText.textContent = fund.macroDrivers || 'Tasas de interés, inflación y noticias del activo.';
+  }
+
+  // 3. Sentimiento de Noticias
+  if (iqNewsSentimentBadge) {
+    const sent = fund.newsSentiment || 'NEUTRAL';
+    iqNewsSentimentBadge.textContent = `Sentimiento: ${sent}`;
+    if (sent.includes('ALCISTA')) {
+      iqNewsSentimentBadge.style.background = '#10b981';
+      iqNewsSentimentBadge.style.color = '#052e16';
+      iqNewsSentimentBadge.style.fontWeight = '700';
+    } else if (sent.includes('BAJISTA')) {
+      iqNewsSentimentBadge.style.background = '#ef4444';
+      iqNewsSentimentBadge.style.color = '#fff';
+      iqNewsSentimentBadge.style.fontWeight = '700';
+    } else {
+      iqNewsSentimentBadge.style.background = 'rgba(255,255,255,0.08)';
+      iqNewsSentimentBadge.style.color = '#cbd5e1';
+      iqNewsSentimentBadge.style.fontWeight = 'normal';
+    }
+  }
+
+  // 4. Lista de Noticias en Vivo
+  if (iqLiveNewsList) {
+    iqLiveNewsList.innerHTML = '';
+    const news = Array.isArray(fund.news) ? fund.news : [];
+    if (news.length === 0) {
+      iqLiveNewsList.innerHTML = '<div style="color:#94a3b8; font-size:0.82rem;">No hay noticias recientes para este activo en este momento.</div>';
+    } else {
+      news.forEach(n => {
+        const item = document.createElement('a');
+        item.href = n.link || '#';
+        item.target = '_blank';
+        item.rel = 'noopener noreferrer';
+        item.style.cssText = 'background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 8px 12px; text-decoration: none; color: #f1f5f9; display: block; transition: border-color 0.2s;';
+        const dateStr = n.publishedAt ? new Date(n.publishedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+        item.innerHTML = `
+          <div style="font-weight:600; font-size:0.84rem; color:#e2e8f0; line-height:1.35;">${escaparHTML(n.title)}</div>
+          <div style="font-size:0.74rem; color:#94a3b8; margin-top:3px; display:flex; justify-content:space-between;">
+            <span>📰 ${escaparHTML(n.publisher)}</span>
+            <span>${dateStr}</span>
+          </div>
+        `;
+        iqLiveNewsList.appendChild(item);
+      });
+    }
+  }
+}
+
+// Dibujado ultra-fluido de Velas Japonesas en Canvas con EMAs y Soportes/Resistencias
+function dibujarGraficoVelasIQ(candles, sr, ind, decimals) {
+  if (!iqCandlesCanvas) return;
+  const canvas = iqCandlesCanvas;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+
+  const w = canvas.width;
+  const h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+
+  // Fondo oscuro estilo IQ Option
+  ctx.fillStyle = '#080d19';
+  ctx.fillRect(0, 0, w, h);
+
+  if (!candles || candles.length === 0) {
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '14px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Cargando velas de IQ Option...', w / 2, h / 2);
+    return;
+  }
+
+  // Encontrar rango Min y Max de precios visible
+  let minPrice = Infinity;
+  let maxPrice = -Infinity;
+  candles.forEach(c => {
+    if (c.low < minPrice) minPrice = c.low;
+    if (c.high > maxPrice) maxPrice = c.high;
+    if (c.ema9 && c.ema9 < minPrice) minPrice = c.ema9;
+    if (c.ema9 && c.ema9 > maxPrice) maxPrice = c.ema9;
+    if (c.ema21 && c.ema21 < minPrice) minPrice = c.ema21;
+    if (c.ema21 && c.ema21 > maxPrice) maxPrice = c.ema21;
+  });
+
+  const paddingY = (maxPrice - minPrice) * 0.12 || 1;
+  const chartMin = minPrice - paddingY;
+  const chartMax = maxPrice + paddingY;
+  const chartRange = chartMax - chartMin;
+
+  const padLeft = 14;
+  const padRight = 72; // Espacio a la derecha para la escala de precios
+  const padTop = 16;
+  const padBottom = 24;
+  const chartW = w - padLeft - padRight;
+  const chartH = h - padTop - padBottom;
+
+  const toY = (val) => padTop + chartH - ((val - chartMin) / chartRange) * chartH;
+
+  // 1. Cuadrícula de precios y niveles horizontales
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+  ctx.lineWidth = 1;
+  const gridSteps = 5;
+  for (let i = 0; i <= gridSteps; i++) {
+    const pVal = chartMin + (chartRange / gridSteps) * i;
+    const y = toY(pVal);
+    ctx.beginPath();
+    ctx.moveTo(padLeft, y);
+    ctx.lineTo(padLeft + chartW, y);
+    ctx.stroke();
+
+    // Etiqueta de precio en el eje derecho
+    ctx.fillStyle = '#64748b';
+    ctx.font = '10px monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText(pVal.toFixed(decimals), padLeft + chartW + 6, y + 3);
+  }
+
+  // 2. Líneas punteadas de Soporte y Resistencia
+  if (sr.resistance1) {
+    const yR = toY(sr.resistance1);
+    ctx.strokeStyle = 'rgba(239, 68, 68, 0.8)';
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.moveTo(padLeft, yR);
+    ctx.lineTo(padLeft + chartW, yR);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#ef4444';
+    ctx.font = '10px sans-serif';
+    ctx.fillText(`R1: ${sr.resistance1.toFixed(decimals)}`, padLeft + chartW + 6, yR - 3);
+  }
+  if (sr.support1) {
+    const yS = toY(sr.support1);
+    ctx.strokeStyle = 'rgba(34, 197, 94, 0.8)';
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.moveTo(padLeft, yS);
+    ctx.lineTo(padLeft + chartW, yS);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#22c55e';
+    ctx.font = '10px sans-serif';
+    ctx.fillText(`S1: ${sr.support1.toFixed(decimals)}`, padLeft + chartW + 6, yS + 11);
+  }
+
+  // 3. Dibujar Velas Japonesas
+  const count = candles.length;
+  const candleSlot = chartW / count;
+  const candleW = Math.max(2, Math.min(10, candleSlot * 0.7));
+
+  candles.forEach((c, idx) => {
+    const xCenter = padLeft + idx * candleSlot + candleSlot / 2;
+    const isBull = c.close >= c.open;
+    const color = isBull ? '#10b981' : '#ef4444';
+
+    const yHigh = toY(c.high);
+    const yLow = toY(c.low);
+    const yOpen = toY(c.open);
+    const yClose = toY(c.close);
+
+    const bodyTop = Math.min(yOpen, yClose);
+    const bodyHeight = Math.max(1.5, Math.abs(yClose - yOpen));
+
+    // Mecha superior e inferior
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(xCenter, yHigh);
+    ctx.lineTo(xCenter, yLow);
+    ctx.stroke();
+
+    // Cuerpo de la vela
+    ctx.fillStyle = color;
+    ctx.fillRect(xCenter - candleW / 2, bodyTop, candleW, bodyHeight);
+  });
+
+  // 4. Dibujar EMA 9 (Amarilla)
+  ctx.strokeStyle = '#facc15';
+  ctx.lineWidth = 1.6;
+  ctx.beginPath();
+  let firstEma9 = true;
+  candles.forEach((c, idx) => {
+    if (c.ema9 !== null && c.ema9 !== undefined) {
+      const x = padLeft + idx * candleSlot + candleSlot / 2;
+      const y = toY(c.ema9);
+      if (firstEma9) { ctx.moveTo(x, y); firstEma9 = false; }
+      else ctx.lineTo(x, y);
+    }
+  });
+  ctx.stroke();
+
+  // 5. Dibujar EMA 21 (Celeste)
+  ctx.strokeStyle = '#38bdf8';
+  ctx.lineWidth = 1.6;
+  ctx.beginPath();
+  let firstEma21 = true;
+  candles.forEach((c, idx) => {
+    if (c.ema21 !== null && c.ema21 !== undefined) {
+      const x = padLeft + idx * candleSlot + candleSlot / 2;
+      const y = toY(c.ema21);
+      if (firstEma21) { ctx.moveTo(x, y); firstEma21 = false; }
+      else ctx.lineTo(x, y);
+    }
+  });
+  ctx.stroke();
+
+  // 6. Línea y etiqueta del Precio Actual en tiempo real
+  const lastC = candles[candles.length - 1];
+  const lastY = toY(lastC.close);
+  const isBullLast = lastC.close >= lastC.open;
+  const lastColor = isBullLast ? '#10b981' : '#ef4444';
+
+  ctx.strokeStyle = lastColor;
+  ctx.setLineDash([2, 2]);
+  ctx.beginPath();
+  ctx.moveTo(padLeft, lastY);
+  ctx.lineTo(padLeft + chartW, lastY);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Tag del precio actual a la derecha
+  ctx.fillStyle = lastColor;
+  ctx.fillRect(padLeft + chartW + 2, lastY - 9, padRight - 4, 18);
+  ctx.fillStyle = '#0f172a';
+  ctx.font = 'bold 11px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText(lastC.close.toFixed(decimals), padLeft + chartW + 2 + (padRight - 4) / 2, lastY + 4);
+}
+
+function renderizarWidgetTradingView(symbol) {
+  if (!iqTvChartWrap) return;
+  iqTvChartWrap.innerHTML = '';
+
+  const iframe = document.createElement('iframe');
+  iframe.src = `https://s.tradingview.com/widgetembed/?frameElementId=tradingview_widget&symbol=${encodeURIComponent(symbol)}&interval=5&hidesidetoolbar=0&symboledit=1&saveimage=1&toolbarbg=0a0f1d&studies=%5B%22RSI%40tv-basicstudies%22%2C%22MASimple%40tv-basicstudies%22%5D&theme=dark&style=1&timezone=America%2FArgentina%2FBuenos_Aires&studies_overrides=%7B%7D&overrides=%7B%7D&enabled_features=%5B%5D&disabled_features=%5B%5D&locale=es&utm_source=agenda-personal`;
+  iframe.style.width = '100%';
+  iframe.style.height = '100%';
+  iframe.style.border = 'none';
+  iqTvChartWrap.appendChild(iframe);
+}
+
+// Generador de Diagnóstico IA Táctico para IQ Option
+async function solicitarDiagnosticoIAIQOption() {
+  if (!btnIqRunAiReport || !iqDatosMercadoActual) return;
+  btnIqRunAiReport.disabled = true;
+  btnIqRunAiReport.textContent = '⏳ Analizando gráfico con IA...';
+  if (iqAiReportBox) iqAiReportBox.classList.remove('hidden');
+  if (iqAiReportContent) iqAiReportContent.textContent = '🧠 Conectando con el motor analítico de IA...';
+
+  const d = iqDatosMercadoActual;
+  const technicalSummary = `
+- Activo: ${d.asset?.iqName} (${d.asset?.subtitle})
+- Temporalidad: ${d.interval}
+- Precio Actual: ${d.price?.current} (Var: ${d.price?.changePct?.toFixed(2)}%)
+- RSI (14): ${d.indicators?.rsi?.toFixed(1)}
+- EMA 9: ${d.indicators?.ema9?.toFixed(2)} | EMA 21: ${d.indicators?.ema21?.toFixed(2)}
+- SMA 50: ${d.indicators?.sma50?.toFixed(2)}
+- MACD Histograma: ${d.indicators?.macd?.histogram?.toFixed(4)}
+- Bandas Bollinger: %B ${d.indicators?.bollinger?.percentB?.toFixed(1)}% (Sup: ${d.indicators?.bollinger?.upper?.toFixed(2)}, Inf: ${d.indicators?.bollinger?.lower?.toFixed(2)})
+- Estocástico K: ${d.indicators?.stoch?.k?.toFixed(1)} | D: ${d.indicators?.stoch?.d?.toFixed(1)}
+- Soporte 1: ${d.supportResistance?.support1?.toFixed(2)} | Resistencia 1: ${d.supportResistance?.resistance1?.toFixed(2)}
+- Patrón de Vela: ${d.candlePattern?.name} (${d.candlePattern?.bias})
+- Señal Automática: ${d.signal?.action} (Score: ${d.signal?.score}/100, Confianza: ${d.signal?.confidence}%)
+`;
+
+  const fundamentalSummary = `
+- Catalizadores Macro: ${d.fundamental?.macroDrivers}
+- Sentimiento Noticias: ${d.fundamental?.newsSentiment}
+- Sesiones Activas: ${(d.fundamental?.sessions?.activeNames || []).join(', ')}
+- Noticias Recientes: ${(d.fundamental?.news || []).slice(0, 3).map(n => n.title).join(' | ')}
+`;
+
+  try {
+    const res = await fetch('/api/iq-market', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'ai-analysis',
+        asset: d.asset?.iqName || iqActivoSeleccionado,
+        timeframe: d.interval || iqTemporalidadSeleccionada,
+        technicalSummary,
+        fundamentalSummary,
+        imageBase64: iqScreenshotBase64
+      })
+    });
+    const result = await res.json();
+    if (iqAiReportContent) {
+      iqAiReportContent.textContent = result.analysis || 'Análisis finalizado con éxito.';
+    }
+  } catch (e) {
+    if (iqAiReportContent) {
+      iqAiReportContent.textContent = 'No se pudo completar el análisis IA en este momento. Los indicadores técnicos en vivo siguen funcionando arriba.';
+    }
+  } finally {
+    btnIqRunAiReport.disabled = false;
+    btnIqRunAiReport.textContent = '🧠 Generar Informe IA (Técnico + Fundamental)';
+  }
+}
+
+// Event Listeners del Módulo de Operaciones Financieras (IQ Option)
+if (selectIqAsset) {
+  selectIqAsset.addEventListener('change', () => {
+    iqActivoSeleccionado = selectIqAsset.value;
+    cargarAnalisisIQOption(true);
+  });
+}
+
+if (inputIqSearch) {
+  inputIqSearch.addEventListener('input', () => {
+    poblarSelectorActivosIQ();
+  });
+}
+
+if (iqCategoryChips) {
+  iqCategoryChips.querySelectorAll('button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      iqCategoryChips.querySelectorAll('button').forEach(b => {
+        b.classList.remove('active', 'prio-verde');
+        b.classList.add('prio-gris');
+      });
+      btn.classList.add('active', 'prio-verde');
+      btn.classList.remove('prio-gris');
+      iqCategoriaFiltro = btn.getAttribute('data-iq-cat') || 'ALL';
+      poblarSelectorActivosIQ();
+    });
+  });
+}
+
+if (iqQuickAssetsBar) {
+  iqQuickAssetsBar.querySelectorAll('.iq-quick-asset-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const asset = btn.getAttribute('data-asset');
+      if (asset) {
+        iqActivoSeleccionado = asset;
+        iqQuickAssetsBar.querySelectorAll('.iq-quick-asset-btn').forEach(b => {
+          b.style.borderColor = '';
+          b.style.color = '';
+          b.style.fontWeight = '';
+        });
+        btn.style.borderColor = '#10b981';
+        btn.style.color = '#d1fae5';
+        btn.style.fontWeight = '700';
+        poblarSelectorActivosIQ();
+        if (selectIqAsset) selectIqAsset.value = asset;
+        cargarAnalisisIQOption(true);
+      }
+    });
+  });
+}
+
+if (iqTimeframeSelector) {
+  iqTimeframeSelector.querySelectorAll('button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      iqTimeframeSelector.querySelectorAll('button').forEach(b => {
+        b.classList.remove('active', 'prio-verde');
+        b.classList.add('prio-gris');
+      });
+      btn.classList.add('active', 'prio-verde');
+      btn.classList.remove('prio-gris');
+      iqTemporalidadSeleccionada = btn.getAttribute('data-tf') || '5m';
+      cargarAnalisisIQOption(true);
+    });
+  });
+}
+
+if (btnIqRefreshNow) {
+  btnIqRefreshNow.addEventListener('click', () => {
+    cargarAnalisisIQOption(true);
+  });
+}
+
+if (chkIqAutorefresh) {
+  chkIqAutorefresh.addEventListener('change', () => {
+    if (chkIqAutorefresh.checked) activarAutoRefrescoIQ();
+    else if (iqTimerAutoRefresco) clearInterval(iqTimerAutoRefresco);
+  });
+}
+
+if (btnIqChartModeNative) {
+  btnIqChartModeNative.addEventListener('click', () => {
+    iqModoGrafico = 'native';
+    btnIqChartModeNative.classList.add('active', 'prio-verde');
+    btnIqChartModeNative.classList.remove('prio-gris');
+    if (btnIqChartModeTv) {
+      btnIqChartModeTv.classList.remove('active', 'prio-verde');
+      btnIqChartModeTv.classList.add('prio-gris');
+    }
+    if (iqNativeChartWrap) iqNativeChartWrap.classList.remove('hidden');
+    if (iqTvChartWrap) iqTvChartWrap.classList.add('hidden');
+    if (iqDatosMercadoActual) {
+      dibujarGraficoVelasIQ(iqDatosMercadoActual.chartCandles || [], iqDatosMercadoActual.supportResistance || {}, iqDatosMercadoActual.indicators || {}, iqDatosMercadoActual.asset?.decimals || 2);
+    }
+  });
+}
+
+if (btnIqChartModeTv) {
+  btnIqChartModeTv.addEventListener('click', () => {
+    iqModoGrafico = 'tv';
+    btnIqChartModeTv.classList.add('active', 'prio-verde');
+    btnIqChartModeTv.classList.remove('prio-gris');
+    if (btnIqChartModeNative) {
+      btnIqChartModeNative.classList.remove('active', 'prio-verde');
+      btnIqChartModeNative.classList.add('prio-gris');
+    }
+    if (iqNativeChartWrap) iqNativeChartWrap.classList.add('hidden');
+    if (iqTvChartWrap) iqTvChartWrap.classList.remove('hidden');
+    const tvSym = iqDatosMercadoActual?.asset?.tvSymbol || 'FOREXCOM:SPXUSD';
+    renderizarWidgetTradingView(tvSym);
+  });
+}
+
+if (btnIqRunAiReport) {
+  btnIqRunAiReport.addEventListener('click', solicitarDiagnosticoIAIQOption);
+}
+
+if (btnCloseIqAiReport && iqAiReportBox) {
+  btnCloseIqAiReport.addEventListener('click', () => {
+    iqAiReportBox.classList.add('hidden');
+  });
+}
+
+// Subida y lectura de capturas de IQ Option (para OTC o análisis visual)
+if (inputIqScreenshot) {
+  inputIqScreenshot.addEventListener('change', (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      iqScreenshotBase64 = evt.target?.result;
+      if (iqScreenshotPreviewImg) iqScreenshotPreviewImg.src = iqScreenshotBase64;
+      if (iqScreenshotPreviewWrap) iqScreenshotPreviewWrap.classList.remove('hidden');
+      if (btnIqAnalyzeScreenshot) btnIqAnalyzeScreenshot.classList.remove('hidden');
+      if (btnIqClearScreenshot) btnIqClearScreenshot.classList.remove('hidden');
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+// Permitir pegar captura directamente con Ctrl+V en la pantalla de Operaciones Financieras
+document.addEventListener('paste', (e) => {
+  if (!viewFinancialOps || viewFinancialOps.classList.contains('hidden')) return;
+  const items = e.clipboardData?.items;
+  if (!items) return;
+  for (let i = 0; i < items.length; i++) {
+    if (items[i].type.indexOf('image') !== -1) {
+      const blob = items[i].getAsFile();
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        iqScreenshotBase64 = evt.target?.result;
+        if (iqScreenshotPreviewImg) iqScreenshotPreviewImg.src = iqScreenshotBase64;
+        if (iqScreenshotPreviewWrap) iqScreenshotPreviewWrap.classList.remove('hidden');
+        if (btnIqAnalyzeScreenshot) btnIqAnalyzeScreenshot.classList.remove('hidden');
+        if (btnIqClearScreenshot) btnIqClearScreenshot.classList.remove('hidden');
+      };
+      reader.readAsDataURL(blob);
+      break;
+    }
+  }
+});
+
+if (btnIqClearScreenshot) {
+  btnIqClearScreenshot.addEventListener('click', () => {
+    iqScreenshotBase64 = null;
+    if (inputIqScreenshot) inputIqScreenshot.value = '';
+    if (iqScreenshotPreviewImg) iqScreenshotPreviewImg.src = '';
+    if (iqScreenshotPreviewWrap) iqScreenshotPreviewWrap.classList.add('hidden');
+    if (btnIqAnalyzeScreenshot) btnIqAnalyzeScreenshot.classList.add('hidden');
+    if (btnIqClearScreenshot) btnIqClearScreenshot.classList.add('hidden');
+  });
+}
+
+if (btnIqAnalyzeScreenshot) {
+  btnIqAnalyzeScreenshot.addEventListener('click', () => {
+    solicitarDiagnosticoIAIQOption();
   });
 }
 
