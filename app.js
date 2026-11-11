@@ -128,6 +128,14 @@ const viewWallet = document.getElementById('view-wallet');
 const viewAssistant = document.getElementById('view-assistant');
 const viewExtras = document.getElementById('view-extras');
 const viewSettings = document.getElementById('view-settings');
+const viewAntigravity = document.getElementById('view-antigravity');
+const homeAntigravityBlock = document.getElementById('home-antigravity-block');
+const btnOpenAntigravity = document.getElementById('btn-open-antigravity');
+const homeAntigravityBadge = document.getElementById('home-antigravity-badge');
+const agMenuPanel = document.getElementById('ag-menu-panel');
+const agChatPanel = document.getElementById('ag-chat-panel');
+let antigravityChats = null;
+let canalAntigravityActivo = null;
 const btnOpenSettings = document.getElementById('btn-open-settings');
 const viewExternal = document.getElementById('view-external');
 
@@ -2903,10 +2911,13 @@ function irAMenuTareasAgenda() {
   viewTasks.classList.add('hidden');
   viewAgenda.classList.add('hidden');
   if (viewSharedTasks) viewSharedTasks.classList.add('hidden');
+  if (viewEconomyMenu) viewEconomyMenu.classList.add('hidden');
   viewWallet.classList.add('hidden');
+  if (viewDebts) viewDebts.classList.add('hidden');
   if (viewAssistant) viewAssistant.classList.add('hidden');
   if (viewExtras) viewExtras.classList.add('hidden');
   if (viewSettings) viewSettings.classList.add('hidden');
+  if (viewAntigravity) viewAntigravity.classList.add('hidden');
   if (viewTasksAgendaMenu) viewTasksAgendaMenu.classList.remove('hidden');
   btnHome.classList.remove('hidden');
   actualizarContadoresTareasAgendaMenu();
@@ -2917,12 +2928,15 @@ function irATareas() {
   registrarPasoHistorial('tasks');
   viewHome.classList.add('hidden');
   if (viewTasksAgendaMenu) viewTasksAgendaMenu.classList.add('hidden');
+  if (viewEconomyMenu) viewEconomyMenu.classList.add('hidden');
   viewAgenda.classList.add('hidden');
   if (viewSharedTasks) viewSharedTasks.classList.add('hidden');
   viewWallet.classList.add('hidden');
+  if (viewDebts) viewDebts.classList.add('hidden');
   if (viewAssistant) viewAssistant.classList.add('hidden');
   if (viewExtras) viewExtras.classList.add('hidden');
   if (viewSettings) viewSettings.classList.add('hidden');
+  if (viewAntigravity) viewAntigravity.classList.add('hidden');
   viewTasks.classList.remove('hidden');
   btnHome.classList.remove('hidden');
   limpiarTareasVencidas();
@@ -2939,12 +2953,15 @@ function irAAgenda(fechaISO) {
   }
   viewHome.classList.add('hidden');
   if (viewTasksAgendaMenu) viewTasksAgendaMenu.classList.add('hidden');
+  if (viewEconomyMenu) viewEconomyMenu.classList.add('hidden');
   viewTasks.classList.add('hidden');
   if (viewSharedTasks) viewSharedTasks.classList.add('hidden');
   viewWallet.classList.add('hidden');
+  if (viewDebts) viewDebts.classList.add('hidden');
   if (viewAssistant) viewAssistant.classList.add('hidden');
   if (viewExtras) viewExtras.classList.add('hidden');
   if (viewSettings) viewSettings.classList.add('hidden');
+  if (viewAntigravity) viewAntigravity.classList.add('hidden');
   viewAgenda.classList.remove('hidden');
   btnHome.classList.remove('hidden');
   renderizarCalendario();
@@ -2955,12 +2972,15 @@ function irATareasCompartidas() {
   registrarPasoHistorial('shared-tasks');
   viewHome.classList.add('hidden');
   if (viewTasksAgendaMenu) viewTasksAgendaMenu.classList.add('hidden');
+  if (viewEconomyMenu) viewEconomyMenu.classList.add('hidden');
   viewTasks.classList.add('hidden');
   viewAgenda.classList.add('hidden');
   viewWallet.classList.add('hidden');
+  if (viewDebts) viewDebts.classList.add('hidden');
   if (viewAssistant) viewAssistant.classList.add('hidden');
   if (viewExtras) viewExtras.classList.add('hidden');
   if (viewSettings) viewSettings.classList.add('hidden');
+  if (viewAntigravity) viewAntigravity.classList.add('hidden');
   if (viewSharedTasks) viewSharedTasks.classList.remove('hidden');
   btnHome.classList.remove('hidden');
   renderizarTareasCompartidas();
@@ -2979,6 +2999,7 @@ function irAMenuEconomia() {
   if (viewAssistant) viewAssistant.classList.add('hidden');
   if (viewExtras) viewExtras.classList.add('hidden');
   if (viewSettings) viewSettings.classList.add('hidden');
+  if (viewAntigravity) viewAntigravity.classList.add('hidden');
   if (viewEconomyMenu) viewEconomyMenu.classList.remove('hidden');
   btnHome.classList.remove('hidden');
   actualizarContadoresEconomiaMenu();
@@ -2996,6 +3017,7 @@ function irABilletera() {
   if (viewAssistant) viewAssistant.classList.add('hidden');
   if (viewExtras) viewExtras.classList.add('hidden');
   if (viewSettings) viewSettings.classList.add('hidden');
+  if (viewAntigravity) viewAntigravity.classList.add('hidden');
   viewWallet.classList.remove('hidden');
   btnHome.classList.remove('hidden');
   renderizarBilletera();
@@ -3013,6 +3035,7 @@ function irADeudas(subtabDeseada) {
   if (viewAssistant) viewAssistant.classList.add('hidden');
   if (viewExtras) viewExtras.classList.add('hidden');
   if (viewSettings) viewSettings.classList.add('hidden');
+  if (viewAntigravity) viewAntigravity.classList.add('hidden');
   if (viewDebts) viewDebts.classList.remove('hidden');
   btnHome.classList.remove('hidden');
   cambiarSubtabDeudas(subtabDeseada || subtabDeudaActiva || 'me-deben');
@@ -3030,6 +3053,7 @@ function irAAsistente() {
   if (viewDebts) viewDebts.classList.add('hidden');
   if (viewExtras) viewExtras.classList.add('hidden');
   if (viewSettings) viewSettings.classList.add('hidden');
+  if (viewAntigravity) viewAntigravity.classList.add('hidden');
   if (viewAssistant) viewAssistant.classList.remove('hidden');
   btnHome.classList.remove('hidden');
   const inp = document.getElementById('input-chat-msg');
@@ -3048,6 +3072,7 @@ function irAExtras() {
   if (viewDebts) viewDebts.classList.add('hidden');
   if (viewAssistant) viewAssistant.classList.add('hidden');
   if (viewSettings) viewSettings.classList.add('hidden');
+  if (viewAntigravity) viewAntigravity.classList.add('hidden');
   viewExtras.classList.remove('hidden');
   btnHome.classList.remove('hidden');
 
@@ -12131,12 +12156,6 @@ function togglePasswordInputVisibility(id) {
 // =========================================================================
 // ACCESOS A ANTIGRAVITY (EXCLUSIVO DE ALEJANDRO DNI 40218898)
 // =========================================================================
-const homeAntigravityBlock = document.getElementById('home-antigravity-block');
-const btnOpenAntigravity = document.getElementById('btn-open-antigravity');
-const homeAntigravityBadge = document.getElementById('home-antigravity-badge');
-const viewAntigravity = document.getElementById('view-antigravity');
-const agMenuPanel = document.getElementById('ag-menu-panel');
-const agChatPanel = document.getElementById('ag-chat-panel');
 const btnBackFromAntigravity = document.getElementById('btn-back-from-antigravity');
 const btnBackToAgMenu = document.getElementById('btn-back-to-ag-menu');
 const agChatRoomTitle = document.getElementById('ag-chat-room-title');
@@ -12150,9 +12169,6 @@ const btnAgSaveChatId = document.getElementById('btn-ag-save-chat-id');
 const agChatMessages = document.getElementById('ag-chat-messages');
 const inputAgMessage = document.getElementById('input-ag-message');
 const btnSendAgMessage = document.getElementById('btn-send-ag-message');
-
-let antigravityChats = null;
-let canalAntigravityActivo = null;
 
 const CANALES_ANTIGRAVITY_DEFAULT = {
   'mod-app': {
