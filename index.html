@@ -1415,99 +1415,75 @@
         </div>
     </section>
 
-    <!-- MÓDULO 2C: OPERACIONES FINANCIERAS (IQ OPTION REAL-TIME ANALYZER) -->
+    <!-- MÓDULO 2C: OPERACIONES FINANCIERAS (CONSEJERO TÁCTICO IQ OPTION) -->
     <section id="view-financial-ops" class="view hidden">
       <div class="tasks-top-bar" style="margin-bottom: 14px;">
         <div>
-          <h2 style="display:flex;align-items:center;gap:8px;">📊 Operaciones Financieras · IQ Option</h2>
-          <p class="subtitle-text">Lectura de gráficos en tiempo real con nomenclatura de IQ Option (ej. US 500), Indicadores Técnicos y Análisis Fundamental</p>
+          <h2 style="display:flex;align-items:center;gap:8px;">📊 Operaciones Financieras · Consejero IQ Option</h2>
+          <p class="subtitle-text">Consejero táctico en tiempo real: Medias Móviles, RSI, Bandas de Bollinger, Soportes/Resistencias, Acción del Precio y Análisis Fundamental</p>
         </div>
         <button id="btn-back-to-economy-from-finops" class="btn-secondary" style="display:flex;align-items:center;gap:6px;">
           ← Menú Economía
         </button>
       </div>
 
-      <!-- PANEL DE CONTROL DE ACTIVO IQ OPTION Y TEMPORALIDAD -->
+      <!-- PANEL COMPACTO DE SELECCIÓN: SOLO US 500, US 100 Y DIVISAS -->
       <div class="task-form-box" style="border-color: #10b981; background: linear-gradient(145deg, rgba(15, 23, 42, 0.96), rgba(6, 78, 59, 0.25)); margin-bottom: 16px;">
-        <!-- FILTRO RÁPIDO POR CATEGORÍA DE IQ OPTION -->
-        <div style="margin-bottom: 12px;">
-          <label style="font-size: 0.8rem; color: #6ee7b7; font-weight: 700; display: block; margin-bottom: 6px;">1. Categoría en IQ Option:</label>
-          <div id="iq-category-chips" style="display: flex; flex-wrap: wrap; gap: 6px;">
-            <button type="button" class="prio-option prio-verde active" data-iq-cat="ALL" style="padding: 5px 11px; font-size: 0.8rem;">Todos</button>
-            <button type="button" class="prio-option prio-gris" data-iq-cat="Índices" style="padding: 5px 11px; font-size: 0.8rem;">📈 Índices (US 500, US 100...)</button>
-            <button type="button" class="prio-option prio-gris" data-iq-cat="Divisas" style="padding: 5px 11px; font-size: 0.8rem;">💱 Divisas (EUR/USD...)</button>
-            <button type="button" class="prio-option prio-gris" data-iq-cat="Materias Primas" style="padding: 5px 11px; font-size: 0.8rem;">🥇 Materias Primas (XAU/USD...)</button>
-            <button type="button" class="prio-option prio-gris" data-iq-cat="Cripto" style="padding: 5px 11px; font-size: 0.8rem;">₿ Cripto (BTC/USD...)</button>
-            <button type="button" class="prio-option prio-gris" data-iq-cat="Acciones" style="padding: 5px 11px; font-size: 0.8rem;">🏢 Acciones (APPLE, NVIDIA...)</button>
-          </div>
+        <!-- BOTONES DIRECTOS: LOS DOS ÍNDICES FAVORITOS -->
+        <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px;">
+          <span style="font-size: 0.82rem; color: #6ee7b7; font-weight: 700;">Tus dos favoritos:</span>
+          <button type="button" class="btn-primary iq-quick-asset-btn" data-asset="US 500" style="padding: 7px 16px; font-size: 0.92rem; font-weight: 800; background: #10b981; border-color: #059669;">
+            ★ US 500
+          </button>
+          <button type="button" class="btn-secondary iq-quick-asset-btn" data-asset="US 100" style="padding: 7px 16px; font-size: 0.92rem; font-weight: 800; border-color: #38bdf8; color: #bae6fd;">
+            ★ US 100
+          </button>
+          <span style="font-size: 0.78rem; color: #94a3b8; margin-left: 6px;">(Wall Street · Futuros continuos idénticos a IQ Option)</span>
         </div>
 
-        <!-- ACCESOS RÁPIDOS A LOS ACTIVOS MÁS OPERADOS EN IQ OPTION -->
-        <div style="margin-bottom: 14px;">
-          <label style="font-size: 0.78rem; color: #94a3b8; display: block; margin-bottom: 6px;">⚡ Favoritos directos de IQ Option:</label>
-          <div id="iq-quick-assets-bar" style="display: flex; flex-wrap: wrap; gap: 6px;">
-            <button type="button" class="btn-secondary iq-quick-asset-btn" data-asset="US 500" style="padding: 5px 10px; font-size: 0.8rem; border-color: #10b981; color: #d1fae5; font-weight: 700;">US 500</button>
-            <button type="button" class="btn-secondary iq-quick-asset-btn" data-asset="US 100" style="padding: 5px 10px; font-size: 0.8rem;">US 100</button>
-            <button type="button" class="btn-secondary iq-quick-asset-btn" data-asset="US 30" style="padding: 5px 10px; font-size: 0.8rem;">US 30</button>
-            <button type="button" class="btn-secondary iq-quick-asset-btn" data-asset="GER 30" style="padding: 5px 10px; font-size: 0.8rem;">GER 30</button>
-            <button type="button" class="btn-secondary iq-quick-asset-btn" data-asset="EUR/USD" style="padding: 5px 10px; font-size: 0.8rem;">EUR/USD</button>
-            <button type="button" class="btn-secondary iq-quick-asset-btn" data-asset="GBP/USD" style="padding: 5px 10px; font-size: 0.8rem;">GBP/USD</button>
-            <button type="button" class="btn-secondary iq-quick-asset-btn" data-asset="USD/JPY" style="padding: 5px 10px; font-size: 0.8rem;">USD/JPY</button>
-            <button type="button" class="btn-secondary iq-quick-asset-btn" data-asset="XAU/USD" style="padding: 5px 10px; font-size: 0.8rem;">XAU/USD (Oro)</button>
-            <button type="button" class="btn-secondary iq-quick-asset-btn" data-asset="USO/USD" style="padding: 5px 10px; font-size: 0.8rem;">USO/USD (Petróleo)</button>
-            <button type="button" class="btn-secondary iq-quick-asset-btn" data-asset="BTC/USD" style="padding: 5px 10px; font-size: 0.8rem;">BTC/USD</button>
-            <button type="button" class="btn-secondary iq-quick-asset-btn" data-asset="NVIDIA" style="padding: 5px 10px; font-size: 0.8rem;">NVIDIA</button>
-          </div>
-        </div>
-
-        <div class="form-row" style="align-items: flex-end; gap: 12px;">
-          <div class="form-group flex-1" style="min-width: 170px; margin-bottom: 0;">
-            <label for="input-iq-search" style="font-size: 0.82rem; color: #cbd5e1;">🔍 Buscar nombre en IQ Option:</label>
-            <input type="text" id="input-iq-search" placeholder="Ej: US 500, EUR/USD, Oro..." autocomplete="off" style="padding: 9px 12px;">
-          </div>
-
-          <div class="form-group flex-2" style="min-width: 210px; margin-bottom: 0;">
-            <label for="select-iq-asset" style="font-size: 0.82rem; color: #6ee7b7; font-weight: 700;">2. Activo seleccionado (Nombre IQ Option):</label>
+        <div class="form-row" style="align-items: flex-end; gap: 12px; margin-bottom: 0;">
+          <div class="form-group flex-2" style="min-width: 220px; margin-bottom: 0;">
+            <label for="select-iq-asset" style="font-size: 0.82rem; color: #cbd5e1; font-weight: 700;">Activo a Operar:</label>
             <select id="select-iq-asset" class="select-input" style="font-weight: 700; color: #fff; border-color: #10b981;"></select>
           </div>
 
           <div class="form-group" style="margin-bottom: 0;">
-            <label style="font-size: 0.82rem; color: #cbd5e1;">3. Vela (Temporalidad):</label>
+            <label style="font-size: 0.82rem; color: #cbd5e1; font-weight: 700;">Vela (Temporalidad):</label>
             <div class="priority-selector" id="iq-timeframe-selector">
               <button type="button" class="prio-option prio-gris" data-tf="1m" style="padding: 7px 11px;">1m</button>
-              <button type="button" class="prio-option prio-verde active" data-tf="5m" style="padding: 7px 11px;">5m</button>
+              <button type="button" class="prio-option prio-gris" data-tf="5m" style="padding: 7px 11px;">5m</button>
               <button type="button" class="prio-option prio-gris" data-tf="15m" style="padding: 7px 11px;">15m</button>
-              <button type="button" class="prio-option prio-gris" data-tf="1h" style="padding: 7px 11px;">1h</button>
+              <button type="button" class="prio-option prio-verde active" data-tf="1h" style="padding: 7px 11px;">1h</button>
             </div>
           </div>
 
-          <div class="form-group" style="margin-bottom: 0; display: flex; gap: 8px; align-items: center;">
+          <div class="form-group" style="margin-bottom: 0; display: flex; gap: 8px;">
             <button type="button" id="btn-iq-refresh-now" class="btn-primary" style="background: #10b981; border-color: #059669; font-weight: 700; padding: 9px 14px;">
               🔄 Actualizar
             </button>
           </div>
         </div>
 
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.08);">
-          <label style="display: flex; align-items: center; gap: 8px; font-size: 0.83rem; color: #cbd5e1; cursor: pointer;">
-            <input type="checkbox" id="chk-iq-autorefresh" checked style="width: 16px; height: 16px; accent-color: #10b981;">
-            <span>⚡ <strong>Lectura en Tiempo Real Activa</strong> (actualiza velas e indicadores cada 15 seg)</span>
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 10px; font-size: 0.78rem; color: #94a3b8;">
+          <span id="iq-last-update-label">Conectando en tiempo real...</span>
+          <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; color: #cbd5e1;">
+            <input type="checkbox" id="chk-iq-autorefresh" checked style="accent-color: #10b981;">
+            <span>Auto-refresco cada 15s</span>
           </label>
-          <span id="iq-last-update-label" style="font-size: 0.78rem; color: #94a3b8;">Conectando con el feed en vivo...</span>
         </div>
       </div>
 
-      <!-- SEMÁFORO CENTRAL DE SEÑAL OPERATIVA (CALL / PUT / NEUTRAL) -->
+      <!-- SEMÁFORO OPERATIVO IQ OPTION (MANTENIDO Y PERFECCIONADO) -->
       <div id="iq-signal-hero-box" class="task-form-box" style="border-width: 2px; border-color: #334155; background: rgba(15, 23, 42, 0.95); margin-bottom: 16px;">
         <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 14px;">
           <div>
             <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-              <span id="iq-hero-asset-badge" style="background: #10b981; color: #052e16; font-weight: 800; font-size: 0.82rem; padding: 3px 9px; border-radius: 6px;">US 500</span>
-              <span id="iq-hero-subtitle" style="color: #94a3b8; font-size: 0.88rem;">S&amp;P 500 Index (EE.UU.)</span>
-              <span id="iq-hero-tf-badge" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); font-size: 0.76rem; padding: 2px 8px; border-radius: 6px; font-weight: 700;">Vela 5m</span>
+              <span id="iq-hero-asset-badge" style="background: #10b981; color: #052e16; font-weight: 800; font-size: 0.88rem; padding: 4px 10px; border-radius: 6px;">US 500</span>
+              <span id="iq-hero-subtitle" style="color: #94a3b8; font-size: 0.88rem;">S&amp;P 500 Index</span>
+              <span id="iq-hero-tf-badge" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); font-size: 0.76rem; padding: 2px 8px; border-radius: 6px; font-weight: 700;">Vela 1h</span>
             </div>
             <div style="display: flex; align-items: baseline; gap: 12px; margin-top: 8px; flex-wrap: wrap;">
-              <div id="iq-hero-price" style="font-size: 2.1rem; font-weight: 800; color: #f8fafc; letter-spacing: -0.5px;">--</div>
+              <div id="iq-hero-price" style="font-size: 2.2rem; font-weight: 800; color: #f8fafc; letter-spacing: -0.5px;">--</div>
               <div id="iq-hero-change" style="font-size: 0.95rem; font-weight: 700; color: #94a3b8;">--</div>
             </div>
             <div id="iq-hero-ohlc" style="font-size: 0.78rem; color: #94a3b8; margin-top: 4px;">
@@ -1515,124 +1491,83 @@
             </div>
           </div>
 
-          <!-- CAJA DE VEREDICTO CALL / PUT -->
-          <div id="iq-verdict-card" style="min-width: 260px; flex: 1; max-width: 420px; background: rgba(30, 41, 59, 0.85); border: 2px solid #475569; border-radius: 12px; padding: 12px 16px; text-align: center;">
-            <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.8px; color: #cbd5e1; margin-bottom: 4px;">Diagnóstico Técnico en Vivo</div>
-            <div id="iq-verdict-title" style="font-size: 1.25rem; font-weight: 800; color: #f8fafc; margin-bottom: 6px;">Analizando gráfico...</div>
+          <!-- VEREDICTO VISUAL CALL / PUT -->
+          <div id="iq-verdict-card" style="min-width: 260px; flex: 1; max-width: 400px; background: rgba(30, 41, 59, 0.85); border: 2px solid #475569; border-radius: 12px; padding: 12px 16px; text-align: center;">
+            <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.8px; color: #cbd5e1; margin-bottom: 4px;">Semáforo Operativo IQ Option</div>
+            <div id="iq-verdict-title" style="font-size: 1.3rem; font-weight: 800; color: #f8fafc; margin-bottom: 6px;">Analizando...</div>
             <div style="width: 100%; height: 10px; background: #1e293b; border-radius: 999px; overflow: hidden; margin-bottom: 8px; border: 1px solid rgba(255,255,255,0.1);">
               <div id="iq-verdict-bar" style="width: 50%; height: 100%; background: #64748b; transition: width 0.35s ease, background 0.35s ease;"></div>
             </div>
             <div style="display: flex; justify-content: space-between; font-size: 0.78rem; color: #cbd5e1;">
-              <span id="iq-verdict-score">Puntaje: 0/100</span>
-              <span id="iq-verdict-exp">⏱️ Expiración: 5 a 15 min</span>
+              <span id="iq-verdict-score">Fuerza: 0/100</span>
+              <span id="iq-verdict-exp">⏱️ Expiración recomendada: 1 a 3 velas</span>
             </div>
           </div>
         </div>
 
-        <!-- LISTA DE CONFLUENCIAS QUE EXPLICAN LA SEÑAL -->
+        <!-- FACTORES TÉCNICOS DETECTADOS (LOS 5 PILARES) -->
         <div style="margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.08);">
-          <div style="font-size: 0.82rem; font-weight: 700; color: #cbd5e1; margin-bottom: 8px;">🎯 Confluencia de Indicadores detectada en el gráfico:</div>
+          <div style="font-size: 0.82rem; font-weight: 700; color: #cbd5e1; margin-bottom: 8px;">
+            🔍 Confluencias Técnicas (Medias, RSI, Bollinger, Soportes/Resistencias y Acción del Precio):
+          </div>
           <div id="iq-signal-reasons-list" style="display: flex; flex-direction: column; gap: 6px; font-size: 0.85rem;"></div>
         </div>
       </div>
 
-      <!-- GRÁFICO EN TIEMPO REAL (VELAS IQ OPTION CON INDICADORES + WIDGET TRADINGVIEW) -->
-      <div class="task-form-box" style="border-color: #38bdf8; background: #0b1120; margin-bottom: 16px; padding: 14px;">
+      <!-- SECCIÓN PRINCIPAL: CONSEJERO TÁCTICO IA (TE DA EL CONSEJO EXACTO PARA OPERAR EN IQ) -->
+      <div class="task-form-box" style="border-color: #38bdf8; background: linear-gradient(145deg, rgba(15, 23, 42, 0.98), rgba(14, 116, 144, 0.25)); margin-bottom: 16px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 12px;">
+          <div>
+            <h3 style="margin: 0; color: #7dd3fc; font-size: 1.15rem; display: flex; align-items: center; gap: 8px;">
+              <span>🧠</span> Consejero Táctico IA para tu sesión en IQ Option
+            </h3>
+            <p class="subtitle-text" style="font-size: 0.82rem; margin: 3px 0 0 0;">
+              Lee los 5 valores técnicos en vivo + el análisis fundamental y te da el consejo exacto de cómo entrar en la temporalidad elegida.
+            </p>
+          </div>
+          <button type="button" id="btn-iq-ask-advisor" class="btn-primary" style="background: linear-gradient(135deg, #0284c7, #0369a1); border-color: #38bdf8; font-weight: 800; padding: 10px 18px; font-size: 0.92rem; box-shadow: 0 4px 15px rgba(2, 132, 199, 0.4);">
+            🎯 Pedir Consejo Táctico IA
+          </button>
+        </div>
+
+        <!-- CAJA DE RESPUESTA DEL CONSEJERO -->
+        <div id="iq-advisor-output-box" style="background: rgba(15, 23, 42, 0.9); border: 1.5px solid rgba(56, 189, 248, 0.4); border-radius: 10px; padding: 14px; min-height: 90px;">
+          <div id="iq-advisor-placeholder" style="color: #94a3b8; font-size: 0.86rem; line-height: 1.5;">
+            💡 Tocá el botón <strong>"🎯 Pedir Consejo Táctico IA"</strong> para que la Inteligencia Artificial analice de inmediato la vela de <span id="iq-advisor-timeframe-label" style="color:#38bdf8;font-weight:700;">1h</span> de <span id="iq-advisor-asset-label" style="color:#38bdf8;font-weight:700;">US 500</span> (medias móviles, RSI, Bollinger, soportes y noticias de Wall Street) y te indique si conviene entrar al alza (CALL), a la baja (PUT), o esperar, con su punto de entrada exacto.
+          </div>
+          <div id="iq-advisor-text" class="hidden" style="color: #f1f5f9; font-size: 0.9rem; line-height: 1.6; white-space: pre-wrap;"></div>
+        </div>
+      </div>
+
+      <!-- GRÁFICO EN TIEMPO REAL (ALINEADO Y SINCRONIZADO CON IQ OPTION) -->
+      <div class="task-form-box" style="border-color: #475569; background: #0b1120; margin-bottom: 16px; padding: 14px;">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;">
           <div>
-            <h3 style="margin: 0; font-size: 1.05rem; color: #f8fafc;">📈 Gráfico en Tiempo Real (<span id="iq-chart-title-asset">US 500</span>)</h3>
+            <h3 style="margin: 0; font-size: 1rem; color: #f8fafc;">📈 Gráfico de Velas Japonesas (<span id="iq-chart-title-asset">US 500 · 1h</span>)</h3>
             <p class="subtitle-text" style="font-size: 0.78rem; margin: 2px 0 0 0;">
-              Velas japonesas en vivo con <span style="color:#facc15;font-weight:700;">━ EMA 9</span>, <span style="color:#38bdf8;font-weight:700;">━ EMA 21</span>, <span style="color:#f87171;font-weight:700;">┅ Resistencia</span> y <span style="color:#4ade80;font-weight:700;">┅ Soporte</span>
+              Sincronizado con el mercado de Wall Street: <span style="color:#facc15;font-weight:700;">━ EMA 9</span>, <span style="color:#38bdf8;font-weight:700;">━ EMA 21</span>, <span style="color:#f87171;font-weight:700;">┅ Resistencia</span> y <span style="color:#4ade80;font-weight:700;">┅ Soporte</span>
             </p>
           </div>
           <div class="priority-selector">
-            <button type="button" id="btn-iq-chart-mode-native" class="prio-option prio-verde active" style="padding: 5px 10px; font-size: 0.78rem;">📊 Velas IQ + Soportes</button>
-            <button type="button" id="btn-iq-chart-mode-tv" class="prio-option prio-gris" style="padding: 5px 10px; font-size: 0.78rem;">🌐 Vista TradingView</button>
+            <button type="button" id="btn-iq-chart-mode-native" class="prio-option prio-verde active" style="padding: 5px 10px; font-size: 0.78rem;">📊 Velas Directas</button>
+            <button type="button" id="btn-iq-chart-mode-tv" class="prio-option prio-gris" style="padding: 5px 10px; font-size: 0.78rem;">🌐 TradingView Pro</button>
           </div>
         </div>
 
-        <!-- CANVAS PROPIO DE ALTA PRECISIÓN ESTILO IQ OPTION -->
+        <!-- CANVAS PROPIO -->
         <div id="iq-native-chart-wrap" style="width: 100%; position: relative; background: #090d16; border: 1px solid #1e293b; border-radius: 10px; overflow: hidden;">
-          <canvas id="iq-candles-canvas" width="900" height="340" style="width: 100%; height: 320px; display: block;"></canvas>
+          <canvas id="iq-candles-canvas" width="900" height="320" style="width: 100%; height: 300px; display: block;"></canvas>
         </div>
 
-        <!-- CONTENEDOR TRADINGVIEW (OPCIONAL AL TOCAR PESTAÑA) -->
+        <!-- IFRAME TRADINGVIEW -->
         <div id="iq-tv-chart-wrap" class="hidden" style="width: 100%; height: 380px; border: 1px solid #1e293b; border-radius: 10px; overflow: hidden; background: #090d16;"></div>
       </div>
 
-      <!-- TABLERO DE LOS 8 INDICADORES TÉCNICOS EN VIVO -->
-      <div class="task-form-box" style="border-color: #6366f1; margin-bottom: 16px;">
-        <h3 style="margin: 0 0 4px 0; color: #a5b4fc; font-size: 1.08rem;">📐 Indicadores Técnicos en Tiempo Real</h3>
-        <p class="subtitle-text" style="margin-bottom: 12px; font-size: 0.82rem;">Calculados vela a vela sobre el gráfico actual de IQ Option:</p>
-
-        <div id="iq-indicators-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px;">
-          <!-- Se completa dinámicamente en renderizarDatosIQOption() -->
-        </div>
-      </div>
-
-      <!-- PANEL DE ANÁLISIS FUNDAMENTAL, SESIONES Y MOTOR IA -->
-      <div class="task-form-box" style="border-color: #f59e0b; background: linear-gradient(145deg, rgba(15, 23, 42, 0.96), rgba(120, 53, 15, 0.2)); margin-bottom: 16px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 12px;">
-          <div>
-            <h3 style="margin: 0; color: #fcd34d; font-size: 1.08rem;">🌍 Análisis Fundamental y Noticias en Vivo</h3>
-            <p class="subtitle-text" style="font-size: 0.82rem; margin: 2px 0 0 0;">Sesiones bursátiles abiertas, catalizadores macroeconómicos y titulares en tiempo real</p>
-          </div>
-          <button type="button" id="btn-iq-run-ai-report" class="btn-primary" style="background: linear-gradient(135deg, #f59e0b, #d97706); border-color: #b45309; color: #0f172a; font-weight: 800; padding: 9px 14px;">
-            🧠 Generar Informe IA (Técnico + Fundamental)
-          </button>
-        </div>
-
-        <!-- SESIONES DE MERCADO ABIERTAS AHORA -->
-        <div id="iq-sessions-box" style="background: rgba(15, 23, 42, 0.75); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 10px; padding: 10px 12px; margin-bottom: 12px; font-size: 0.84rem;"></div>
-
-        <!-- DRIVERS MACRO DEL ACTIVO -->
-        <div style="background: rgba(15, 23, 42, 0.75); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 10px 12px; margin-bottom: 12px;">
-          <div style="font-size: 0.78rem; color: #fbbf24; font-weight: 700; margin-bottom: 4px;">📌 Qué mueve fundamentalmente a <span id="iq-fund-asset-name">US 500</span>:</div>
-          <div id="iq-fund-macro-text" style="font-size: 0.85rem; color: #e2e8f0; line-height: 1.45;">--</div>
-        </div>
-
-        <!-- NOTICIAS EN VIVO -->
-        <div>
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-            <span style="font-size: 0.82rem; font-weight: 700; color: #cbd5e1;">📰 Últimas noticias del mercado para este activo:</span>
-            <span id="iq-news-sentiment-badge" style="font-size: 0.76rem; padding: 2px 8px; border-radius: 6px; background: rgba(255,255,255,0.08); color: #cbd5e1;">Sentimiento: Neutral</span>
-          </div>
-          <div id="iq-live-news-list" style="display: flex; flex-direction: column; gap: 8px;"></div>
-        </div>
-
-        <!-- RESULTADO DEL INFORME TÁCTICO IA -->
-        <div id="iq-ai-report-box" class="hidden" style="margin-top: 14px; background: rgba(6, 78, 59, 0.3); border: 1.5px solid #10b981; border-radius: 10px; padding: 14px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-            <strong style="color: #6ee7b7; font-size: 0.95rem;">🤖 Diagnóstico Estratégico IA para IQ Option:</strong>
-            <button type="button" id="btn-close-iq-ai-report" class="btn-alert-dismiss">✕</button>
-          </div>
-          <div id="iq-ai-report-content" style="font-size: 0.88rem; color: #f1f5f9; line-height: 1.55; white-space: pre-wrap;"></div>
-        </div>
-      </div>
-
-      <!-- ANALIZADOR VISUAL DE CAPTURAS DE IQ OPTION (IDEAL PARA GRÁFICOS OTC O TU PROPIA PANTALLA) -->
-      <div class="task-form-box" style="border-color: #a855f7; background: linear-gradient(145deg, rgba(15, 23, 42, 0.96), rgba(88, 28, 135, 0.2));">
-        <h3 style="margin: 0 0 4px 0; color: #e9d5ff; font-size: 1.05rem;">📸 Lector Directo de tu Pantalla de IQ Option (Incluye Pares OTC)</h3>
-        <p class="subtitle-text" style="font-size: 0.82rem; margin-bottom: 12px;">
-          ¿Estás operando un par <strong>(OTC)</strong> o querés que la IA lea directamente tu captura de la app de IQ Option con tus líneas e indicadores? Pegá la captura acá (<code>Ctrl+V</code>) o subí la imagen:
-        </p>
-
-        <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
-          <label for="input-iq-screenshot" class="btn-secondary" style="border-color: #c084fc; color: #f3e8ff; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; padding: 9px 14px;">
-            📷 Subir captura / foto de IQ Option
-          </label>
-          <input type="file" id="input-iq-screenshot" accept="image/*" class="hidden">
-          <button type="button" id="btn-iq-analyze-screenshot" class="btn-primary hidden" style="background: #9333ea; border-color: #7e22ce; font-weight: 700; padding: 9px 16px;">
-            🔍 Analizar Captura con IA Ahora
-          </button>
-          <button type="button" id="btn-iq-clear-screenshot" class="btn-secondary hidden" style="padding: 9px 12px;">
-            🗑️ Quitar imagen
-          </button>
-        </div>
-
-        <div id="iq-screenshot-preview-wrap" class="hidden" style="margin-top: 12px;">
-          <img id="iq-screenshot-preview-img" src="" alt="Captura IQ Option" style="max-width: 100%; max-height: 240px; border-radius: 8px; border: 1px solid #a855f7; display: block;">
-        </div>
+      <!-- RESUMEN FUNDAMENTAL Y NOTICIAS DEL DÍA -->
+      <div class="task-form-box" style="border-color: #f59e0b; background: rgba(15, 23, 42, 0.85); margin-bottom: 16px;">
+        <h4 style="margin: 0 0 6px 0; color: #fbbf24; font-size: 0.95rem;">🌍 Contexto Fundamental y Noticias Relevantes</h4>
+        <div id="iq-fund-macro-text" style="font-size: 0.84rem; color: #cbd5e1; line-height: 1.45; margin-bottom: 10px;">--</div>
+        <div id="iq-live-news-list" style="display: flex; flex-direction: column; gap: 6px;"></div>
       </div>
     </section>
 
