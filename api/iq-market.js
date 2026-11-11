@@ -1,425 +1,141 @@
-// API en Tiempo Real para Operaciones Financieras (IQ Option Analyzer)
-// Soporta activos con la nomenclatura exacta de IQ Option (ej: US 500, US 100, US 30, EUR/USD, XAU/USD, BTC/USD, etc.)
+// API en Tiempo Real para Consejero Táctico IQ Option (US 500, US 100 y Divisas)
+// Basado en: Medias Móviles, RSI, Bandas de Bollinger, Soportes y Resistencias y Acción de Precio + Análisis Fundamental
 
 const IQ_OPTION_ASSETS = {
-  // ÍNDICES (Nombres exactos en IQ Option)
+  // ÍNDICES PRINCIPALES QUE OPERA ALEJANDRO
   'US 500': {
     iqName: 'US 500',
-    subtitle: 'S&P 500 Index (EE.UU.)',
+    subtitle: 'S&P 500 Index (Wall Street)',
     category: 'Índices',
-    yahooSymbol: 'ES=F',
-    fallbackSymbol: '^GSPC',
-    newsQuery: 'SPY S&P 500 market',
+    primarySymbol: 'ES=F',     // Futuros continuos S&P 500 (mismo feed 24h que IQ Option)
+    fallbackSymbol: '^GSPC',   // Índice contado S&P 500
+    newsQuery: 'SPY S&P 500 stock market FED',
     tvSymbol: 'FOREXCOM:SPXUSD',
     decimals: 2,
-    macroDrivers: 'Tasas de la FED, inflación CPI de EE.UU., resultados trimestrales de Big Tech y datos de empleo NFP.'
+    macroDrivers: 'Decisiones de tasas de la FED, inflación CPI/PPI de EE.UU., balances de las 7 Magníficas y datos de empleo NFP.'
   },
   'US 100': {
     iqName: 'US 100',
-    subtitle: 'Nasdaq 100 Tecnológico (EE.UU.)',
+    subtitle: 'Nasdaq 100 Tecnológico (Wall Street)',
     category: 'Índices',
-    yahooSymbol: 'NQ=F',
-    fallbackSymbol: '^NDX',
-    newsQuery: 'QQQ Nasdaq 100 tech stocks',
+    primarySymbol: 'NQ=F',     // Futuros continuos Nasdaq 100
+    fallbackSymbol: '^NDX',    // Índice contado Nasdaq
+    newsQuery: 'QQQ Nasdaq 100 tech stocks Nvidia',
     tvSymbol: 'FOREXCOM:NSXUSD',
     decimals: 2,
-    macroDrivers: 'Sector tecnológico e IA (Nvidia, Apple, Microsoft), rendimientos de bonos del Tesoro de EE.UU. a 10 años y decisiones de la FED.'
-  },
-  'US 30': {
-    iqName: 'US 30',
-    subtitle: 'Dow Jones Industrial Average (EE.UU.)',
-    category: 'Índices',
-    yahooSymbol: 'YM=F',
-    fallbackSymbol: '^DJI',
-    newsQuery: 'Dow Jones Industrial Average DIA',
-    tvSymbol: 'FOREXCOM:DJI',
-    decimals: 2,
-    macroDrivers: 'Industria pesada, banca de EE.UU., consumo interno, PBI estadounidense y política monetaria de la Reserva Federal.'
-  },
-  'US 2000': {
-    iqName: 'US 2000',
-    subtitle: 'Russell 2000 Small Caps (EE.UU.)',
-    category: 'Índices',
-    yahooSymbol: 'RTY=F',
-    fallbackSymbol: '^RUT',
-    newsQuery: 'Russell 2000 IWM small caps',
-    tvSymbol: 'TVC:RUT',
-    decimals: 2,
-    macroDrivers: 'Empresas de pequeña capitalización de EE.UU., crédito bancario regional y expectativas de recortes de tasas de la FED.'
-  },
-  'GER 30': {
-    iqName: 'GER 30',
-    subtitle: 'DAX 30 / 40 (Alemania)',
-    category: 'Índices',
-    yahooSymbol: '^GDAXI',
-    fallbackSymbol: 'EWG',
-    newsQuery: 'DAX Germany stock market ECB',
-    tvSymbol: 'XETR:DAX',
-    decimals: 2,
-    macroDrivers: 'Banco Central Europeo (BCE), industria automotriz y manufacturera alemana, costos de energía en Europa e inflación de la Eurozona.'
-  },
-  'UK 100': {
-    iqName: 'UK 100',
-    subtitle: 'FTSE 100 (Reino Unido)',
-    category: 'Índices',
-    yahooSymbol: '^FTSE',
-    fallbackSymbol: 'EWU',
-    newsQuery: 'FTSE 100 UK market Bank of England',
-    tvSymbol: 'TVC:UKX',
-    decimals: 2,
-    macroDrivers: 'Banco de Inglaterra (BoE), precios de materias primas/energía, libra esterlina (GBP) y datos de inflación del Reino Unido.'
-  },
-  'JP 225': {
-    iqName: 'JP 225',
-    subtitle: 'Nikkei 225 (Japón)',
-    category: 'Índices',
-    yahooSymbol: 'NIY=F',
-    fallbackSymbol: '^N225',
-    newsQuery: 'Nikkei 225 Japan market Yen',
-    tvSymbol: 'TVC:NI225',
-    decimals: 2,
-    macroDrivers: 'Banco de Japón (BoJ), cotización del Yen (USD/JPY) que impulsa exportadoras japonesas y tendencia de Wall Street.'
-  },
-  'FR 40': {
-    iqName: 'FR 40',
-    subtitle: 'CAC 40 (Francia)',
-    category: 'Índices',
-    yahooSymbol: '^FCHI',
-    fallbackSymbol: 'EWQ',
-    newsQuery: 'CAC 40 France European stocks',
-    tvSymbol: 'EURONEXT:PX1',
-    decimals: 2,
-    macroDrivers: 'Política del BCE, sector de lujo europeo (LVMH), demanda de China y actividad económica de la Eurozona.'
-  },
-  'SP 35': {
-    iqName: 'SP 35',
-    subtitle: 'IBEX 35 (España)',
-    category: 'Índices',
-    yahooSymbol: '^IBEX',
-    fallbackSymbol: 'EWP',
-    newsQuery: 'IBEX 35 Spain market banks',
-    tvSymbol: 'BME:IBC',
-    decimals: 2,
-    macroDrivers: 'Banca española (Santander, BBVA), turismo europeo y tasas de interés del Banco Central Europeo.'
-  },
-  'AUS 200': {
-    iqName: 'AUS 200',
-    subtitle: 'ASX 200 (Australia)',
-    category: 'Índices',
-    yahooSymbol: '^AXJO',
-    fallbackSymbol: 'EWA',
-    newsQuery: 'ASX 200 Australia market RBA',
-    tvSymbol: 'ASX:XJO',
-    decimals: 2,
-    macroDrivers: 'Banco de la Reserva de Australia (RBA), exportación de minerales/materias primas y demanda industrial de China.'
+    macroDrivers: 'Sector tecnológico e IA (Nvidia, Apple, Microsoft), rendimientos de los bonos del Tesoro de EE.UU. a 10 años y liquidez bancaria.'
   },
 
-  // DIVISAS / FOREX / BINARIAS / DIGITALES
+  // DIVISAS (FOREX / BINARIAS / DIGITALES DE IQ OPTION)
   'EUR/USD': {
     iqName: 'EUR/USD',
     subtitle: 'Euro vs Dólar Estadounidense',
     category: 'Divisas',
-    yahooSymbol: 'EURUSD=X',
+    primarySymbol: 'EURUSD=X',
     fallbackSymbol: 'EURUSD=X',
-    newsQuery: 'EURUSD Euro Dollar Forex',
+    newsQuery: 'EURUSD Euro Dollar Forex BCE FED',
     tvSymbol: 'FX:EURUSD',
     decimals: 5,
-    macroDrivers: 'Diferencial de tasas entre la FED (EE.UU.) y el BCE (Europa), inflación IPC, nóminas no agrícolas (NFP) y PMI europeo.'
+    macroDrivers: 'Diferencial de tasas de interés FED vs BCE, IPC de la Eurozona, nóminas no agrícolas de EE.UU. y balanza comercial europea.'
   },
   'GBP/USD': {
     iqName: 'GBP/USD',
     subtitle: 'Libra Esterlina vs Dólar Estadounidense',
     category: 'Divisas',
-    yahooSymbol: 'GBPUSD=X',
+    primarySymbol: 'GBPUSD=X',
     fallbackSymbol: 'GBPUSD=X',
-    newsQuery: 'GBPUSD Pound Dollar Forex',
+    newsQuery: 'GBPUSD Pound Dollar Forex Bank of England',
     tvSymbol: 'FX:GBPUSD',
     decimals: 5,
-    macroDrivers: 'Decisiones del Banco de Inglaterra (BoE) vs Reserva Federal (FED), IPC británico y PBI del Reino Unido.'
+    macroDrivers: 'Decisiones del Banco de Inglaterra (BoE), inflación británica y fortaleza del dólar estadounidense (DXY).'
   },
   'USD/JPY': {
     iqName: 'USD/JPY',
     subtitle: 'Dólar Estadounidense vs Yen Japonés',
     category: 'Divisas',
-    yahooSymbol: 'JPY=X',
+    primarySymbol: 'JPY=X',
     fallbackSymbol: 'JPY=X',
-    newsQuery: 'USDJPY Yen Dollar Forex',
+    newsQuery: 'USDJPY Yen Dollar Forex Bank of Japan',
     tvSymbol: 'FX:USDJPY',
     decimals: 3,
-    macroDrivers: 'Rendimiento de los bonos del Tesoro de EE.UU. a 10 años, intervenciones del Banco de Japón (BoJ) y tasas de la FED.'
+    macroDrivers: 'Rendimiento de los bonos del Tesoro de EE.UU. a 10 años, intervenciones cambiarias del Banco de Japón (BoJ) y diferenciales de tasas.'
   },
   'EUR/JPY': {
     iqName: 'EUR/JPY',
     subtitle: 'Euro vs Yen Japonés',
     category: 'Divisas',
-    yahooSymbol: 'EURJPY=X',
+    primarySymbol: 'EURJPY=X',
     fallbackSymbol: 'EURJPY=X',
     newsQuery: 'EURJPY Euro Yen Forex',
     tvSymbol: 'FX:EURJPY',
     decimals: 3,
-    macroDrivers: 'Apetito global por el riesgo, política monetaria del BCE frente a las tasas bajas del Banco de Japón.'
+    macroDrivers: 'Sentimiento de apetito de riesgo global, política monetaria del BCE frente al sesgo acomodaticio de Japón.'
   },
   'AUD/USD': {
     iqName: 'AUD/USD',
     subtitle: 'Dólar Australiano vs Dólar Estadounidense',
     category: 'Divisas',
-    yahooSymbol: 'AUDUSD=X',
+    primarySymbol: 'AUDUSD=X',
     fallbackSymbol: 'AUDUSD=X',
-    newsQuery: 'AUDUSD Australian Dollar Forex',
+    newsQuery: 'AUDUSD Australian Dollar Forex RBA China',
     tvSymbol: 'FX:AUDUSD',
     decimals: 5,
-    macroDrivers: 'Precios del oro y hierro, crecimiento económico de China, tasas del RBA y fortaleza general del Dólar (DXY).'
+    macroDrivers: 'Demanda de commodities en China, precios del mineral de hierro y oro, y política del Banco de la Reserva de Australia (RBA).'
+  },
+  'GBP/JPY': {
+    iqName: 'GBP/JPY',
+    subtitle: 'Libra Esterlina vs Yen Japonés (El Dragón)',
+    category: 'Divisas',
+    primarySymbol: 'GBPJPY=X',
+    fallbackSymbol: 'GBPJPY=X',
+    newsQuery: 'GBPJPY Forex volatile currency',
+    tvSymbol: 'FX:GBPJPY',
+    decimals: 3,
+    macroDrivers: 'Par de alta volatilidad impulsado por noticias del Reino Unido, aversión al riesgo y compras de refugio en Yen.'
   },
   'EUR/GBP': {
     iqName: 'EUR/GBP',
     subtitle: 'Euro vs Libra Esterlina',
     category: 'Divisas',
-    yahooSymbol: 'EURGBP=X',
+    primarySymbol: 'EURGBP=X',
     fallbackSymbol: 'EURGBP=X',
     newsQuery: 'EURGBP Euro Pound Forex',
     tvSymbol: 'FX:EURGBP',
     decimals: 5,
-    macroDrivers: 'Divergencia económica entre la Eurozona y el Reino Unido, anuncios del BCE y del Banco de Inglaterra.'
+    macroDrivers: 'Divergencia entre la economía de la Eurozona y el Reino Unido, anuncios del BCE vs BoE.'
   },
   'USD/CAD': {
     iqName: 'USD/CAD',
     subtitle: 'Dólar Estadounidense vs Dólar Canadiense',
     category: 'Divisas',
-    yahooSymbol: 'CAD=X',
+    primarySymbol: 'CAD=X',
     fallbackSymbol: 'CAD=X',
     newsQuery: 'USDCAD Canadian Dollar Oil Forex',
     tvSymbol: 'FX:USDCAD',
     decimals: 5,
-    macroDrivers: 'Precio internacional del petróleo WTI (Canadá es gran exportador), Banco de Canadá (BoC) y datos de empleo de EE.UU. y Canadá.'
+    macroDrivers: 'Cotización internacional del petróleo (Canadá es gran exportador), Banco de Canadá (BoC) y datos de empleo.'
   },
   'USD/CHF': {
     iqName: 'USD/CHF',
     subtitle: 'Dólar Estadounidense vs Franco Suizo',
     category: 'Divisas',
-    yahooSymbol: 'CHF=X',
+    primarySymbol: 'CHF=X',
     fallbackSymbol: 'CHF=X',
-    newsQuery: 'USDCHF Swiss Franc Forex',
+    newsQuery: 'USDCHF Swiss Franc Forex SNB',
     tvSymbol: 'FX:USDCHF',
     decimals: 5,
-    macroDrivers: 'Flujos de refugio seguro hacia el Franco Suizo, Banco Nacional Suizo (SNB) e índice Dólar (DXY).'
-  },
-  'GBP/JPY': {
-    iqName: 'GBP/JPY',
-    subtitle: 'Libra Esterlina vs Yen Japonés',
-    category: 'Divisas',
-    yahooSymbol: 'GBPJPY=X',
-    fallbackSymbol: 'GBPJPY=X',
-    newsQuery: 'GBPJPY Forex',
-    tvSymbol: 'FX:GBPJPY',
-    decimals: 3,
-    macroDrivers: 'Par de alta volatilidad ("El Dragón"): sensible al sentimiento de riesgo global, tasas del BoE y política del BoJ.'
-  },
-  'NZD/USD': {
-    iqName: 'NZD/USD',
-    subtitle: 'Dólar Neozelandés vs Dólar Estadounidense',
-    category: 'Divisas',
-    yahooSymbol: 'NZDUSD=X',
-    fallbackSymbol: 'NZDUSD=X',
-    newsQuery: 'NZDUSD Forex',
-    tvSymbol: 'FX:NZDUSD',
-    decimals: 5,
-    macroDrivers: 'Banco de la Reserva de Nueva Zelanda (RBNZ), comercio Asia-Pacífico y fortaleza del dólar estadounidense.'
-  },
-  'USD/BRL': {
-    iqName: 'USD/BRL',
-    subtitle: 'Dólar Estadounidense vs Real Brasileño',
-    category: 'Divisas',
-    yahooSymbol: 'BRL=X',
-    fallbackSymbol: 'BRL=X',
-    newsQuery: 'USDBRL Real Brasil Dollar',
-    tvSymbol: 'FX_IDC:USDBRL',
-    decimals: 4,
-    macroDrivers: 'Tasa Selic del Banco Central de Brasil, política fiscal brasileña, precios de commodities y fortaleza del USD.'
-  },
-
-  // MATERIAS PRIMAS (COMMODITIES IQ OPTION)
-  'XAU/USD': {
-    iqName: 'XAU/USD',
-    subtitle: 'Oro / Gold vs Dólar',
-    category: 'Materias Primas',
-    yahooSymbol: 'GC=F',
-    fallbackSymbol: 'GLD',
-    newsQuery: 'Gold price XAUUSD inflation FED',
-    tvSymbol: 'OANDA:XAUUSD',
-    decimals: 2,
-    macroDrivers: 'Refugio ante tensiones geopolíticas, inflación de EE.UU., tasas reales de la FED y debilidad o fortaleza del Dólar (DXY).'
-  },
-  'XAG/USD': {
-    iqName: 'XAG/USD',
-    subtitle: 'Plata / Silver vs Dólar',
-    category: 'Materias Primas',
-    yahooSymbol: 'SI=F',
-    fallbackSymbol: 'SLV',
-    newsQuery: 'Silver price XAGUSD',
-    tvSymbol: 'OANDA:XAGUSD',
-    decimals: 3,
-    macroDrivers: 'Sigue la tendencia del Oro (XAU/USD) combinada con la demanda industrial de electrónica y energías renovables.'
-  },
-  'USO/USD': {
-    iqName: 'USO/USD',
-    subtitle: 'Petróleo Crudo WTI (EE.UU.)',
-    category: 'Materias Primas',
-    yahooSymbol: 'CL=F',
-    fallbackSymbol: 'USO',
-    newsQuery: 'WTI Crude Oil price OPEC inventory',
-    tvSymbol: 'TVC:USOIL',
-    decimals: 2,
-    macroDrivers: 'Inventarios semanales de crudo de la EIA (miércoles), recortes de producción de la OPEP+, geopolítica en Medio Oriente y demanda global.'
-  },
-  'UKO/USD': {
-    iqName: 'UKO/USD',
-    subtitle: 'Petróleo Crudo Brent (Mar del Norte)',
-    category: 'Materias Primas',
-    yahooSymbol: 'BZ=F',
-    fallbackSymbol: 'BNO',
-    newsQuery: 'Brent Crude Oil price OPEC',
-    tvSymbol: 'TVC:UKOIL',
-    decimals: 2,
-    macroDrivers: 'Cuotas de la OPEP+, transporte marítimo internacional, demanda europea/asiática y tensiones geopolíticas.'
-  },
-
-  // CRIPTOMONEDAS
-  'BTC/USD': {
-    iqName: 'BTC/USD',
-    subtitle: 'Bitcoin vs Dólar',
-    category: 'Cripto',
-    yahooSymbol: 'BTC-USD',
-    fallbackSymbol: 'BTC-USD',
-    newsQuery: 'Bitcoin BTC crypto ETF',
-    tvSymbol: 'BITSTAMP:BTCUSD',
-    decimals: 2,
-    macroDrivers: 'Flujos diarios en ETFs de Bitcoin Spot, liquidez global, regulación cripto y apetito de riesgo en Nasdaq (US 100).'
-  },
-  'ETH/USD': {
-    iqName: 'ETH/USD',
-    subtitle: 'Ethereum vs Dólar',
-    category: 'Cripto',
-    yahooSymbol: 'ETH-USD',
-    fallbackSymbol: 'ETH-USD',
-    newsQuery: 'Ethereum ETH crypto',
-    tvSymbol: 'BITSTAMP:ETHUSD',
-    decimals: 2,
-    macroDrivers: 'Correlación directa con Bitcoin (BTC/USD), actividad en redes DeFi/Layer-2 y flujos institucionales en ETFs de Ethereum.'
-  },
-  'SOL/USD': {
-    iqName: 'SOL/USD',
-    subtitle: 'Solana vs Dólar',
-    category: 'Cripto',
-    yahooSymbol: 'SOL-USD',
-    fallbackSymbol: 'SOL-USD',
-    newsQuery: 'Solana SOL crypto',
-    tvSymbol: 'COINBASE:SOLUSD',
-    decimals: 2,
-    macroDrivers: 'Volumen en DEX de Solana, adopción de ecosistema cripto y tendencia general marcada por BTC/USD.'
-  },
-  'XRP/USD': {
-    iqName: 'XRP/USD',
-    subtitle: 'Ripple vs Dólar',
-    category: 'Cripto',
-    yahooSymbol: 'XRP-USD',
-    fallbackSymbol: 'XRP-USD',
-    newsQuery: 'Ripple XRP crypto',
-    tvSymbol: 'BITSTAMP:XRPUSD',
-    decimals: 4,
-    macroDrivers: 'Novedades regulatorias de Ripple/SEC, pagos transfronterizos y sentimiento general del mercado cripto.'
-  },
-
-  // ACCIONES (STOCKS IQ OPTION)
-  'APPLE': {
-    iqName: 'APPLE',
-    subtitle: 'Apple Inc. (AAPL)',
-    category: 'Acciones',
-    yahooSymbol: 'AAPL',
-    fallbackSymbol: 'AAPL',
-    newsQuery: 'Apple AAPL stock iPhone',
-    tvSymbol: 'NASDAQ:AAPL',
-    decimals: 2,
-    macroDrivers: 'Ventas globales de iPhone, servicios e IA de Apple, cadena de suministro en Asia y dirección general del índice US 100.'
-  },
-  'TESLA': {
-    iqName: 'TESLA',
-    subtitle: 'Tesla Inc. (TSLA)',
-    category: 'Acciones',
-    yahooSymbol: 'TSLA',
-    fallbackSymbol: 'TSLA',
-    newsQuery: 'Tesla TSLA stock EV',
-    tvSymbol: 'NASDAQ:TSLA',
-    decimals: 2,
-    macroDrivers: 'Entregas trimestrales de vehículos eléctricos, márgenes operativos, avances en conducción autónoma/robotaxi y anuncios de Elon Musk.'
-  },
-  'NVIDIA': {
-    iqName: 'NVIDIA',
-    subtitle: 'NVIDIA Corp. (NVDA)',
-    category: 'Acciones',
-    yahooSymbol: 'NVDA',
-    fallbackSymbol: 'NVDA',
-    newsQuery: 'Nvidia NVDA AI chips stock',
-    tvSymbol: 'NASDAQ:NVDA',
-    decimals: 2,
-    macroDrivers: 'Demanda global de chips para Inteligencia Artificial, gasto en centros de datos de grandes tecnológicas y guía de ingresos trimestral.'
-  },
-  'AMAZON': {
-    iqName: 'AMAZON',
-    subtitle: 'Amazon.com Inc. (AMZN)',
-    category: 'Acciones',
-    yahooSymbol: 'AMZN',
-    fallbackSymbol: 'AMZN',
-    newsQuery: 'Amazon AMZN AWS stock',
-    tvSymbol: 'NASDAQ:AMZN',
-    decimals: 2,
-    macroDrivers: 'Crecimiento de la nube AWS, consumo minorista en EE.UU. y márgenes logísticos.'
-  },
-  'MICROSOFT': {
-    iqName: 'MICROSOFT',
-    subtitle: 'Microsoft Corp. (MSFT)',
-    category: 'Acciones',
-    yahooSymbol: 'MSFT',
-    fallbackSymbol: 'MSFT',
-    newsQuery: 'Microsoft MSFT Azure AI stock',
-    tvSymbol: 'NASDAQ:MSFT',
-    decimals: 2,
-    macroDrivers: 'Crecimiento de Azure Cloud, monetización de Copilot/OpenAI y gasto tecnológico empresarial.'
-  },
-  'META': {
-    iqName: 'META',
-    subtitle: 'Meta Platforms (META)',
-    category: 'Acciones',
-    yahooSymbol: 'META',
-    fallbackSymbol: 'META',
-    newsQuery: 'Meta Platforms Facebook stock',
-    tvSymbol: 'NASDAQ:META',
-    decimals: 2,
-    macroDrivers: 'Ingresos por publicidad digital en Instagram/Facebook/WhatsApp e inversiones en modelos de IA.'
-  },
-  'GOOGLE': {
-    iqName: 'GOOGLE',
-    subtitle: 'Alphabet Inc. (GOOGL)',
-    category: 'Acciones',
-    yahooSymbol: 'GOOGL',
-    fallbackSymbol: 'GOOGL',
-    newsQuery: 'Alphabet Google GOOGL stock',
-    tvSymbol: 'NASDAQ:GOOGL',
-    decimals: 2,
-    macroDrivers: 'Publicidad en buscador y YouTube, crecimiento de Google Cloud y desarrollo de Gemini IA.'
+    macroDrivers: 'Flujos de refugio hacia el Franco Suizo, Banco Nacional Suizo (SNB) y fortaleza del dólar.'
   }
 };
 
-// Cálculo de Media Móvil Simple (SMA)
+// Medias Móviles (SMA y EMA)
 function calcSMA(values, period) {
   if (!values || values.length < period) return null;
   let sum = 0;
-  for (let i = values.length - period; i < values.length; i++) {
-    sum += values[i];
-  }
+  for (let i = values.length - period; i < values.length; i++) sum += values[i];
   return sum / period;
 }
 
-// Cálculo de Serie de Media Móvil Exponencial (EMA)
 function calcEMASeries(values, period) {
   if (!values || values.length < period) return [];
   const k = 2 / (period + 1);
@@ -435,7 +151,7 @@ function calcEMASeries(values, period) {
   return ema;
 }
 
-// Cálculo de RSI (Wilder 14 períodos, idéntico al de IQ Option)
+// RSI (14 períodos de Wilder)
 function calcRSI(closes, period = 14) {
   if (!closes || closes.length <= period) return 50;
   let gains = 0;
@@ -459,37 +175,11 @@ function calcRSI(closes, period = 14) {
   return 100 - 100 / (1 + rs);
 }
 
-// Cálculo de MACD (12, 26, 9)
-function calcMACD(closes) {
-  if (!closes || closes.length < 35) {
-    return { macd: 0, signal: 0, histogram: 0, prevHistogram: 0 };
-  }
-  const ema12 = calcEMASeries(closes, 12);
-  const ema26 = calcEMASeries(closes, 26);
-  const macdLine = [];
-  for (let i = 0; i < closes.length; i++) {
-    if (ema12[i] !== null && ema26[i] !== null) {
-      macdLine.push(ema12[i] - ema26[i]);
-    }
-  }
-  const signalSeries = calcEMASeries(macdLine, 9);
-  const lastMacd = macdLine[macdLine.length - 1] || 0;
-  const prevMacd = macdLine[macdLine.length - 2] || 0;
-  const lastSignal = signalSeries[signalSeries.length - 1] || 0;
-  const prevSignal = signalSeries[signalSeries.length - 2] || 0;
-  return {
-    macd: lastMacd,
-    signal: lastSignal,
-    histogram: lastMacd - lastSignal,
-    prevHistogram: prevMacd - prevSignal
-  };
-}
-
-// Cálculo de Bandas de Bollinger (20 períodos, desviación 2)
+// Bandas de Bollinger (20 períodos, desviación 2)
 function calcBollingerBands(closes, period = 20, mult = 2) {
   if (!closes || closes.length < period) {
     const last = closes?.[closes.length - 1] || 0;
-    return { upper: last, middle: last, lower: last, percentB: 50, bandwidth: 0 };
+    return { upper: last, middle: last, lower: last, percentB: 50 };
   }
   const slice = closes.slice(-period);
   const mean = slice.reduce((a, b) => a + b, 0) / period;
@@ -500,68 +190,22 @@ function calcBollingerBands(closes, period = 20, mult = 2) {
   const last = closes[closes.length - 1];
   const range = upper - lower;
   const percentB = range > 0 ? ((last - lower) / range) * 100 : 50;
-  const bandwidth = mean > 0 ? (range / mean) * 100 : 0;
-  return { upper, middle: mean, lower, percentB, bandwidth };
+  return { upper, middle: mean, lower, percentB };
 }
 
-// Cálculo de Oscilador Estocástico (14, 3)
-function calcStochastic(candles, period = 14, smoothK = 3) {
-  if (!candles || candles.length < period + smoothK) {
-    return { k: 50, d: 50 };
-  }
-  const rawK = [];
-  for (let i = period - 1; i < candles.length; i++) {
-    let highest = -Infinity;
-    let lowest = Infinity;
-    for (let j = i - period + 1; j <= i; j++) {
-      if (candles[j].high > highest) highest = candles[j].high;
-      if (candles[j].low < lowest) lowest = candles[j].low;
-    }
-    const denom = highest - lowest;
-    const kVal = denom > 0 ? ((candles[i].close - lowest) / denom) * 100 : 50;
-    rawK.push(kVal);
-  }
-  const kSeries = [];
-  for (let i = smoothK - 1; i < rawK.length; i++) {
-    let s = 0;
-    for (let j = i - smoothK + 1; j <= i; j++) s += rawK[j];
-    kSeries.push(s / smoothK);
-  }
-  const k = kSeries[kSeries.length - 1] ?? 50;
-  const dSlice = kSeries.slice(-3);
-  const d = dSlice.length > 0 ? dSlice.reduce((a, b) => a + b, 0) / dSlice.length : k;
-  return { k, d };
-}
-
-// Cálculo de ATR (Average True Range 14) para medir volatilidad real de las velas
-function calcATR(candles, period = 14) {
-  if (!candles || candles.length <= period) return 0;
-  const trs = [];
-  for (let i = 1; i < candles.length; i++) {
-    const c = candles[i];
-    const prevClose = candles[i - 1].close;
-    const tr = Math.max(
-      c.high - c.low,
-      Math.abs(c.high - prevClose),
-      Math.abs(c.low - prevClose)
-    );
-    trs.push(tr);
-  }
-  const recent = trs.slice(-period);
-  return recent.reduce((a, b) => a + b, 0) / recent.length;
-}
-
-// Detección de Soportes y Resistencias relevantes en las últimas velas
+// Detección de Zonas de Soporte y Resistencia Clave
 function calcSupportResistance(candles) {
-  if (!candles || candles.length < 15) {
+  if (!candles || candles.length < 10) {
     const p = candles?.[candles.length - 1]?.close || 0;
-    return { support1: p, support2: p, resistance1: p, resistance2: p };
+    return { support1: p, support2: p, resistance1: p, resistance2: p, distToSup: '0%', distToRes: '0%' };
   }
-  const lookback = candles.slice(-60);
+  const lookback = candles.slice(-50);
   const lastPrice = lookback[lookback.length - 1].close;
+  const highs = lookback.map(c => c.high);
+  const lows = lookback.map(c => c.low);
+
   const swingHighs = [];
   const swingLows = [];
-
   for (let i = 2; i < lookback.length - 2; i++) {
     const c = lookback[i];
     if (c.high >= lookback[i - 1].high && c.high >= lookback[i - 2].high &&
@@ -574,30 +218,30 @@ function calcSupportResistance(candles) {
     }
   }
 
-  const allHighs = lookback.map(c => c.high);
-  const allLows = lookback.map(c => c.low);
-  const maxHigh = Math.max(...allHighs);
-  const minLow = Math.min(...allLows);
-
   const above = swingHighs.filter(h => h > lastPrice).sort((a, b) => a - b);
   const below = swingLows.filter(l => l < lastPrice).sort((a, b) => b - a);
 
-  const resistance1 = above[0] ?? maxHigh;
-  const resistance2 = above[1] ?? (maxHigh + (maxHigh - minLow) * 0.25);
-  const support1 = below[0] ?? minLow;
-  const support2 = below[1] ?? (minLow - (maxHigh - minLow) * 0.25);
+  const maxHigh = Math.max(...highs);
+  const minLow = Math.min(...lows);
 
-  return { support1, support2, resistance1, resistance2, periodHigh: maxHigh, periodLow: minLow };
+  const resistance1 = above[0] ?? maxHigh;
+  const resistance2 = above[1] ?? (maxHigh + (maxHigh - minLow) * 0.15);
+  const support1 = below[0] ?? minLow;
+  const support2 = below[1] ?? (minLow - (maxHigh - minLow) * 0.15);
+
+  const distToRes = lastPrice > 0 ? (((resistance1 - lastPrice) / lastPrice) * 100).toFixed(2) + '%' : '0%';
+  const distToSup = lastPrice > 0 ? (((lastPrice - support1) / lastPrice) * 100).toFixed(2) + '%' : '0%';
+
+  return { support1, support2, resistance1, resistance2, distToSup, distToRes, periodHigh: maxHigh, periodLow: minLow };
 }
 
-// Reconocimiento de Patrones de Velas Japonesas (Acción del Precio para IQ Option)
-function detectCandlePattern(candles) {
-  if (!candles || candles.length < 3) {
-    return { name: 'Formación estándar', bias: 'NEUTRAL', desc: 'Sin patrón extremo en la última vela.' };
+// Acción del Precio (Lectura de Velas Japonesas y Mechas para IQ Option)
+function detectPriceAction(candles) {
+  if (!candles || candles.length < 2) {
+    return { name: 'Vela Normal', bias: 'NEUTRAL', actionText: 'Vela en desarrollo dentro del rango.' };
   }
   const curr = candles[candles.length - 1];
   const prev = candles[candles.length - 2];
-  const prev2 = candles[candles.length - 3];
 
   const body = Math.abs(curr.close - curr.open);
   const prevBody = Math.abs(prev.close - prev.open);
@@ -607,126 +251,77 @@ function detectCandlePattern(candles) {
   const isBull = curr.close >= curr.open;
   const isPrevBull = prev.close >= prev.open;
 
-  // 1. Envolvente Alcista (Bullish Engulfing)
+  // 1. Envolvente Alcista
   if (!isPrevBull && isBull && body > prevBody * 1.05 && curr.close >= prev.open && curr.open <= prev.close) {
     return {
       name: 'Envolvente Alcista (Bullish Engulfing)',
       bias: 'ALCISTA (CALL)',
-      desc: 'La vela actual envuelve por completo la vela roja previa, mostrando fuerte entrada de compradores.'
+      actionText: 'Fuerte entrada de compradores que absorben y envuelven la presión de venta previa.'
     };
   }
-  // 2. Envolvente Bajista (Bearish Engulfing)
+  // 2. Envolvente Bajista
   if (isPrevBull && !isBull && body > prevBody * 1.05 && curr.close <= prev.open && curr.open >= prev.close) {
     return {
       name: 'Envolvente Bajista (Bearish Engulfing)',
       bias: 'BAJISTA (PUT)',
-      desc: 'La vela roja actual envuelve por completo la vela verde previa, indicando fuerte presión vendedora.'
+      actionText: 'Fuerte presión de venta que envuelve por completo a los compradores de la vela anterior.'
     };
   }
-  // 3. Martillo / Pinbar Alcista (Rechazo de precios bajos)
-  if (lowerWick > body * 2.1 && upperWick < body * 0.9) {
+  // 3. Martillo / Pinbar de Rechazo Inferior
+  if (lowerWick > body * 2 && upperWick < body * 0.8) {
     return {
-      name: 'Martillo / Pinbar de Rechazo Inferior',
+      name: 'Martillo / Rechazo Inferior (Pinbar)',
       bias: 'ALCISTA (CALL)',
-      desc: 'Mecha inferior larga que muestra rechazo de zona baja y agotamiento vendedor.'
+      actionText: 'Mecha inferior larga: los vendedores empujaron hacia abajo pero los compradores recuperaron con fuerza.'
     };
   }
-  // 4. Estrella Fugaz / Pinbar Bajista (Rechazo de precios altos)
-  if (upperWick > body * 2.1 && lowerWick < body * 0.9) {
+  // 4. Estrella Fugaz / Rechazo Superior
+  if (upperWick > body * 2 && lowerWick < body * 0.8) {
     return {
-      name: 'Estrella Fugaz / Rechazo Superior',
+      name: 'Estrella Fugaz / Rechazo Superior (Pinbar)',
       bias: 'BAJISTA (PUT)',
-      desc: 'Mecha superior larga que indica rechazo en zona alta y entrada de vendedores.'
+      actionText: 'Mecha superior larga: intento alcista rechazado por una zona de oferta / vendedores.'
     };
   }
-  // 5. Doji (Indecisión / posible giro)
+  // 5. Doji
   if (body <= range * 0.12) {
     return {
-      name: 'Vela Doji (Equilibrio / Posible Giro)',
+      name: 'Vela Doji (Indecisión / Agotamiento)',
       bias: 'NEUTRAL',
-      desc: 'Apertura y cierre casi iguales. Señala indecisión o agotamiento de la tendencia inmediata.'
+      actionText: 'Empate entre oferta y demanda: posible pausa o giro de la tendencia inmediata.'
     };
   }
-  // 6. Tres soldados / Tres cuervos (Continuación de impulso)
-  const isPrev2Bull = prev2.close >= prev2.open;
-  if (isBull && isPrevBull && isPrev2Bull && curr.close > prev.close && prev.close > prev2.close) {
+  // 6. Vela de Gran Impulso
+  if (body >= range * 0.75) {
     return {
-      name: 'Secuencia de 3 Velas Alcistas Consecutivas',
-      bias: 'ALCISTA (CALL)',
-      desc: 'Tres cierres alcistas seguidos confirmando impulso comprador sostenido.'
-    };
-  }
-  if (!isBull && !isPrevBull && !isPrev2Bull && curr.close < prev.close && prev.close < prev2.close) {
-    return {
-      name: 'Secuencia de 3 Velas Bajistas Consecutivas',
-      bias: 'BAJISTA (PUT)',
-      desc: 'Tres cierres bajistas seguidos confirmando dominio vendedor en el corto plazo.'
-    };
-  }
-  // 7. Vela de Gran Impulso (Marubozu)
-  if (body >= range * 0.78) {
-    return {
-      name: isBull ? 'Vela de Impulso Alcista Fuerte' : 'Vela de Impulso Bajista Fuerte',
+      name: isBull ? 'Vela de Fuerte Impulso Alcista' : 'Vela de Fuerte Impulso Bajista',
       bias: isBull ? 'ALCISTA (CALL)' : 'BAJISTA (PUT)',
-      desc: isBull ? 'Cuerpo verde amplio con poca mecha, compradores al mando.' : 'Cuerpo rojo amplio con poca mecha, vendedores al mando.'
+      actionText: isBull ? 'Cuerpo verde dominante con mechas mínimas: fuerza compradora.' : 'Cuerpo rojo dominante con mechas mínimas: fuerza vendedora.'
     };
   }
 
   return {
-    name: isBull ? 'Vela Verde Estándar' : 'Vela Roja Estándar',
-    bias: isBull ? 'ALCISTA LEVE' : 'BAJISTA LEVE',
-    desc: 'Movimiento normal dentro del rango actual de volatilidad.'
+    name: isBull ? 'Vela Verde Sostenida' : 'Vela Roja Sostenida',
+    bias: isBull ? 'ALCISTA' : 'BAJISTA',
+    actionText: 'Estructura continua en dirección de la vela actual.'
   };
 }
 
-// Evaluación de Sesiones de Mercado Internacionales en vivo (según hora UTC)
-function getActiveMarketSessions() {
-  const now = new Date();
-  const utcHour = now.getUTCHours() + now.getUTCMinutes() / 60;
-  const day = now.getUTCDay(); // 0 Dom, 6 Sáb
-  const isWeekend = (day === 6) || (day === 0 && utcHour < 21) || (day === 5 && utcHour >= 22);
-
-  const sessions = [
-    { name: 'Nueva York (Wall Street)', open: utcHour >= 13 && utcHour < 22 && !isWeekend, hoursArg: '10:00 a 19:00 hs ARG' },
-    { name: 'Londres (Europa)', open: utcHour >= 7 && utcHour < 16 && !isWeekend, hoursArg: '04:00 a 13:00 hs ARG' },
-    { name: 'Tokio (Asia)', open: (utcHour >= 0 && utcHour < 9) && !isWeekend, hoursArg: '21:00 a 06:00 hs ARG' },
-    { name: 'Sídney (Pacífico)', open: (utcHour >= 21 || utcHour < 6) && !isWeekend, hoursArg: '18:00 a 03:00 hs ARG' }
-  ];
-
-  const activeNames = sessions.filter(s => s.open).map(s => s.name);
-  let liquidityNote = '';
-  if (isWeekend) {
-    liquidityNote = 'Fin de semana para mercados tradicionales: en IQ Option están activos los pares (OTC) y Criptomonedas 24/7.';
-  } else if (utcHour >= 13 && utcHour < 16) {
-    liquidityNote = '🔥 Superposición Londres + Nueva York activa: Es la franja de MAYOR volumen y mejores movimientos tendenciales para US 500, US 100, EUR/USD y Oro.';
-  } else if (utcHour >= 13 && utcHour < 21) {
-    liquidityNote = 'Sesión de Nueva York activa: Excelente volumen en índices estadounidenses (US 500, US 100, US 30), Acciones y Dólar.';
-  } else if (utcHour >= 7 && utcHour < 13) {
-    liquidityNote = 'Sesión Europea activa: Fuerte movimiento en EUR/USD, GBP/USD, GER 30 y UK 100.';
-  } else {
-    liquidityNote = 'Sesión Asiática / Nocturna: Menor volatilidad en índices de EE.UU., ideal para USD/JPY, AUD/USD o estrategias de rebote en soportes/resistencias.';
-  }
-
-  return { isWeekend, sessions, activeNames, liquidityNote };
-}
-
-// Descarga de velas OHLCV en tiempo real desde Yahoo Finance v8
-async function fetchLiveCandles(yahooSymbol, fallbackSymbol, interval) {
+// Descarga en vivo de velas (alineadas al horario real de IQ Option)
+async function fetchCandles(primarySymbol, fallbackSymbol, interval) {
   const validIntervals = { '1m': '1m', '5m': '5m', '15m': '15m', '1h': '60m' };
   const yfInterval = validIntervals[interval] || '5m';
   const yfRange = yfInterval === '1m' ? '2d' : (yfInterval === '60m' ? '1mo' : '5d');
 
-  const symbolsToTry = [yahooSymbol];
-  if (fallbackSymbol && fallbackSymbol !== yahooSymbol) symbolsToTry.push(fallbackSymbol);
+  const symbolsToTry = [primarySymbol];
+  if (fallbackSymbol && fallbackSymbol !== primarySymbol) symbolsToTry.push(fallbackSymbol);
 
   let lastError = null;
   for (const sym of symbolsToTry) {
     try {
       const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?interval=${yfInterval}&range=${yfRange}&includePrePost=true`;
       const res = await fetch(url, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-        }
+        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
       });
       if (!res.ok) continue;
       const data = await res.json();
@@ -756,35 +351,32 @@ async function fetchLiveCandles(yahooSymbol, fallbackSymbol, interval) {
         }
       }
 
-      if (candles.length >= 15) {
+      if (candles.length >= 10) {
         return {
           usedSymbol: sym,
-          meta: result.meta || {},
-          candles: candles.slice(-220)
+          candles: candles.slice(-180)
         };
       }
     } catch (e) {
       lastError = e;
     }
   }
-  throw new Error(lastError?.message || 'No se pudieron obtener velas en vivo para este activo.');
+  throw new Error(lastError?.message || 'No se pudieron descargar velas en vivo.');
 }
 
-// Descarga de noticias financieras en tiempo real para el Análisis Fundamental
-async function fetchLiveNews(newsQuery) {
+// Descarga de noticias financieras para el análisis fundamental
+async function fetchNews(newsQuery) {
   try {
-    const url = `https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(newsQuery)}&newsCount=6`;
+    const url = `https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(newsQuery)}&newsCount=4`;
     const res = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-      }
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
     });
     if (!res.ok) return [];
     const data = await res.json();
     if (!Array.isArray(data.news)) return [];
-    return data.news.slice(0, 6).map(n => ({
+    return data.news.slice(0, 4).map(n => ({
       title: n.title || '',
-      publisher: n.publisher || 'Mercado Internacional',
+      publisher: n.publisher || 'Mercado',
       link: n.link || '',
       publishedAt: n.providerPublishTime ? n.providerPublishTime * 1000 : Date.now()
     }));
@@ -793,128 +385,85 @@ async function fetchLiveNews(newsQuery) {
   }
 }
 
-// Motor de puntuación de Confluencia Técnica + Fundamental (Señal IQ Option)
-function buildSignalDecision(ind, price, sr, pattern, newsList) {
-  let score = 0; // De -100 (Venta Fuerte / PUT) a +100 (Compra Fuerte / CALL)
-  const reasons = [];
+// Semáforo Operativo (Basado estrictamente en: Medias Móviles, RSI, Bandas de Bollinger, Soportes/Resistencias y Acción del Precio)
+function computeSignal(ind, price, sr, pa, news) {
+  let score = 0;
+  const factors = [];
 
-  // 1. Cruce y posición de EMA 9 vs EMA 21 (Tendencia inmediata en IQ Option)
-  if (ind.ema9 !== null && ind.ema21 !== null) {
-    if (ind.ema9 > ind.ema21 && price > ind.ema9) {
-      score += 22;
-      reasons.push({ type: 'bull', text: 'EMA 9 por encima de EMA 21 con el precio sobre ambas (impulso alcista activo).' });
-    } else if (ind.ema9 > ind.ema21) {
-      score += 12;
-      reasons.push({ type: 'bull', text: 'EMA 9 sobre EMA 21 (estructura alcista de corto plazo).' });
-    } else if (ind.ema9 < ind.ema21 && price < ind.ema9) {
-      score -= 22;
-      reasons.push({ type: 'bear', text: 'EMA 9 por debajo de EMA 21 con el precio bajo ambas (impulso bajista activo).' });
-    } else {
-      score -= 12;
-      reasons.push({ type: 'bear', text: 'EMA 9 debajo de EMA 21 (estructura bajista de corto plazo).' });
-    }
-  }
-
-  // 2. Tendencia de Fondo (SMA 50 y SMA 200)
-  if (ind.sma50 !== null) {
-    if (price > ind.sma50) {
-      score += 12;
-      reasons.push({ type: 'bull', text: 'Precio operando por encima de la Media Móvil de 50 períodos (SMA 50).' });
-    } else {
-      score -= 12;
-      reasons.push({ type: 'bear', text: 'Precio operando por debajo de la Media Móvil de 50 períodos (SMA 50).' });
-    }
-  }
-  if (ind.sma200 !== null) {
-    if (price > ind.sma200) score += 8;
-    else score -= 8;
-  }
-
-  // 3. RSI (14) - Rebotes de sobrecompra/sobreventa y fuerza
-  if (ind.rsi <= 28) {
-    score += 24;
-    reasons.push({ type: 'bull', text: `RSI (14) en ${ind.rsi.toFixed(1)} (Sobreventa extrema: alta probabilidad de rebote alcista CALL).` });
-  } else if (ind.rsi >= 72) {
-    score -= 24;
-    reasons.push({ type: 'bear', text: `RSI (14) en ${ind.rsi.toFixed(1)} (Sobrecompra extrema: alta probabilidad de corrección bajista PUT).` });
-  } else if (ind.rsi >= 54 && ind.rsi < 68) {
-    score += 10;
-    reasons.push({ type: 'bull', text: `RSI (14) en ${ind.rsi.toFixed(1)} mostrando fuerza compradora saludable sin agotamiento.` });
-  } else if (ind.rsi <= 46 && ind.rsi > 32) {
-    score -= 10;
-    reasons.push({ type: 'bear', text: `RSI (14) en ${ind.rsi.toFixed(1)} mostrando presión vendedora dominante.` });
-  } else {
-    reasons.push({ type: 'neutral', text: `RSI (14) en zona de equilibrio (${ind.rsi.toFixed(1)}).` });
-  }
-
-  // 4. MACD (12, 26, 9)
-  if (ind.macd.histogram > 0) {
-    const growing = ind.macd.histogram >= ind.macd.prevHistogram;
-    score += growing ? 16 : 8;
-    reasons.push({
-      type: 'bull',
-      text: growing ? 'Histograma MACD positivo y creciendo (aceleración alcista).' : 'MACD en terreno positivo.'
-    });
-  } else if (ind.macd.histogram < 0) {
-    const falling = ind.macd.histogram <= ind.macd.prevHistogram;
-    score -= falling ? 16 : 8;
-    reasons.push({
-      type: 'bear',
-      text: falling ? 'Histograma MACD negativo y expandiéndose (aceleración bajista).' : 'MACD en terreno negativo.'
-    });
-  }
-
-  // 5. Bandas de Bollinger (20, 2)
-  if (ind.bollinger.percentB <= 8) {
+  // 1. Medias Móviles (EMA 9, EMA 21 y SMA 50)
+  if (ind.ema9 > ind.ema21 && price > ind.ema9) {
+    score += 25;
+    factors.push({ name: 'Medias Móviles', type: 'bull', text: 'EMA 9 sobre EMA 21 con precio arriba (impulso comprador activo).' });
+  } else if (ind.ema9 > ind.ema21) {
     score += 15;
-    reasons.push({ type: 'bull', text: 'Precio tocando/perforando la Banda Inferior de Bollinger (zona estadística de rebote alcista).' });
-  } else if (ind.bollinger.percentB >= 92) {
+    factors.push({ name: 'Medias Móviles', type: 'bull', text: 'EMA 9 sobre EMA 21 (estructura de tendencia alcista).' });
+  } else if (ind.ema9 < ind.ema21 && price < ind.ema9) {
+    score -= 25;
+    factors.push({ name: 'Medias Móviles', type: 'bear', text: 'EMA 9 por debajo de EMA 21 con precio abajo (impulso vendedor activo).' });
+  } else {
     score -= 15;
-    reasons.push({ type: 'bear', text: 'Precio tocando/perforando la Banda Superior de Bollinger (zona estadística de rechazo bajista).' });
+    factors.push({ name: 'Medias Móviles', type: 'bear', text: 'EMA 9 bajo EMA 21 (estructura de tendencia bajista).' });
   }
 
-  // 6. Oscilador Estocástico (14, 3, 3)
-  if (ind.stoch.k < 20 && ind.stoch.k >= ind.stoch.d) {
-    score += 10;
-    reasons.push({ type: 'bull', text: `Estocástico saliendo de sobreventa (${ind.stoch.k.toFixed(1)}) con cruce alcista.` });
-  } else if (ind.stoch.k > 80 && ind.stoch.k <= ind.stoch.d) {
-    score -= 10;
-    reasons.push({ type: 'bear', text: `Estocástico en sobrecompra (${ind.stoch.k.toFixed(1)}) girando a la baja.` });
+  if (ind.sma50 !== null) {
+    if (price > ind.sma50) score += 10;
+    else score -= 10;
   }
 
-  // 7. Acción del Precio (Patrón de Vela)
-  if (pattern.bias.includes('ALCISTA')) {
-    score += pattern.bias.includes('CALL') ? 12 : 5;
-    reasons.push({ type: 'bull', text: `Patrón de vela: ${pattern.name}.` });
-  } else if (pattern.bias.includes('BAJISTA')) {
-    score -= pattern.bias.includes('PUT') ? 12 : 5;
-    reasons.push({ type: 'bear', text: `Patrón de vela: ${pattern.name}.` });
+  // 2. RSI (14)
+  if (ind.rsi <= 30) {
+    score += 25;
+    factors.push({ name: 'RSI (14)', type: 'bull', text: `RSI en ${ind.rsi.toFixed(1)} (Sobreventa: zona de rebote alcista CALL).` });
+  } else if (ind.rsi >= 70) {
+    score -= 25;
+    factors.push({ name: 'RSI (14)', type: 'bear', text: `RSI en ${ind.rsi.toFixed(1)} (Sobrecompra: zona de rechazo bajista PUT).` });
+  } else if (ind.rsi >= 52) {
+    score += 8;
+    factors.push({ name: 'RSI (14)', type: 'bull', text: `RSI en ${ind.rsi.toFixed(1)} con fuerza compradora saludable.` });
+  } else {
+    score -= 8;
+    factors.push({ name: 'RSI (14)', type: 'bear', text: `RSI en ${ind.rsi.toFixed(1)} con dominio de presión vendedora.` });
   }
 
-  // Limitar score entre -100 y +100
+  // 3. Bandas de Bollinger (20, 2)
+  if (ind.bollinger.percentB <= 12) {
+    score += 20;
+    factors.push({ name: 'Bandas Bollinger', type: 'bull', text: 'Precio testeando la Banda Inferior (piso estadístico de volatilidad).' });
+  } else if (ind.bollinger.percentB >= 88) {
+    score -= 20;
+    factors.push({ name: 'Bandas Bollinger', type: 'bear', text: 'Precio testeando la Banda Superior (techo estadístico de volatilidad).' });
+  }
+
+  // 4. Zonas de Soporte y Resistencia
+  const distResNum = parseFloat(sr.distToRes);
+  const distSupNum = parseFloat(sr.distToSup);
+  if (distSupNum <= 0.18) {
+    score += 20;
+    factors.push({ name: 'Soporte y Resistencia', type: 'bull', text: `Precio testeando el Soporte S1 (${sr.support1?.toFixed(2)}): zona clave para compras CALL.` });
+  } else if (distResNum <= 0.18) {
+    score -= 20;
+    factors.push({ name: 'Soporte y Resistencia', type: 'bear', text: `Precio testeando la Resistencia R1 (${sr.resistance1?.toFixed(2)}): zona clave para ventas PUT.` });
+  }
+
+  // 5. Acción del Precio (Patrón de Vela)
+  if (pa.bias.includes('CALL')) {
+    score += 20;
+    factors.push({ name: 'Acción del Precio', type: 'bull', text: `${pa.name}: ${pa.actionText}` });
+  } else if (pa.bias.includes('PUT')) {
+    score -= 20;
+    factors.push({ name: 'Acción del Precio', type: 'bear', text: `${pa.name}: ${pa.actionText}` });
+  } else {
+    factors.push({ name: 'Acción del Precio', type: 'neutral', text: `${pa.name}: ${pa.actionText}` });
+  }
+
   score = Math.max(-100, Math.min(100, Math.round(score)));
 
-  // Análisis rápido de sentimiento de titulares de noticias
-  let newsSentiment = 'NEUTRAL';
-  let newsBiasScore = 0;
-  const bullWords = ['higher', 'surge', 'jump', 'gain', 'rally', 'record', 'beat', 'bull', 'buy', 'up', 'recover', 'growth', 'adds'];
-  const bearWords = ['drop', 'fall', 'plunge', 'selloff', 'down', 'miss', 'bear', 'crash', 'fear', 'inflation', 'cut', 'loss', 'decline'];
-
-  (newsList || []).forEach(n => {
-    const t = String(n.title || '').toLowerCase();
-    bullWords.forEach(w => { if (t.includes(w)) newsBiasScore += 1; });
-    bearWords.forEach(w => { if (t.includes(w)) newsBiasScore -= 1; });
-  });
-
-  if (newsBiasScore >= 2) newsSentiment = 'ALCISTA (Positivo)';
-  else if (newsBiasScore <= -2) newsSentiment = 'BAJISTA (Cautela)';
-
-  let action = 'ESPERAR / NEUTRAL';
-  let direction = 'NEUTRAL';
+  let action = 'ESPERAR (ZONA NEUTRAL ⚪)';
   let color = '#94a3b8';
+  let direction = 'NEUTRAL';
   let confidence = Math.min(95, Math.max(50, 50 + Math.round(Math.abs(score) * 0.45)));
 
-  if (score >= 42) {
+  if (score >= 40) {
     action = 'COMPRA FUERTE · SUBE (CALL 🟢)';
     direction = 'CALL';
     color = '#10b981';
@@ -922,7 +471,7 @@ function buildSignalDecision(ind, price, sr, pattern, newsList) {
     action = 'COMPRA · SUBE (CALL 🟢)';
     direction = 'CALL';
     color = '#34d399';
-  } else if (score <= -42) {
+  } else if (score <= -40) {
     action = 'VENTA FUERTE · BAJA (PUT 🔴)';
     direction = 'PUT';
     color = '#ef4444';
@@ -932,15 +481,7 @@ function buildSignalDecision(ind, price, sr, pattern, newsList) {
     color = '#f87171';
   }
 
-  return {
-    score,
-    action,
-    direction,
-    color,
-    confidence,
-    newsSentiment,
-    reasons
-  };
+  return { score, action, direction, color, confidence, factors };
 }
 
 export default async function handler(req, res) {
@@ -948,92 +489,70 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
+  if (req.method === 'OPTIONS') return res.status(200).end();
 
   try {
     const isPost = req.method === 'POST';
     const body = isPost ? (typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {})) : {};
     const action = body.action || req.query?.action || 'quote';
 
-    // 1. devolver catálogo si se solicita
+    // 1. Catálogo simplificado
     if (action === 'catalog') {
       return res.status(200).json({ assets: IQ_OPTION_ASSETS });
     }
 
-    // 2. Análisis IA profundo (de datos en vivo o de una captura de gráfico de IQ Option)
-    if (action === 'ai-analysis') {
+    // 2. CONSEJERO IA TÁCTICO PARA OPERAR EN IQ OPTION
+    if (action === 'ai-advice') {
       const assetKey = body.asset || 'US 500';
-      const timeframe = body.timeframe || '5m';
-      const imageBase64 = body.imageBase64 || null;
-      const technicalSummary = body.technicalSummary || '';
-      const fundamentalSummary = body.fundamentalSummary || '';
+      const timeframe = body.timeframe || '1h';
+      const techSummary = body.techSummary || '';
+      const fundSummary = body.fundSummary || '';
 
       const geminiKey = process.env.GEMINI_API_KEY;
+      const systemPrompt = `Sos el Consejero Táctico de Trading en IQ Option de Alejandro.
+Tu único trabajo es aconsejarlo sobre CÓMO OPERAR "${assetKey}" en la temporalidad de vela "${timeframe}" que él eligió.
+Basate estrictamente en los 5 pilares técnicos clave:
+1. Medias Móviles (EMA 9, EMA 21 y SMA 50)
+2. RSI (14)
+3. Bandas de Bollinger (20, 2)
+4. Zonas de Soporte y Resistencia Clave
+5. Acción del Precio (patrones de vela y mechas)
+Combiná estos datos técnicos con el Contexto y Análisis Fundamental actual.
 
-      const systemPrompt = `Sos un analista cuantitativo y trader profesional especialista en la plataforma IQ Option (Opciones Binarias, Digitales, Forex, Índices como US 500 / US 100 / US 30, Cripto y Materias Primas).
-Respondé siempre en español claro, directo y estructurado para Alejandro.
-Tu objetivo es analizar el gráfico / indicadores de "${assetKey}" en temporalidad "${timeframe}" y entregar:
-1. 🎯 **Veredicto Operativo IQ Option**: Señal clara (SUBE / CALL 🟢, BAJA / PUT 🔴, o ESPERAR ⚪) y tiempo de expiración recomendado de la vela.
-2. 📊 **Lectura Técnica del Gráfico**: Qué están haciendo las velas, EMAs (9 y 21), RSI (14), MACD, Bandas de Bollinger y los niveles exactos de Soporte y Resistencia.
-3. 🌍 **Lectura Fundamental y Horario**: Cómo influye el contexto de mercado actual y las noticias del activo.
-4. 🛡️ **Punto Exacto de Entrada (Gatillo)**: En qué precio o condición de vela conviene ejecutar la operación para maximizar efectividad.`;
+Respondé en español rioplatense claro, directo, estructurado con emojis y al grano:
+- 🎯 **Veredicto IQ Option**: Qué hacer exactamente (CALL 🟢, PUT 🔴, o ESPERAR ⚪) y tiempo de expiración recomendado.
+- 📐 **Lectura de los 5 Pilares Técnicos**: Breve resumen de lo que dicen las Medias, RSI, Bollinger, Soportes/Resistencias y las velas.
+- 🌍 **Impacto Fundamental**: Si hay noticias o contexto macro de fondo afectando el activo ahora mismo.
+- ⚡ **Gatillo de Entrada (Cuándo apretar el botón)**: En qué precio exacto o condición de vela conviene disparar la operación en IQ Option para no quedar atrapado.`;
 
-      // Si el usuario subió una captura de pantalla de IQ Option (ej. gráfico OTC o con sus indicadores)
-      if (imageBase64 && geminiKey) {
-        const cleanB64 = imageBase64.replace(/^data:image\/[a-zA-Z0-9+.-]+;base64,/, '');
-        const mimeMatch = imageBase64.match(/^data:(image\/[a-zA-Z0-9+.-]+);base64,/);
-        const mimeType = mimeMatch ? mimeMatch[1] : 'image/png';
+      const userPrompt = `Activo: ${assetKey} | Vela seleccionada: ${timeframe}
+Datos Técnicos en Vivo:
+${techSummary}
 
-        const gemVisionRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            systemInstruction: { parts: [{ text: systemPrompt }] },
-            contents: [{
-              role: 'user',
-              parts: [
-                { inlineData: { mimeType, data: cleanB64 } },
-                { text: `Analizá esta captura de pantalla de mi gráfico de IQ Option (${assetKey} · ${timeframe}). Leé las velas, mechas, tendencia, soportes/resistencias e indicadores visibles en la imagen, combinándolo con estos datos en vivo si aplican:\n${technicalSummary}\n${fundamentalSummary}` }
-              ]
-            }]
-          })
-        });
+Contexto Fundamental y Noticias:
+${fundSummary}
 
-        if (gemVisionRes.ok) {
-          const gemJson = await gemVisionRes.json();
-          const txt = gemJson?.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (txt) return res.status(200).json({ analysis: txt });
-        }
-      }
-
-      const userPrompt = `Activo IQ Option: ${assetKey} (Temporalidad de vela: ${timeframe})
-Datos Técnicos en Tiempo Real:
-${technicalSummary}
-
-Datos Fundamentales y Noticias en Vivo:
-${fundamentalSummary}
-
-Brindame el análisis táctico completo para operar este activo en IQ Option ahora mismo.`;
+Dame tu consejo táctico definitivo para operar en IQ Option ahora mismo.`;
 
       if (geminiKey) {
-        const gemRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            systemInstruction: { parts: [{ text: systemPrompt }] },
-            contents: [{ role: 'user', parts: [{ text: userPrompt }] }]
-          })
-        });
-        if (gemRes.ok) {
-          const gemJson = await gemRes.json();
-          const txt = gemJson?.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (txt) return res.status(200).json({ analysis: txt });
-        }
+        try {
+          const gemRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              systemInstruction: { parts: [{ text: systemPrompt }] },
+              contents: [{ role: 'user', parts: [{ text: userPrompt }] }]
+            })
+          });
+          if (gemRes.ok) {
+            const gemJson = await gemRes.json();
+            const txt = gemJson?.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (txt) return res.status(200).json({ advice: txt });
+          }
+        } catch (e) {}
       }
 
-      // Respaldo IA libre (Pollinations OpenAI)
+      // Respaldo gratuito si no hay clave
       const aiRes = await fetch('https://text.pollinations.ai/openai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1047,99 +566,69 @@ Brindame el análisis táctico completo para operar este activo en IQ Option aho
       });
       if (aiRes.ok) {
         const aiData = await aiRes.json();
-        const reply = aiData?.choices?.[0]?.message?.content;
-        if (reply) return res.status(200).json({ analysis: reply });
+        const rep = aiData?.choices?.[0]?.message?.content;
+        if (rep) return res.status(200).json({ advice: rep });
       }
 
       return res.status(200).json({
-        analysis: 'No se pudo contactar al motor de IA en este instante, pero tenés todos los indicadores técnicos y el semáforo calculados en vivo arriba.'
+        advice: 'No se pudo contactar al motor de IA en este segundo, pero tu semáforo técnico y los niveles clave están calculados en vivo arriba.'
       });
     }
 
-    // 3. Acción por defecto: 'quote' -> Obtener velas en vivo + calcular todos los indicadores de IQ Option + noticias fundamentales
+    // 3. Acción 'quote': datos en tiempo real
     const assetKey = String(body.asset || req.query?.asset || 'US 500').trim();
-    const interval = String(body.interval || req.query?.interval || '5m').trim();
+    const interval = String(body.interval || req.query?.interval || '1h').trim();
 
-    const assetConfig = IQ_OPTION_ASSETS[assetKey] || {
-      iqName: assetKey,
-      subtitle: `Activo personalizado (${assetKey})`,
-      category: 'Personalizado',
-      yahooSymbol: assetKey,
-      fallbackSymbol: assetKey,
-      newsQuery: assetKey,
-      tvSymbol: assetKey,
-      decimals: 2,
-      macroDrivers: 'Oferta y demanda institucional, volumen de sesión y noticias del sector.'
-    };
+    const assetConfig = IQ_OPTION_ASSETS[assetKey] || IQ_OPTION_ASSETS['US 500'];
 
     const [candleData, liveNews] = await Promise.all([
-      fetchLiveCandles(assetConfig.yahooSymbol, assetConfig.fallbackSymbol, interval),
-      fetchLiveNews(assetConfig.newsQuery)
+      fetchCandles(assetConfig.primarySymbol, assetConfig.fallbackSymbol, interval),
+      fetchNews(assetConfig.newsQuery)
     ]);
 
     const candles = candleData.candles;
     const closes = candles.map(c => c.close);
     const lastCandle = candles[candles.length - 1];
     const prevCandle = candles[candles.length - 2] || lastCandle;
-    const firstCandleOfDay = candles[Math.max(0, candles.length - 75)] || candles[0];
+    const firstCandleOfDay = candles[Math.max(0, candles.length - 40)] || candles[0];
 
     const currentPrice = lastCandle.close;
     const changeAbs = currentPrice - firstCandleOfDay.open;
     const changePct = firstCandleOfDay.open ? (changeAbs / firstCandleOfDay.open) * 100 : 0;
 
-    // Calcular todos los indicadores técnicos usados en IQ Option
+    // Cálculo de los 5 pilares técnicos
     const ema9Series = calcEMASeries(closes, 9);
     const ema21Series = calcEMASeries(closes, 21);
     const ema9 = ema9Series[ema9Series.length - 1] ?? currentPrice;
     const ema21 = ema21Series[ema21Series.length - 1] ?? currentPrice;
     const sma50 = calcSMA(closes, 50) ?? calcSMA(closes, Math.min(closes.length, 25));
-    const sma200 = calcSMA(closes, 200) ?? calcSMA(closes, Math.min(closes.length, 100));
     const rsi = calcRSI(closes, 14);
-    const macd = calcMACD(closes);
     const bollinger = calcBollingerBands(closes, 20, 2);
-    const stoch = calcStochastic(candles, 14, 3);
-    const atr = calcATR(candles, 14);
     const sr = calcSupportResistance(candles);
-    const pattern = detectCandlePattern(candles);
-    const sessions = getActiveMarketSessions();
+    const priceAction = detectPriceAction(candles);
 
-    const indicators = {
-      rsi,
-      ema9,
-      ema21,
-      sma50,
-      sma200,
-      macd,
-      bollinger,
-      stoch,
-      atr
-    };
+    const indicators = { ema9, ema21, sma50, rsi, bollinger };
+    const signal = computeSignal(indicators, currentPrice, sr, priceAction, liveNews);
 
-    const signal = buildSignalDecision(indicators, currentPrice, sr, pattern, liveNews);
+    // Preparar últimas 60 velas para el gráfico
+    const chartCandles = candles.slice(-60).map((c, i, arr) => {
+      const realIdx = candles.length - arr.length + i;
+      return {
+        time: c.time,
+        open: c.open,
+        high: c.high,
+        low: c.low,
+        close: c.close,
+        ema9: ema9Series[realIdx] ?? null,
+        ema21: ema21Series[realIdx] ?? null
+      };
+    });
 
-    // Adjuntar EMA9 y EMA21 a las últimas 80 velas para que el gráfico de la app las dibuje igual que en IQ Option
-    const chartCandlesCount = Math.min(80, candles.length);
-    const startIdx = candles.length - chartCandlesCount;
-    const chartCandles = [];
-    for (let i = startIdx; i < candles.length; i++) {
-      chartCandles.push({
-        time: candles[i].time,
-        open: candles[i].open,
-        high: candles[i].high,
-        low: candles[i].low,
-        close: candles[i].close,
-        volume: candles[i].volume,
-        ema9: ema9Series[i] ?? null,
-        ema21: ema21Series[i] ?? null
-      });
-    }
-
-    // Recomendación de tiempo de expiración según temporalidad de vela en IQ Option
     const expirationMap = {
-      '1m': '1 a 3 minutos (1 a 3 velas de 1m)',
-      '5m': '5 a 15 minutos (1 a 3 velas de 5m)',
-      '15m': '15 a 45 minutos (1 a 3 velas de 15m)',
-      '1h': '1 a 3 horas (Cierre de vela horaria)'
+      '1m': '1 a 3 minutos (1 a 3 velas)',
+      '5m': '5 a 15 minutos (1 a 3 velas)',
+      '15m': '15 a 45 minutos (1 a 3 velas)',
+      '1h': '1 a 3 horas (cierre de vela)'
     };
 
     return res.status(200).json({
@@ -1147,7 +636,7 @@ Brindame el análisis táctico completo para operar este activo en IQ Option aho
       timestamp: Date.now(),
       asset: assetConfig,
       interval,
-      expirationSuggested: expirationMap[interval] || '5 a 15 minutos',
+      expirationSuggested: expirationMap[interval] || '1 a 3 velas',
       price: {
         current: currentPrice,
         open: lastCandle.open,
@@ -1159,20 +648,15 @@ Brindame el análisis táctico completo para operar este activo en IQ Option aho
       },
       indicators,
       supportResistance: sr,
-      candlePattern: pattern,
+      priceAction,
       signal,
       fundamental: {
         macroDrivers: assetConfig.macroDrivers,
-        newsSentiment: signal.newsSentiment,
-        sessions,
         news: liveNews
       },
       chartCandles
     });
   } catch (err) {
-    return res.status(500).json({
-      ok: false,
-      error: String(err.message || err)
-    });
+    return res.status(500).json({ ok: false, error: String(err.message || err) });
   }
 }
