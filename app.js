@@ -105,19 +105,52 @@ let medioPagoActual = 'efectivo';
 let sincronizando = false;
 let navegandoPorHistorial = false;
 let bloqueandoGuardadoNav = false;
+let ultimoToqueAtrasHome = 0;
+let ultimoRefuerzoHistorialGesture = 0;
 
 const STORAGE_NAV_STATE_PREFIX = 'agenda_nav_state_v1_';
 const STORAGE_USER_DATA_CACHE_PREFIX = 'agenda_datos_cache_v1_';
 
+function mostrarAvisoDobleAtrasSalir() {
+  let toast = document.getElementById('toast-double-back-exit');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'toast-double-back-exit';
+    toast.style.cssText = 'position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:rgba(15,23,42,0.96); color:#f8fafc; border:1.5px solid #10b981; padding:10px 18px; border-radius:999px; font-size:0.9rem; font-weight:700; z-index:99999; box-shadow:0 8px 25px rgba(0,0,0,0.6); pointer-events:none; transition:opacity 0.25s ease;';
+    document.body.appendChild(toast);
+  }
+  toast.textContent = '👆 Tocá atrás una vez más para salir de la app';
+  toast.style.opacity = '1';
+  clearTimeout(toast._hideTimer);
+  toast._hideTimer = setTimeout(() => {
+    toast.style.opacity = '0';
+  }, 2400);
+}
+
 function registrarPasoHistorial(vistaNombre) {
   if (navegandoPorHistorial || ES_MODO_EXTERNO) return;
   try {
-    history.pushState({ vista: vistaNombre }, '');
+    // Apilar múltiples entradas durante el gesto real del usuario para que Android Chrome
+    // permita retroceder varios niveles seguidos sin cerrar la aplicación.
+    history.pushState({ vista: vistaNombre, step: 1 }, '');
+    history.pushState({ vista: vistaNombre, step: 2 }, '');
   } catch (e) {}
   if (!bloqueandoGuardadoNav) {
     setTimeout(guardarEstadoNavegacionActual, 0);
   }
 }
+
+// Reforzar el colchón de historial en gestos táctiles/clics del usuario
+document.addEventListener('pointerdown', () => {
+  if (ES_MODO_EXTERNO || navegandoPorHistorial) return;
+  const ahora = Date.now();
+  if (ahora - ultimoRefuerzoHistorialGesture > 1200) {
+    ultimoRefuerzoHistorialGesture = ahora;
+    try {
+      history.pushState({ vista: 'gesture-guard', ts: ahora }, '');
+    } catch (e) {}
+  }
+}, { passive: true });
 
 // Elementos del DOM
 const viewUsers = document.getElementById('view-users');
@@ -3286,9 +3319,19 @@ window.addEventListener('popstate', () => {
       return;
     }
 
-    // 8. Si está en el menú de inicio del usuario, permanecer en inicio
+    // 8. Si está en el menú de inicio del usuario, requerir doble toque atrás para salir
     if (!viewHome.classList.contains('hidden')) {
-      history.pushState({ vista: 'home' }, '');
+      const ahora = Date.now();
+      if (ahora - ultimoToqueAtrasHome < 2500) {
+        // Segundo toque dentro de los 2.5 segundos: permitir salir
+        history.back();
+        return;
+      }
+      ultimoToqueAtrasHome = ahora;
+      mostrarAvisoDobleAtrasSalir();
+      try {
+        history.pushState({ vista: 'home' }, '');
+      } catch (e) {}
       return;
     }
 
