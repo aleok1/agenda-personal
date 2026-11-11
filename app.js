@@ -12713,11 +12713,9 @@ if (btnAgClearChat) {
 }
 
 // ==========================================
-// MÓDULO 2C: OPERACIONES FINANCIERAS (IQ OPTION ANALYZER)
+// MÓDULO 2C: OPERACIONES FINANCIERAS (CONSEJERO TÁCTICO IQ OPTION)
 // ==========================================
 const selectIqAsset = document.getElementById('select-iq-asset');
-const inputIqSearch = document.getElementById('input-iq-search');
-const iqCategoryChips = document.getElementById('iq-category-chips');
 const iqQuickAssetsBar = document.getElementById('iq-quick-assets-bar');
 const iqTimeframeSelector = document.getElementById('iq-timeframe-selector');
 const btnIqRefreshNow = document.getElementById('btn-iq-refresh-now');
@@ -12737,6 +12735,13 @@ const iqVerdictScore = document.getElementById('iq-verdict-score');
 const iqVerdictExp = document.getElementById('iq-verdict-exp');
 const iqSignalReasonsList = document.getElementById('iq-signal-reasons-list');
 
+const btnIqAskAdvisor = document.getElementById('btn-iq-ask-advisor');
+const iqAdvisorOutputBox = document.getElementById('iq-advisor-output-box');
+const iqAdvisorPlaceholder = document.getElementById('iq-advisor-placeholder');
+const iqAdvisorText = document.getElementById('iq-advisor-text');
+const iqAdvisorTimeframeLabel = document.getElementById('iq-advisor-timeframe-label');
+const iqAdvisorAssetLabel = document.getElementById('iq-advisor-asset-label');
+
 const iqChartTitleAsset = document.getElementById('iq-chart-title-asset');
 const btnIqChartModeNative = document.getElementById('btn-iq-chart-mode-native');
 const btnIqChartModeTv = document.getElementById('btn-iq-chart-mode-tv');
@@ -12744,75 +12749,28 @@ const iqNativeChartWrap = document.getElementById('iq-native-chart-wrap');
 const iqTvChartWrap = document.getElementById('iq-tv-chart-wrap');
 const iqCandlesCanvas = document.getElementById('iq-candles-canvas');
 
-const iqIndicatorsGrid = document.getElementById('iq-indicators-grid');
-const iqSessionsBox = document.getElementById('iq-sessions-box');
-const iqFundAssetName = document.getElementById('iq-fund-asset-name');
 const iqFundMacroText = document.getElementById('iq-fund-macro-text');
-const iqNewsSentimentBadge = document.getElementById('iq-news-sentiment-badge');
 const iqLiveNewsList = document.getElementById('iq-live-news-list');
 
-const btnIqRunAiReport = document.getElementById('btn-iq-run-ai-report');
-const iqAiReportBox = document.getElementById('iq-ai-report-box');
-const iqAiReportContent = document.getElementById('iq-ai-report-content');
-const btnCloseIqAiReport = document.getElementById('btn-close-iq-ai-report');
-
-const inputIqScreenshot = document.getElementById('input-iq-screenshot');
-const btnIqAnalyzeScreenshot = document.getElementById('btn-iq-analyze-screenshot');
-const btnIqClearScreenshot = document.getElementById('btn-iq-clear-screenshot');
-const iqScreenshotPreviewWrap = document.getElementById('iq-screenshot-preview-wrap');
-const iqScreenshotPreviewImg = document.getElementById('iq-screenshot-preview-img');
-
 let iqActivoSeleccionado = 'US 500';
-let iqTemporalidadSeleccionada = '5m';
-let iqCategoriaFiltro = 'ALL';
+let iqTemporalidadSeleccionada = '1h';
 let iqModoGrafico = 'native'; // 'native' o 'tv'
 let iqTimerAutoRefresco = null;
 let iqDatosMercadoActual = null;
-let iqScreenshotBase64 = null;
-let iqCatalogoCargado = null;
 
-const IQ_CATALOGO_DEFAULT = [
-  // Índices
-  { name: 'US 500', cat: 'Índices', sub: 'S&P 500 Index (EE.UU.)' },
-  { name: 'US 100', cat: 'Índices', sub: 'Nasdaq 100 Tecnológico (EE.UU.)' },
-  { name: 'US 30', cat: 'Índices', sub: 'Dow Jones Industrial (EE.UU.)' },
-  { name: 'US 2000', cat: 'Índices', sub: 'Russell 2000 Small Caps (EE.UU.)' },
-  { name: 'GER 30', cat: 'Índices', sub: 'DAX 30 / 40 (Alemania)' },
-  { name: 'UK 100', cat: 'Índices', sub: 'FTSE 100 (Reino Unido)' },
-  { name: 'JP 225', cat: 'Índices', sub: 'Nikkei 225 (Japón)' },
-  { name: 'FR 40', cat: 'Índices', sub: 'CAC 40 (Francia)' },
-  { name: 'SP 35', cat: 'Índices', sub: 'IBEX 35 (España)' },
-  { name: 'AUS 200', cat: 'Índices', sub: 'ASX 200 (Australia)' },
-  // Divisas
-  { name: 'EUR/USD', cat: 'Divisas', sub: 'Euro vs Dólar' },
-  { name: 'GBP/USD', cat: 'Divisas', sub: 'Libra Esterlina vs Dólar' },
-  { name: 'USD/JPY', cat: 'Divisas', sub: 'Dólar vs Yen' },
-  { name: 'EUR/JPY', cat: 'Divisas', sub: 'Euro vs Yen' },
+// Catálogo limpio: SOLO US 500, US 100 y Divisas principales
+const IQ_CATALOGO_LISTA = [
+  { name: 'US 500', cat: 'Índices', sub: 'S&P 500 Index (Wall Street)' },
+  { name: 'US 100', cat: 'Índices', sub: 'Nasdaq 100 Tecnológico (Wall Street)' },
+  { name: 'EUR/USD', cat: 'Divisas', sub: 'Euro vs Dólar Estadounidense' },
+  { name: 'GBP/USD', cat: 'Divisas', sub: 'Libra Esterlina vs Dólar Estadounidense' },
+  { name: 'USD/JPY', cat: 'Divisas', sub: 'Dólar Estadounidense vs Yen Japonés' },
+  { name: 'EUR/JPY', cat: 'Divisas', sub: 'Euro vs Yen Japonés' },
   { name: 'AUD/USD', cat: 'Divisas', sub: 'Dólar Australiano vs Dólar' },
-  { name: 'EUR/GBP', cat: 'Divisas', sub: 'Euro vs Libra' },
-  { name: 'USD/CAD', cat: 'Divisas', sub: 'Dólar vs Dólar Canadiense' },
-  { name: 'USD/CHF', cat: 'Divisas', sub: 'Dólar vs Franco Suizo' },
   { name: 'GBP/JPY', cat: 'Divisas', sub: 'Libra vs Yen (El Dragón)' },
-  { name: 'NZD/USD', cat: 'Divisas', sub: 'Dólar Neozelandés vs Dólar' },
-  { name: 'USD/BRL', cat: 'Divisas', sub: 'Dólar vs Real Brasileño' },
-  // Materias Primas
-  { name: 'XAU/USD', cat: 'Materias Primas', sub: 'Oro / Gold vs Dólar' },
-  { name: 'XAG/USD', cat: 'Materias Primas', sub: 'Plata / Silver vs Dólar' },
-  { name: 'USO/USD', cat: 'Materias Primas', sub: 'Petróleo Crudo WTI (EE.UU.)' },
-  { name: 'UKO/USD', cat: 'Materias Primas', sub: 'Petróleo Brent (Europa)' },
-  // Cripto
-  { name: 'BTC/USD', cat: 'Cripto', sub: 'Bitcoin vs Dólar' },
-  { name: 'ETH/USD', cat: 'Cripto', sub: 'Ethereum vs Dólar' },
-  { name: 'SOL/USD', cat: 'Cripto', sub: 'Solana vs Dólar' },
-  { name: 'XRP/USD', cat: 'Cripto', sub: 'Ripple vs Dólar' },
-  // Acciones
-  { name: 'APPLE', cat: 'Acciones', sub: 'Apple Inc. (AAPL)' },
-  { name: 'TESLA', cat: 'Acciones', sub: 'Tesla Inc. (TSLA)' },
-  { name: 'NVIDIA', cat: 'Acciones', sub: 'NVIDIA Corp. (NVDA)' },
-  { name: 'AMAZON', cat: 'Acciones', sub: 'Amazon.com Inc. (AMZN)' },
-  { name: 'MICROSOFT', cat: 'Acciones', sub: 'Microsoft Corp. (MSFT)' },
-  { name: 'META', cat: 'Acciones', sub: 'Meta Platforms (META)' },
-  { name: 'GOOGLE', cat: 'Acciones', sub: 'Alphabet Inc. (GOOGL)' }
+  { name: 'EUR/GBP', cat: 'Divisas', sub: 'Euro vs Libra Esterlina' },
+  { name: 'USD/CAD', cat: 'Divisas', sub: 'Dólar vs Dólar Canadiense' },
+  { name: 'USD/CHF', cat: 'Divisas', sub: 'Dólar vs Franco Suizo' }
 ];
 
 function iniciarModuloOperacionesFinancieras() {
@@ -12835,26 +12793,9 @@ function activarAutoRefrescoIQ() {
 
 function poblarSelectorActivosIQ() {
   if (!selectIqAsset) return;
-  const filtroTexto = (inputIqSearch ? inputIqSearch.value : '').trim().toLowerCase();
   selectIqAsset.innerHTML = '';
 
-  const lista = (iqCatalogoCargado || IQ_CATALOGO_DEFAULT).filter(item => {
-    if (iqCategoriaFiltro !== 'ALL' && item.cat !== iqCategoriaFiltro) return false;
-    if (filtroTexto) {
-      return item.name.toLowerCase().includes(filtroTexto) || (item.sub && item.sub.toLowerCase().includes(filtroTexto));
-    }
-    return true;
-  });
-
-  if (lista.length === 0) {
-    const opt = document.createElement('option');
-    opt.value = iqActivoSeleccionado;
-    opt.textContent = `${iqActivoSeleccionado} (Personalizado)`;
-    selectIqAsset.appendChild(opt);
-    return;
-  }
-
-  lista.forEach(item => {
+  IQ_CATALOGO_LISTA.forEach(item => {
     const opt = document.createElement('option');
     opt.value = item.name;
     opt.textContent = `${item.name} — ${item.sub} [${item.cat}]`;
@@ -12874,25 +12815,21 @@ async function cargarAnalisisIQOption(mostrarCargando = false) {
 
   try {
     const res = await fetch(`/api/iq-market?asset=${encodeURIComponent(asset)}&interval=${encodeURIComponent(tf)}`);
-    if (!res.ok) {
-      throw new Error(`HTTP ${res.status}`);
-    }
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
-    if (!data.ok) {
-      throw new Error(data.error || 'Error al obtener datos');
-    }
+    if (!data.ok) throw new Error(data.error || 'Error al obtener datos');
 
     iqDatosMercadoActual = data;
     renderizarDatosIQOption(data);
     if (iqLastUpdateLabel) {
       const horaStr = new Date(data.timestamp).toLocaleTimeString();
-      iqLastUpdateLabel.textContent = `✓ Actualizado en vivo a las ${horaStr} (Próxima actualización en 15s)`;
+      iqLastUpdateLabel.textContent = `✓ Actualizado a las ${horaStr} (Próxima actualización en 15s)`;
       iqLastUpdateLabel.style.color = '#34d399';
     }
   } catch (err) {
     console.warn('Error al cargar datos de IQ Option:', err);
     if (iqLastUpdateLabel) {
-      iqLastUpdateLabel.textContent = `⚠️ Falló actualización: ${err.message}. Reintentando...`;
+      iqLastUpdateLabel.textContent = `⚠️ Error de conexión: ${err.message}`;
       iqLastUpdateLabel.style.color = '#f87171';
     }
   }
@@ -12904,7 +12841,7 @@ function renderizarDatosIQOption(data) {
   const sig = data.signal || {};
   const ind = data.indicators || {};
   const sr = data.supportResistance || {};
-  const pat = data.candlePattern || {};
+  const pa = data.priceAction || {};
   const fund = data.fundamental || {};
   const asset = data.asset || {};
   const dec = asset.decimals !== undefined ? asset.decimals : 2;
@@ -12914,7 +12851,8 @@ function renderizarDatosIQOption(data) {
   if (iqHeroSubtitle) iqHeroSubtitle.textContent = asset.subtitle || '';
   if (iqHeroTfBadge) iqHeroTfBadge.textContent = `Vela ${data.interval || iqTemporalidadSeleccionada}`;
   if (iqChartTitleAsset) iqChartTitleAsset.textContent = `${asset.iqName} · ${data.interval}`;
-  if (iqFundAssetName) iqFundAssetName.textContent = asset.iqName;
+  if (iqAdvisorAssetLabel) iqAdvisorAssetLabel.textContent = asset.iqName;
+  if (iqAdvisorTimeframeLabel) iqAdvisorTimeframeLabel.textContent = data.interval;
 
   if (iqHeroPrice) {
     iqHeroPrice.textContent = typeof p.current === 'number' ? p.current.toFixed(dec) : '--';
@@ -12929,7 +12867,7 @@ function renderizarDatosIQOption(data) {
     iqHeroOhlc.textContent = `Apertura: ${(p.open || 0).toFixed(dec)} · Máximo: ${(p.high || 0).toFixed(dec)} · Mínimo: ${(p.low || 0).toFixed(dec)}`;
   }
 
-  // 2. Semáforo / Veredicto Operativo IQ Option
+  // 2. Semáforo Operativo IQ Option
   if (iqVerdictTitle) {
     iqVerdictTitle.textContent = sig.action || 'ESPERAR';
     iqVerdictTitle.style.color = sig.color || '#f8fafc';
@@ -12938,7 +12876,6 @@ function renderizarDatosIQOption(data) {
     iqVerdictCard.style.borderColor = sig.color || '#475569';
   }
   if (iqVerdictBar) {
-    // Normalizar score de -100..+100 a 0%..100%
     const norm = Math.max(0, Math.min(100, Math.round(((sig.score + 100) / 2))));
     iqVerdictBar.style.width = `${norm}%`;
     iqVerdictBar.style.background = sig.color || '#64748b';
@@ -12948,212 +12885,52 @@ function renderizarDatosIQOption(data) {
     iqVerdictScore.textContent = `Fuerza Técnica: ${s}/100 (${sig.confidence}% conf.)`;
   }
   if (iqVerdictExp) {
-    iqVerdictExp.textContent = `⏱️ Expiración: ${data.expirationSuggested || '5 a 15 min'}`;
+    iqVerdictExp.textContent = `⏱️ Expiración: ${data.expirationSuggested || '1 a 3 velas'}`;
   }
 
-  // Lista de razones / confluencias
+  // Lista de confluencias de los 5 pilares técnicos
   if (iqSignalReasonsList) {
     iqSignalReasonsList.innerHTML = '';
-    (sig.reasons || []).forEach(r => {
+    (sig.factors || []).forEach(f => {
       const item = document.createElement('div');
-      const icon = r.type === 'bull' ? '🟢' : (r.type === 'bear' ? '🔴' : '⚪');
-      const color = r.type === 'bull' ? '#6ee7b7' : (r.type === 'bear' ? '#fca5a5' : '#cbd5e1');
-      item.innerHTML = `<span>${icon}</span> <span style="color:${color};">${escaparHTML(r.text)}</span>`;
+      const icon = f.type === 'bull' ? '🟢' : (f.type === 'bear' ? '🔴' : '⚪');
+      const color = f.type === 'bull' ? '#6ee7b7' : (f.type === 'bear' ? '#fca5a5' : '#cbd5e1');
+      item.innerHTML = `<span>${icon}</span> <b>${escaparHTML(f.name)}:</b> <span style="color:${color};">${escaparHTML(f.text)}</span>`;
       iqSignalReasonsList.appendChild(item);
     });
-    if ((sig.reasons || []).length === 0) {
-      iqSignalReasonsList.innerHTML = '<span style="color:#94a3b8;">Sin divergencias extremas en esta vela.</span>';
-    }
   }
 
-  // 3. Tablero de 8 Indicadores Técnicos
-  renderizarTarjetasIndicadores(ind, sr, pat, p.current, dec);
-
-  // 4. Gráfico de Velas Japonesas en Canvas
+  // 3. Gráfico de Velas Canvas
   dibujarGraficoVelasIQ(data.chartCandles || [], sr, ind, dec);
 
-  // Si está activo TradingView, actualizar su iframe
   if (iqModoGrafico === 'tv') {
     renderizarWidgetTradingView(asset.tvSymbol || 'FOREXCOM:SPXUSD');
   }
 
-  // 5. Análisis Fundamental y Sesiones
-  renderizarSeccionFundamental(fund);
-}
-
-function renderizarTarjetasIndicadores(ind, sr, pat, price, dec) {
-  if (!iqIndicatorsGrid) return;
-  iqIndicatorsGrid.innerHTML = '';
-
-  const cards = [
-    {
-      title: 'RSI (14)',
-      icon: '📈',
-      value: typeof ind.rsi === 'number' ? ind.rsi.toFixed(1) : '--',
-      badge: ind.rsi <= 30 ? 'Sobreventa (CALL)' : (ind.rsi >= 70 ? 'Sobrecompra (PUT)' : 'Neutral'),
-      badgeColor: ind.rsi <= 30 ? '#10b981' : (ind.rsi >= 70 ? '#ef4444' : '#64748b'),
-      desc: 'Nivel 30 = posible rebote al alza · Nivel 70 = posible corrección'
-    },
-    {
-      title: 'EMAs (9 y 21)',
-      icon: '〰️',
-      value: `EMA9: ${(ind.ema9 || 0).toFixed(dec)} · EMA21: ${(ind.ema21 || 0).toFixed(dec)}`,
-      badge: ind.ema9 > ind.ema21 ? 'Cruce Alcista' : 'Cruce Bajista',
-      badgeColor: ind.ema9 > ind.ema21 ? '#10b981' : '#ef4444',
-      desc: price > ind.ema9 ? 'Precio operando con fuerza sobre la EMA 9' : 'Precio rechazado por debajo de EMA 9'
-    },
-    {
-      title: 'Medias de Fondo (50/200)',
-      icon: '📊',
-      value: `SMA 50: ${(ind.sma50 || 0).toFixed(dec)}`,
-      badge: price > ind.sma50 ? 'Tendencia Alcista' : 'Tendencia Bajista',
-      badgeColor: price > ind.sma50 ? '#10b981' : '#ef4444',
-      desc: 'Tendencia macro del mercado en IQ Option'
-    },
-    {
-      title: 'MACD (12, 26, 9)',
-      icon: '⚡',
-      value: `Hist: ${(ind.macd?.histogram || 0).toFixed(dec)}`,
-      badge: ind.macd?.histogram > 0 ? 'Impulso Sube' : 'Impulso Baja',
-      badgeColor: ind.macd?.histogram > 0 ? '#10b981' : '#ef4444',
-      desc: `Línea: ${(ind.macd?.macd || 0).toFixed(dec)} | Señal: ${(ind.macd?.signal || 0).toFixed(dec)}`
-    },
-    {
-      title: 'Bandas Bollinger (20, 2)',
-      icon: '🎯',
-      value: `%B: ${(ind.bollinger?.percentB || 50).toFixed(1)}%`,
-      badge: ind.bollinger?.percentB <= 10 ? 'Piso de Banda' : (ind.bollinger?.percentB >= 90 ? 'Techo de Banda' : 'En Rango'),
-      badgeColor: ind.bollinger?.percentB <= 10 ? '#10b981' : (ind.bollinger?.percentB >= 90 ? '#ef4444' : '#64748b'),
-      desc: `Superior: ${(ind.bollinger?.upper || 0).toFixed(dec)} | Inferior: ${(ind.bollinger?.lower || 0).toFixed(dec)}`
-    },
-    {
-      title: 'Estocástico (14, 3)',
-      icon: '🔄',
-      value: `K: ${(ind.stoch?.k || 50).toFixed(1)} | D: ${(ind.stoch?.d || 50).toFixed(1)}`,
-      badge: ind.stoch?.k < 20 ? 'Giro Alcista' : (ind.stoch?.k > 80 ? 'Giro Bajista' : 'Zona Media'),
-      badgeColor: ind.stoch?.k < 20 ? '#10b981' : (ind.stoch?.k > 80 ? '#ef4444' : '#64748b'),
-      desc: 'Oscilador para puntos de entrada en opciones de expiración corta'
-    },
-    {
-      title: 'Soporte y Resistencia',
-      icon: '🧱',
-      value: `R1: ${(sr.resistance1 || 0).toFixed(dec)} | S1: ${(sr.support1 || 0).toFixed(dec)}`,
-      badge: 'Zonas Clave',
-      badgeColor: '#6366f1',
-      desc: `R2: ${(sr.resistance2 || 0).toFixed(dec)} | S2: ${(sr.support2 || 0).toFixed(dec)}`
-    },
-    {
-      title: 'Patrón de Vela (Acción Precio)',
-      icon: '🕯️',
-      value: pat.name || 'Estándar',
-      badge: pat.bias || 'NEUTRAL',
-      badgeColor: (pat.bias || '').includes('ALCISTA') ? '#10b981' : ((pat.bias || '').includes('BAJISTA') ? '#ef4444' : '#64748b'),
-      desc: pat.desc || 'Lectura de mechas y cuerpos de la vela inmediata.'
-    }
-  ];
-
-  cards.forEach(c => {
-    const el = document.createElement('div');
-    el.style.cssText = 'background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; justify-content: space-between;';
-    el.innerHTML = `
-      <div>
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-          <strong style="color:#cbd5e1; font-size:0.84rem; display:flex; align-items:center; gap:5px;">
-            <span>${c.icon}</span> ${escaparHTML(c.title)}
-          </strong>
-          <span style="background:${c.badgeColor}; color:#fff; font-size:0.72rem; font-weight:700; padding:2px 7px; border-radius:6px;">
-            ${escaparHTML(c.badge)}
-          </span>
-        </div>
-        <div style="font-size:1.02rem; font-weight:800; color:#f8fafc; margin:4px 0;">
-          ${escaparHTML(c.value)}
-        </div>
-      </div>
-      <div style="font-size:0.75rem; color:#94a3b8; line-height:1.35; margin-top:4px;">
-        ${escaparHTML(c.desc)}
-      </div>
-    `;
-    iqIndicatorsGrid.appendChild(el);
-  });
-}
-
-function renderizarSeccionFundamental(fund) {
-  if (!fund) return;
-
-  // 1. Sesiones bursátiles
-  if (iqSessionsBox) {
-    const s = fund.sessions || {};
-    const act = (s.activeNames || []).join(', ') || 'Ninguna (Cierre de mercado)';
-    let sesHtml = `
-      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:6px;">
-        <strong style="color:#fbbf24;">🕒 Sesiones Mundiales Activas:</strong>
-        <span style="background:rgba(245,158,11,0.2); color:#fde68a; font-weight:700; padding:2px 8px; border-radius:6px; font-size:0.78rem;">
-          ${escaparHTML(act)}
-        </span>
-      </div>
-      <div style="color:#cbd5e1; font-size:0.82rem; margin-bottom:4px;">${escaparHTML(s.liquidityNote || '')}</div>
-      <div style="display:flex; gap:12px; flex-wrap:wrap; font-size:0.75rem; color:#94a3b8; margin-top:4px;">
-    `;
-    (s.sessions || []).forEach(item => {
-      const dot = item.open ? '🟢' : '⚪';
-      sesHtml += `<span>${dot} <b>${item.name}</b> (${item.hoursArg})</span>`;
-    });
-    sesHtml += `</div>`;
-    iqSessionsBox.innerHTML = sesHtml;
-  }
-
-  // 2. Macro Drivers
+  // 4. Fundamental
   if (iqFundMacroText) {
-    iqFundMacroText.textContent = fund.macroDrivers || 'Tasas de interés, inflación y noticias del activo.';
+    iqFundMacroText.textContent = fund.macroDrivers || 'Contexto macroeconómico del activo.';
   }
-
-  // 3. Sentimiento de Noticias
-  if (iqNewsSentimentBadge) {
-    const sent = fund.newsSentiment || 'NEUTRAL';
-    iqNewsSentimentBadge.textContent = `Sentimiento: ${sent}`;
-    if (sent.includes('ALCISTA')) {
-      iqNewsSentimentBadge.style.background = '#10b981';
-      iqNewsSentimentBadge.style.color = '#052e16';
-      iqNewsSentimentBadge.style.fontWeight = '700';
-    } else if (sent.includes('BAJISTA')) {
-      iqNewsSentimentBadge.style.background = '#ef4444';
-      iqNewsSentimentBadge.style.color = '#fff';
-      iqNewsSentimentBadge.style.fontWeight = '700';
-    } else {
-      iqNewsSentimentBadge.style.background = 'rgba(255,255,255,0.08)';
-      iqNewsSentimentBadge.style.color = '#cbd5e1';
-      iqNewsSentimentBadge.style.fontWeight = 'normal';
-    }
-  }
-
-  // 4. Lista de Noticias en Vivo
   if (iqLiveNewsList) {
     iqLiveNewsList.innerHTML = '';
     const news = Array.isArray(fund.news) ? fund.news : [];
     if (news.length === 0) {
-      iqLiveNewsList.innerHTML = '<div style="color:#94a3b8; font-size:0.82rem;">No hay noticias recientes para este activo en este momento.</div>';
+      iqLiveNewsList.innerHTML = '<div style="color:#94a3b8; font-size:0.8rem;">Sin noticias de impacto reciente.</div>';
     } else {
-      news.forEach(n => {
+      news.slice(0, 3).forEach(n => {
         const item = document.createElement('a');
         item.href = n.link || '#';
         item.target = '_blank';
         item.rel = 'noopener noreferrer';
-        item.style.cssText = 'background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 8px 12px; text-decoration: none; color: #f1f5f9; display: block; transition: border-color 0.2s;';
-        const dateStr = n.publishedAt ? new Date(n.publishedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
-        item.innerHTML = `
-          <div style="font-weight:600; font-size:0.84rem; color:#e2e8f0; line-height:1.35;">${escaparHTML(n.title)}</div>
-          <div style="font-size:0.74rem; color:#94a3b8; margin-top:3px; display:flex; justify-content:space-between;">
-            <span>📰 ${escaparHTML(n.publisher)}</span>
-            <span>${dateStr}</span>
-          </div>
-        `;
+        item.style.cssText = 'background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255,255,255,0.06); border-radius: 6px; padding: 6px 10px; text-decoration: none; color: #f1f5f9; display: block; font-size: 0.8rem;';
+        item.innerHTML = `<span style="color:#e2e8f0;">📰 ${escaparHTML(n.title)}</span> <span style="color:#94a3b8; font-size:0.72rem;">(${escaparHTML(n.publisher)})</span>`;
         iqLiveNewsList.appendChild(item);
       });
     }
   }
 }
 
-// Dibujado ultra-fluido de Velas Japonesas en Canvas con EMAs y Soportes/Resistencias
+// Dibujado del Gráfico de Velas en Canvas
 function dibujarGraficoVelasIQ(candles, sr, ind, decimals) {
   if (!iqCandlesCanvas) return;
   const canvas = iqCandlesCanvas;
@@ -13164,7 +12941,6 @@ function dibujarGraficoVelasIQ(candles, sr, ind, decimals) {
   const h = canvas.height;
   ctx.clearRect(0, 0, w, h);
 
-  // Fondo oscuro estilo IQ Option
   ctx.fillStyle = '#080d19';
   ctx.fillRect(0, 0, w, h);
 
@@ -13172,11 +12948,10 @@ function dibujarGraficoVelasIQ(candles, sr, ind, decimals) {
     ctx.fillStyle = '#94a3b8';
     ctx.font = '14px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('Cargando velas de IQ Option...', w / 2, h / 2);
+    ctx.fillText('Cargando gráfico...', w / 2, h / 2);
     return;
   }
 
-  // Encontrar rango Min y Max de precios visible
   let minPrice = Infinity;
   let maxPrice = -Infinity;
   candles.forEach(c => {
@@ -13194,37 +12969,35 @@ function dibujarGraficoVelasIQ(candles, sr, ind, decimals) {
   const chartRange = chartMax - chartMin;
 
   const padLeft = 14;
-  const padRight = 72; // Espacio a la derecha para la escala de precios
+  const padRight = 72;
   const padTop = 16;
-  const padBottom = 24;
+  const padBottom = 22;
   const chartW = w - padLeft - padRight;
   const chartH = h - padTop - padBottom;
 
   const toY = (val) => padTop + chartH - ((val - chartMin) / chartRange) * chartH;
 
-  // 1. Cuadrícula de precios y niveles horizontales
+  // Cuadrícula y escala
   ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
   ctx.lineWidth = 1;
-  const gridSteps = 5;
-  for (let i = 0; i <= gridSteps; i++) {
-    const pVal = chartMin + (chartRange / gridSteps) * i;
+  for (let i = 0; i <= 4; i++) {
+    const pVal = chartMin + (chartRange / 4) * i;
     const y = toY(pVal);
     ctx.beginPath();
     ctx.moveTo(padLeft, y);
     ctx.lineTo(padLeft + chartW, y);
     ctx.stroke();
 
-    // Etiqueta de precio en el eje derecho
     ctx.fillStyle = '#64748b';
     ctx.font = '10px monospace';
     ctx.textAlign = 'left';
     ctx.fillText(pVal.toFixed(decimals), padLeft + chartW + 6, y + 3);
   }
 
-  // 2. Líneas punteadas de Soporte y Resistencia
+  // Soporte y Resistencia
   if (sr.resistance1) {
     const yR = toY(sr.resistance1);
-    ctx.strokeStyle = 'rgba(239, 68, 68, 0.8)';
+    ctx.strokeStyle = 'rgba(239, 68, 68, 0.85)';
     ctx.setLineDash([4, 4]);
     ctx.beginPath();
     ctx.moveTo(padLeft, yR);
@@ -13237,7 +13010,7 @@ function dibujarGraficoVelasIQ(candles, sr, ind, decimals) {
   }
   if (sr.support1) {
     const yS = toY(sr.support1);
-    ctx.strokeStyle = 'rgba(34, 197, 94, 0.8)';
+    ctx.strokeStyle = 'rgba(34, 197, 94, 0.85)';
     ctx.setLineDash([4, 4]);
     ctx.beginPath();
     ctx.moveTo(padLeft, yS);
@@ -13249,7 +13022,7 @@ function dibujarGraficoVelasIQ(candles, sr, ind, decimals) {
     ctx.fillText(`S1: ${sr.support1.toFixed(decimals)}`, padLeft + chartW + 6, yS + 11);
   }
 
-  // 3. Dibujar Velas Japonesas
+  // Velas Japonesas
   const count = candles.length;
   const candleSlot = chartW / count;
   const candleW = Math.max(2, Math.min(10, candleSlot * 0.7));
@@ -13267,7 +13040,6 @@ function dibujarGraficoVelasIQ(candles, sr, ind, decimals) {
     const bodyTop = Math.min(yOpen, yClose);
     const bodyHeight = Math.max(1.5, Math.abs(yClose - yOpen));
 
-    // Mecha superior e inferior
     ctx.strokeStyle = color;
     ctx.lineWidth = 1.2;
     ctx.beginPath();
@@ -13275,12 +13047,11 @@ function dibujarGraficoVelasIQ(candles, sr, ind, decimals) {
     ctx.lineTo(xCenter, yLow);
     ctx.stroke();
 
-    // Cuerpo de la vela
     ctx.fillStyle = color;
     ctx.fillRect(xCenter - candleW / 2, bodyTop, candleW, bodyHeight);
   });
 
-  // 4. Dibujar EMA 9 (Amarilla)
+  // EMA 9 (Amarilla)
   ctx.strokeStyle = '#facc15';
   ctx.lineWidth = 1.6;
   ctx.beginPath();
@@ -13295,7 +13066,7 @@ function dibujarGraficoVelasIQ(candles, sr, ind, decimals) {
   });
   ctx.stroke();
 
-  // 5. Dibujar EMA 21 (Celeste)
+  // EMA 21 (Celeste)
   ctx.strokeStyle = '#38bdf8';
   ctx.lineWidth = 1.6;
   ctx.beginPath();
@@ -13310,7 +13081,7 @@ function dibujarGraficoVelasIQ(candles, sr, ind, decimals) {
   });
   ctx.stroke();
 
-  // 6. Línea y etiqueta del Precio Actual en tiempo real
+  // Precio Actual
   const lastC = candles[candles.length - 1];
   const lastY = toY(lastC.close);
   const isBullLast = lastC.close >= lastC.open;
@@ -13324,7 +13095,6 @@ function dibujarGraficoVelasIQ(candles, sr, ind, decimals) {
   ctx.stroke();
   ctx.setLineDash([]);
 
-  // Tag del precio actual a la derecha
   ctx.fillStyle = lastColor;
   ctx.fillRect(padLeft + chartW + 2, lastY - 9, padRight - 4, 18);
   ctx.fillStyle = '#0f172a';
@@ -13338,42 +13108,40 @@ function renderizarWidgetTradingView(symbol) {
   iqTvChartWrap.innerHTML = '';
 
   const iframe = document.createElement('iframe');
-  iframe.src = `https://s.tradingview.com/widgetembed/?frameElementId=tradingview_widget&symbol=${encodeURIComponent(symbol)}&interval=5&hidesidetoolbar=0&symboledit=1&saveimage=1&toolbarbg=0a0f1d&studies=%5B%22RSI%40tv-basicstudies%22%2C%22MASimple%40tv-basicstudies%22%5D&theme=dark&style=1&timezone=America%2FArgentina%2FBuenos_Aires&studies_overrides=%7B%7D&overrides=%7B%7D&enabled_features=%5B%5D&disabled_features=%5B%5D&locale=es&utm_source=agenda-personal`;
+  iframe.src = `https://s.tradingview.com/widgetembed/?frameElementId=tradingview_widget&symbol=${encodeURIComponent(symbol)}&interval=60&hidesidetoolbar=0&symboledit=1&saveimage=1&toolbarbg=0a0f1d&studies=%5B%22RSI%40tv-basicstudies%22%2C%22MASimple%40tv-basicstudies%22%5D&theme=dark&style=1&timezone=America%2FArgentina%2FBuenos_Aires&locale=es&utm_source=agenda-personal`;
   iframe.style.width = '100%';
   iframe.style.height = '100%';
   iframe.style.border = 'none';
   iqTvChartWrap.appendChild(iframe);
 }
 
-// Generador de Diagnóstico IA Táctico para IQ Option
-async function solicitarDiagnosticoIAIQOption() {
-  if (!btnIqRunAiReport || !iqDatosMercadoActual) return;
-  btnIqRunAiReport.disabled = true;
-  btnIqRunAiReport.textContent = '⏳ Analizando gráfico con IA...';
-  if (iqAiReportBox) iqAiReportBox.classList.remove('hidden');
-  if (iqAiReportContent) iqAiReportContent.textContent = '🧠 Conectando con el motor analítico de IA...';
+// Consejero Táctico IA (Petición de Consejo)
+async function solicitarConsejoTacticoIA() {
+  if (!btnIqAskAdvisor || !iqDatosMercadoActual) return;
+  btnIqAskAdvisor.disabled = true;
+  btnIqAskAdvisor.textContent = '⏳ Analizando gráfico...';
+  if (iqAdvisorPlaceholder) iqAdvisorPlaceholder.classList.add('hidden');
+  if (iqAdvisorText) {
+    iqAdvisorText.classList.remove('hidden');
+    iqAdvisorText.textContent = '🧠 El Consejero IA está evaluando las Medias Móviles, RSI, Bandas de Bollinger, Soportes/Resistencias, Velas y Noticias para darte el veredicto operativo...';
+  }
 
   const d = iqDatosMercadoActual;
-  const technicalSummary = `
+  const techSummary = `
 - Activo: ${d.asset?.iqName} (${d.asset?.subtitle})
-- Temporalidad: ${d.interval}
-- Precio Actual: ${d.price?.current} (Var: ${d.price?.changePct?.toFixed(2)}%)
+- Temporalidad de Vela: ${d.interval}
+- Precio Actual: ${d.price?.current} (Variación del día: ${d.price?.changePct?.toFixed(2)}%)
+- Medias Móviles: EMA 9 = ${d.indicators?.ema9?.toFixed(2)} | EMA 21 = ${d.indicators?.ema21?.toFixed(2)} | SMA 50 = ${d.indicators?.sma50?.toFixed(2)}
 - RSI (14): ${d.indicators?.rsi?.toFixed(1)}
-- EMA 9: ${d.indicators?.ema9?.toFixed(2)} | EMA 21: ${d.indicators?.ema21?.toFixed(2)}
-- SMA 50: ${d.indicators?.sma50?.toFixed(2)}
-- MACD Histograma: ${d.indicators?.macd?.histogram?.toFixed(4)}
-- Bandas Bollinger: %B ${d.indicators?.bollinger?.percentB?.toFixed(1)}% (Sup: ${d.indicators?.bollinger?.upper?.toFixed(2)}, Inf: ${d.indicators?.bollinger?.lower?.toFixed(2)})
-- Estocástico K: ${d.indicators?.stoch?.k?.toFixed(1)} | D: ${d.indicators?.stoch?.d?.toFixed(1)}
-- Soporte 1: ${d.supportResistance?.support1?.toFixed(2)} | Resistencia 1: ${d.supportResistance?.resistance1?.toFixed(2)}
-- Patrón de Vela: ${d.candlePattern?.name} (${d.candlePattern?.bias})
-- Señal Automática: ${d.signal?.action} (Score: ${d.signal?.score}/100, Confianza: ${d.signal?.confidence}%)
+- Bandas de Bollinger (20,2): %B = ${d.indicators?.bollinger?.percentB?.toFixed(1)}% (Superior: ${d.indicators?.bollinger?.upper?.toFixed(2)}, Inferior: ${d.indicators?.bollinger?.lower?.toFixed(2)})
+- Soportes y Resistencias: S1 = ${d.supportResistance?.support1?.toFixed(2)} (a ${d.supportResistance?.distToSup}) | R1 = ${d.supportResistance?.resistance1?.toFixed(2)} (a ${d.supportResistance?.distToRes})
+- Acción del Precio / Vela: ${d.priceAction?.name} (${d.priceAction?.bias}) -> ${d.priceAction?.actionText}
+- Semáforo Cuantitativo: ${d.signal?.action} (Score: ${d.signal?.score}/100, Confianza: ${d.signal?.confidence}%)
 `;
 
-  const fundamentalSummary = `
-- Catalizadores Macro: ${d.fundamental?.macroDrivers}
-- Sentimiento Noticias: ${d.fundamental?.newsSentiment}
-- Sesiones Activas: ${(d.fundamental?.sessions?.activeNames || []).join(', ')}
-- Noticias Recientes: ${(d.fundamental?.news || []).slice(0, 3).map(n => n.title).join(' | ')}
+  const fundSummary = `
+- Factores Macro: ${d.fundamental?.macroDrivers}
+- Titulares de Mercado: ${(d.fundamental?.news || []).map(n => n.title).join(' | ')}
 `;
 
   try {
@@ -13381,78 +13149,64 @@ async function solicitarDiagnosticoIAIQOption() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        action: 'ai-analysis',
+        action: 'ai-advice',
         asset: d.asset?.iqName || iqActivoSeleccionado,
         timeframe: d.interval || iqTemporalidadSeleccionada,
-        technicalSummary,
-        fundamentalSummary,
-        imageBase64: iqScreenshotBase64
+        techSummary,
+        fundSummary
       })
     });
     const result = await res.json();
-    if (iqAiReportContent) {
-      iqAiReportContent.textContent = result.analysis || 'Análisis finalizado con éxito.';
+    if (iqAdvisorText) {
+      iqAdvisorText.textContent = result.advice || 'Consejo finalizado con éxito.';
     }
   } catch (e) {
-    if (iqAiReportContent) {
-      iqAiReportContent.textContent = 'No se pudo completar el análisis IA en este momento. Los indicadores técnicos en vivo siguen funcionando arriba.';
+    if (iqAdvisorText) {
+      iqAdvisorText.textContent = 'En este momento no se pudo conectar con el motor de IA. El semáforo operativo y los niveles de soporte/resistencia calculados en vivo siguen activos arriba.';
     }
   } finally {
-    btnIqRunAiReport.disabled = false;
-    btnIqRunAiReport.textContent = '🧠 Generar Informe IA (Técnico + Fundamental)';
+    btnIqAskAdvisor.disabled = false;
+    btnIqAskAdvisor.textContent = '🎯 Pedir Consejo Táctico IA';
   }
 }
 
-// Event Listeners del Módulo de Operaciones Financieras (IQ Option)
+// Event Listeners
 if (selectIqAsset) {
   selectIqAsset.addEventListener('change', () => {
     iqActivoSeleccionado = selectIqAsset.value;
+    actualizarBotonesRapidosFavoritos();
     cargarAnalisisIQOption(true);
   });
 }
 
-if (inputIqSearch) {
-  inputIqSearch.addEventListener('input', () => {
-    poblarSelectorActivosIQ();
+function actualizarBotonesRapidosFavoritos() {
+  document.querySelectorAll('.iq-quick-asset-btn').forEach(btn => {
+    const a = btn.getAttribute('data-asset');
+    if (a === iqActivoSeleccionado) {
+      btn.classList.add('btn-primary');
+      btn.classList.remove('btn-secondary');
+      btn.style.background = '#10b981';
+      btn.style.borderColor = '#059669';
+    } else {
+      btn.classList.remove('btn-primary');
+      btn.classList.add('btn-secondary');
+      btn.style.background = '';
+      btn.style.borderColor = '';
+    }
   });
 }
 
-if (iqCategoryChips) {
-  iqCategoryChips.querySelectorAll('button').forEach(btn => {
-    btn.addEventListener('click', () => {
-      iqCategoryChips.querySelectorAll('button').forEach(b => {
-        b.classList.remove('active', 'prio-verde');
-        b.classList.add('prio-gris');
-      });
-      btn.classList.add('active', 'prio-verde');
-      btn.classList.remove('prio-gris');
-      iqCategoriaFiltro = btn.getAttribute('data-iq-cat') || 'ALL';
-      poblarSelectorActivosIQ();
-    });
+document.querySelectorAll('.iq-quick-asset-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const asset = btn.getAttribute('data-asset');
+    if (asset) {
+      iqActivoSeleccionado = asset;
+      if (selectIqAsset) selectIqAsset.value = asset;
+      actualizarBotonesRapidosFavoritos();
+      cargarAnalisisIQOption(true);
+    }
   });
-}
-
-if (iqQuickAssetsBar) {
-  iqQuickAssetsBar.querySelectorAll('.iq-quick-asset-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const asset = btn.getAttribute('data-asset');
-      if (asset) {
-        iqActivoSeleccionado = asset;
-        iqQuickAssetsBar.querySelectorAll('.iq-quick-asset-btn').forEach(b => {
-          b.style.borderColor = '';
-          b.style.color = '';
-          b.style.fontWeight = '';
-        });
-        btn.style.borderColor = '#10b981';
-        btn.style.color = '#d1fae5';
-        btn.style.fontWeight = '700';
-        poblarSelectorActivosIQ();
-        if (selectIqAsset) selectIqAsset.value = asset;
-        cargarAnalisisIQOption(true);
-      }
-    });
-  });
-}
+});
 
 if (iqTimeframeSelector) {
   iqTimeframeSelector.querySelectorAll('button').forEach(btn => {
@@ -13463,7 +13217,7 @@ if (iqTimeframeSelector) {
       });
       btn.classList.add('active', 'prio-verde');
       btn.classList.remove('prio-gris');
-      iqTemporalidadSeleccionada = btn.getAttribute('data-tf') || '5m';
+      iqTemporalidadSeleccionada = btn.getAttribute('data-tf') || '1h';
       cargarAnalisisIQOption(true);
     });
   });
@@ -13515,70 +13269,8 @@ if (btnIqChartModeTv) {
   });
 }
 
-if (btnIqRunAiReport) {
-  btnIqRunAiReport.addEventListener('click', solicitarDiagnosticoIAIQOption);
-}
-
-if (btnCloseIqAiReport && iqAiReportBox) {
-  btnCloseIqAiReport.addEventListener('click', () => {
-    iqAiReportBox.classList.add('hidden');
-  });
-}
-
-// Subida y lectura de capturas de IQ Option (para OTC o análisis visual)
-if (inputIqScreenshot) {
-  inputIqScreenshot.addEventListener('change', (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      iqScreenshotBase64 = evt.target?.result;
-      if (iqScreenshotPreviewImg) iqScreenshotPreviewImg.src = iqScreenshotBase64;
-      if (iqScreenshotPreviewWrap) iqScreenshotPreviewWrap.classList.remove('hidden');
-      if (btnIqAnalyzeScreenshot) btnIqAnalyzeScreenshot.classList.remove('hidden');
-      if (btnIqClearScreenshot) btnIqClearScreenshot.classList.remove('hidden');
-    };
-    reader.readAsDataURL(file);
-  });
-}
-
-// Permitir pegar captura directamente con Ctrl+V en la pantalla de Operaciones Financieras
-document.addEventListener('paste', (e) => {
-  if (!viewFinancialOps || viewFinancialOps.classList.contains('hidden')) return;
-  const items = e.clipboardData?.items;
-  if (!items) return;
-  for (let i = 0; i < items.length; i++) {
-    if (items[i].type.indexOf('image') !== -1) {
-      const blob = items[i].getAsFile();
-      const reader = new FileReader();
-      reader.onload = (evt) => {
-        iqScreenshotBase64 = evt.target?.result;
-        if (iqScreenshotPreviewImg) iqScreenshotPreviewImg.src = iqScreenshotBase64;
-        if (iqScreenshotPreviewWrap) iqScreenshotPreviewWrap.classList.remove('hidden');
-        if (btnIqAnalyzeScreenshot) btnIqAnalyzeScreenshot.classList.remove('hidden');
-        if (btnIqClearScreenshot) btnIqClearScreenshot.classList.remove('hidden');
-      };
-      reader.readAsDataURL(blob);
-      break;
-    }
-  }
-});
-
-if (btnIqClearScreenshot) {
-  btnIqClearScreenshot.addEventListener('click', () => {
-    iqScreenshotBase64 = null;
-    if (inputIqScreenshot) inputIqScreenshot.value = '';
-    if (iqScreenshotPreviewImg) iqScreenshotPreviewImg.src = '';
-    if (iqScreenshotPreviewWrap) iqScreenshotPreviewWrap.classList.add('hidden');
-    if (btnIqAnalyzeScreenshot) btnIqAnalyzeScreenshot.classList.add('hidden');
-    if (btnIqClearScreenshot) btnIqClearScreenshot.classList.add('hidden');
-  });
-}
-
-if (btnIqAnalyzeScreenshot) {
-  btnIqAnalyzeScreenshot.addEventListener('click', () => {
-    solicitarDiagnosticoIAIQOption();
-  });
+if (btnIqAskAdvisor) {
+  btnIqAskAdvisor.addEventListener('click', solicitarConsejoTacticoIA);
 }
 
 // ==========================================
